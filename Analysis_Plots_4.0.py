@@ -131,7 +131,7 @@ class Analysis_plot:
 			axes = plt.axes()
 			axes.set_xlim([0,X[len(X)-1]])
 			axes.set_ylim([0,Ymax*Y[len(Y)-1]])
-			#if for some reason the plot differente than expected you can try changing the x,y spacements.
+			#if for some reason the plot is different from expected you can try changing the x,y spacements.
 			#axes.set_xticks(np.arange(0,X[len(X)-1],X[len(X)-1]/8.0)) #numpy bugged hard with the last windows patch
 			#axes.set_yticks(np.arange(0,Ymax*Y[len(Y)-1],Ymax*Y[len(Y)-1]/5.0))
 
@@ -331,9 +331,6 @@ e-mail: bruno.braga@ufms.br '''
 
 		else: #cut!= i means that the current arg[i] was used in the previous iteration
 			cut = i+1
-
-	#for i in [7.0,8.0,9.0,10.0]:
-	#	File.append( ('Gpu-Ultra_cphmd-petase-water/ph%.2f_%s.dat'%(i,anatp),'pH=%d'%i) ) #PETase_CpHMD_water_analysis/
 
 	if not inst_only and not version_only:
 		ob4 = Analysis_plot(type=tpe,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi)
