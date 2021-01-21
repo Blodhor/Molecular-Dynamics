@@ -131,7 +131,7 @@ class Analysis_plot:
 			axes = plt.axes()
 			axes.set_xlim([0,X[len(X)-1]])
 			axes.set_ylim([0,Ymax*Y[len(Y)-1]])
-			#if for some reason the plot is different from expected you can try changing the x,y spacements.
+			#if for some reason the plot differente than expected you can try changing the x,y spacements.
 			#axes.set_xticks(np.arange(0,X[len(X)-1],X[len(X)-1]/8.0)) #numpy bugged hard with the last windows patch
 			#axes.set_yticks(np.arange(0,Ymax*Y[len(Y)-1],Ymax*Y[len(Y)-1]/5.0))
 
@@ -236,7 +236,7 @@ e-mail: bruno.braga@ufms.br '''
 	anatp        = 'rmsd'
 	File         = [('Gpu-Ultra_cphmd-petase-water/ph7.00_rmsd.dat','pH=7.00')]
 	supertitle   = 'Petase nativa - Produção'
-	labx, laby   = (30.5, 0.51) # rmsf: (30.5, 1.51) # radgyr: (16.61, 200)
+	labx, laby   = (30.5, 0.51) # rmsf: (150, 2.25) # radgyr: (160, 16.61)
 	fram2time    = False
 	framstp      = 25*10**4 # Ultra
 	nano         = False
@@ -313,9 +313,10 @@ e-mail: bruno.braga@ufms.br '''
 				supertitle = arg[i+1]
 				continue
 			elif arg[i].lower() == "-lblcrd":
-				tempx, tempy = arg[i+1]
-				labx = float(tempx)
-				laby = float(tempy)
+				#temp_ar = arg[i+1][1:-1].split(',')
+				#tempx, tempy = arg
+				labx = float(arg[i+1])
+				laby = float(arg[i+2])
 				continue
 			elif arg[i].lower() == "-fram2time":
 				fram2time = True
@@ -323,7 +324,7 @@ e-mail: bruno.braga@ufms.br '''
 				continue
 			elif arg[i].lower() == "-nanosec":
 				nano = True
-				continue
+				#continue
 			elif arg[i].lower() == "-dpi":
 				dpi = arg[i+1]
 				continue
@@ -331,6 +332,9 @@ e-mail: bruno.braga@ufms.br '''
 
 		else: #cut!= i means that the current arg[i] was used in the previous iteration
 			cut = i+1
+
+	#for i in [7.0,8.0,9.0,10.0]:
+	#	File.append( ('Gpu-Ultra_cphmd-petase-water/ph%.2f_%s.dat'%(i,anatp),'pH=%d'%i) ) #PETase_CpHMD_water_analysis/
 
 	if not inst_only and not version_only:
 		ob4 = Analysis_plot(type=tpe,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi)
