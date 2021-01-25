@@ -254,7 +254,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	supertitle   = 'Petase nativa - Produção'
 	labx, laby   = (30.5, 0.51) # rmsf: (150, 2.25) # radgyr: (160, 16.61)
 	fram2time    = False
-	framstp      = 25*10**4 # Ultra
+	framstp      = 62500 # Ultra #gpu-high: 50 000
 	nano         = False
 	dpi          = 100
 
@@ -327,7 +327,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 					cc += 1
 				continue
 			elif arg[i].lower() == "-stitle":
-				supertitle = arg[i+1]
+				sup_t = ''
+				cc = i + 1
+				while cc < len(arg):
+					if arg[cc] not in flags:
+						if len(sup_t) > 0:
+							sup_t += ' '
+						sup_t += arg[cc]
+					else:
+						i = cc -1
+						break
+					cc += 1
+				supertitle = sup_t
 				continue
 			elif arg[i].lower() == "-lblcrd":
 				#temp_ar = arg[i+1][1:-1].split(',')
