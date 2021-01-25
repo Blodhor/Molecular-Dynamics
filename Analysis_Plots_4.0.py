@@ -226,15 +226,31 @@ Data file structure expected:
 
 
 
-Autor: Braga, B. C.
-e-mail: bruno.braga@ufms.br '''
+
+Copyright (C) 2021  Braga, B. C. 
+e-mail: bruno.braga@ufms.br 
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+	
+'''
 
 	#default keys
 	version_only = False
 	inst_only    = False
 	tpe          = 'one'
 	anatp        = 'rmsd'
-	File         = [('Gpu-Ultra_cphmd-petase-water/ph7.00_rmsd.dat','pH=7.00')]
+	File         = [('GPU-HIGH/No_warp/Mut_CpHMD_water_ph7-10/T01_ASP206-GLY/ph7.00_rmsd.dat','pH=7.00')]
 	supertitle   = 'Petase nativa - Produção'
 	labx, laby   = (30.5, 0.51) # rmsf: (150, 2.25) # radgyr: (160, 16.61)
 	fram2time    = False
@@ -258,6 +274,7 @@ e-mail: bruno.braga@ufms.br '''
 			elif arg[i].lower() == "-h" or arg[i].lower() == "--help":
 				inst_only = True
 				print("Welcome to Analysis plot %s:\n"%version_n)
+				print("Copyright (C) 2021  Braga, B. C.\nThis program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.\n")
 				print("\nUsage:\n\t-v or --version\t\tprints current version, the python libraries needed and the data format expected.\n")
 				print("\t-h or --help\t\tprints this message.\n")
 				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information (ex:RMSD for pH7 and pH8).\n\t\tfour: Plots four data files with the same axis information (ex:RMSD for pH5, pH6, pH7, pH8).\n")
@@ -332,9 +349,6 @@ e-mail: bruno.braga@ufms.br '''
 
 		else: #cut!= i means that the current arg[i] was used in the previous iteration
 			cut = i+1
-
-	#for i in [7.0,8.0,9.0,10.0]:
-	#	File.append( ('Gpu-Ultra_cphmd-petase-water/ph%.2f_%s.dat'%(i,anatp),'pH=%d'%i) ) #PETase_CpHMD_water_analysis/
 
 	if not inst_only and not version_only:
 		ob4 = Analysis_plot(type=tpe,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi)
