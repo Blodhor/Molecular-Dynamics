@@ -1946,6 +1946,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\nExamples:\n\t$ python3 ASM.py -i 1UBQ.pdb -arq sander -mpi 4 -mode low -g CpHMD 6 -phdset 6.0 7.0 0.5\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq pmemd -mpi 4 -mode low -g CpHMD 6.5 -explicit water\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -rdmut 1\n")
+				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET\n")
+				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET HIS_237-ALA\n")
 				print("\n\t$ python3 ASM.py -i paracetamol.pdb -arq sander -mode med\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq sander -mpi 4 -mode low -g MD -explicit water\n")
 				break
