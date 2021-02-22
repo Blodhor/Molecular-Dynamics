@@ -7,4 +7,5 @@ Analysis_Plots_4.0.py - RMSD, RMSF and Radgyr data analysis. This code needs num
 The following was tested only on Linux S.O.:
 
 ASM.py - Molecular Dynamics simulation manager (tested on AMBER18 and AMBERtools18+). Automates the process of performing a molecular dynamics simulation using the AMBER/AMBERtools computational packages.
+
   Ps: AMBERtools is an open source package of AMBER and both can be found on https://ambermd.org/
