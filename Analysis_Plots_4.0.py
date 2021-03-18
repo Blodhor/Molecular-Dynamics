@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 class Analysis_plot:
 	def __init__(self, type = 'one', names=[('file.dat','analysis_title')], analysisType = 'rmsd', largerYaxis = False, 
 	Yenlarger = 2, frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
-	labelpx = 35.0, labelpy = 0.50, dpi = 100):
+	labelpx = 35.0, labelpy = 0.50, dpi = 100, text_fc = 'darkblue'):
 		'''Parameters:
 		
 		type: Plot 'one' dataset, 'two' datasets beside each other or 'four' datasets in a matrix fashion.
@@ -31,7 +31,9 @@ class Analysis_plot:
 		
 		labelpy: Y position of internal labelling.
 		
-		dpi: Sets the picture quality.'''
+		dpi: Sets the picture quality.
+		
+		text_fc: Text color in the four-type plot.'''
 
 		self.X = []
 		self.Y = []
@@ -64,7 +66,7 @@ class Analysis_plot:
 		elif XTlabels != -1 and type == 'four':
 
 			self.plot_four(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
-			name= [XTlabels[0][1], XTlabels[1][1], XTlabels[2][1], XTlabels[3][1]])
+			name= [XTlabels[0][1], XTlabels[1][1], XTlabels[2][1], XTlabels[3][1]], color=text_fc)
 
 		else:
 			print("Type must be one, two or four!\n")
@@ -165,35 +167,35 @@ class Analysis_plot:
 		
 		plt.show()
 
-	def plot_four(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"]):
+	def plot_four(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"], color = 'darkblue'):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 		
 		plt.figure(dpi=self.dpi)
 
 		ax1 = plt.subplot(221)
 		plt.plot(X[0],Y[0])
-		plt.text(x=self.labelpx, y=self.labelpy, s=name[0], color='darkblue')
+		plt.text(x=self.labelpx, y=self.labelpy, s=name[0], color=color)
 		plt.ylabel(self.ana_type)
 		#plt.xlabel(Xaxis) #Showing this will interfere with the quality of the pict.
 		plt.grid(True)
 		
 		ax2 = plt.subplot(222, sharey=ax1)		
 		plt.plot(X[1],Y[1])
-		plt.text(x=self.labelpx, y=self.labelpy, s=name[1], color='darkblue')
+		plt.text(x=self.labelpx, y=self.labelpy, s=name[1], color=color)
 		#plt.ylabel(self.ana_type) #Showing this will interfere with the quality of the pict.
 		#plt.xlabel(Xaxis) #Showing this will interfere with the quality of the pict.
 		plt.grid(True)
 
 		ax3 = plt.subplot(223, sharex=ax1)
 		plt.plot(X[2],Y[2])
-		plt.text(x=self.labelpx, y=self.labelpy, s=name[2], color='darkblue')
+		plt.text(x=self.labelpx, y=self.labelpy, s=name[2], color=color)
 		plt.ylabel(self.ana_type)
 		plt.xlabel(Xaxis)
 		plt.grid(True)
 		
 		ax4 = plt.subplot(224, sharex=ax2, sharey=ax3)
 		plt.plot(X[3],Y[3])
-		plt.text(x=self.labelpx, y=self.labelpy, s=name[3], color='darkblue')
+		plt.text(x=self.labelpx, y=self.labelpy, s=name[3], color=color)
 		plt.xlabel(Xaxis)
 		plt.grid(True)
 		
@@ -244,18 +246,24 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	
 '''
+	mut_name = 'ASP206-GLU'
+	path = 'gpu-ultra/no_warp/mutation/%s/'%mut_name
 
 	#default keys
 	version_only = False
 	inst_only    = False
-	tpe          = 'one'
-	anatp        = 'rmsd'
-	File         = [('GPU-HIGH/No_warp/Mut_CpHMD_water_ph7-10/T01_ASP206-GLY/ph7.00_rmsd.dat','pH=7.00')]
-	supertitle   = 'Petase nativa - Produção'
-	labx, laby   = (30.5, 0.51) # rmsf: (150, 2.25) # radgyr: (160, 16.61)
-	fram2time    = False
+	tpe          = 'four'  # 'one'
+	anatp        = 'rmsf'  # 'radgyr'# 'rmsd' # 'rmsf'
+	File         = [('%sph7.00_%s.dat'%(path,anatp),'pH=7.00'),
+	('%sph8.00_%s.dat'%(path,anatp),'pH=8.00'),
+	('%sph9.00_%s.dat'%(path,anatp),'pH=9.00'),
+	('%sph10.00_%s.dat'%(path,anatp),'pH=10.00')]
+	supertitle   = 'Produção Mut: %s'%mut_name
+	labx, laby   = (90, 1.5) # rmsf: (150, 2.25) # radgyr: (160, 16.61)
+	cor = 'darkblue' # 'darkblue' # 'darkred'
+	fram2time    = True  # False
 	framstp      = 62500 # Ultra #gpu-high: 50 000
-	nano         = False
+	nano         = True  # False
 	dpi          = 100
 
 	flags = ["&","-v","--version","-h","--help",'-type', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd']
@@ -362,4 +370,4 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			cut = i+1
 
 	if not inst_only and not version_only:
-		ob4 = Analysis_plot(type=tpe,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi)
+		ob4 = Analysis_plot(type=tpe,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, text_fc=cor)
