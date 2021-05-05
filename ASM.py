@@ -743,7 +743,7 @@ mol2_check: If False, load system pdb on leap; if True, it'll run antechamber to
 			elif cha > 0:
 				self.leap_in(charge_fix=True, add_Na=3, add_Cl=cha+3)
 			elif cha < 0:
-				self.leap_in(charge_fix=True, add_Na=cha+3, add_Cl=3)
+				self.leap_in(charge_fix=True, add_Na=3-cha, add_Cl=3)
 
 			# this will check for any fatal errors, proximity warnings don't matter (minimization can fix it). And in order to check for the true error we need to delete all leap log before attempting the leapfix
 			cmd('rm leap.log')
