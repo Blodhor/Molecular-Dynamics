@@ -2,7 +2,7 @@ About the necessary Python 3.6+ compiler:
 
 On Windows its possible to run python programms on Visual Studio Code (see   https://code.visualstudio.com/docs/setup/windows).
 
-On Linux S.O. its easier to run python as on the lastest versions com Ubuntu, python is pre-installed and you can check its version with:
+On Linux S.O. its easier to run python, as on the lastest versions of Ubuntu, python is pre-installed and you can check its version with:
 
 $ python --version
 
