@@ -24,6 +24,57 @@ The following was tested on both Windows and Linux S.O.:
 
 Analysis_Plots_4.0.py - RMSD, RMSF and Radgyr data analysis. This code needs numpy and matplotlib modules with an python 3.6+ compiler (if you dont usually use Terminal, install Visual Studio Code, which runs on Windows and Linux). 
 
+--------------------------------------
+About Analysis_Plots_4.0.py execution:
+
+$ python3 Analysis_Plots_4.0.py -h
+
+    Welcome to Analysis plot 4.0:
+
+    Copyright (C) 2021  Braga, B. C.
+    This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.
+
+
+    Usage:
+        -v or --version         prints current version, the python libraries needed and the data format expected.       
+
+        -h or --help            prints this message.
+
+        -type   Quantity of files used, for data comparison.
+                one: Normal plot with one data file.
+                two: Plots two data files with the same axis information (ex:RMSD for pH7 and pH8).
+                four: Plots four data files with the same axis information (ex:RMSD for pH5, pH6, pH7, pH8).
+
+        -anatp          Analysis type:
+                rmsd;
+                rmsf;
+                radgyr.
+
+        -i              input data file(s) with a name for the plot (separated by space).
+                        Ex: -i ph7.00_rmsd.dat pH=7.00
+
+        -stitle         (Valid only for type four) Title for comparison plot.
+
+        -lblcrd (Valid only for type four) Label coords.
+
+        -fram2time      (For anatp = rmsd or radgyr) Sets X-axis will change from frame to time (pico seconds). Must inform frame-step conversion.
+                        Ex:-fram2time 10000
+
+        -nanosec                (For anatp = rmsd or radgyr) Sets time intervals on X-axis to nanoseconds.
+
+        -dpi            Sets the plot quality (recommended to use only with type=one). Default: 100
+
+
+    Examples:
+        $ python3 Analysis_Plots_4.0.py -type one -anatp rmsd -i ph7.00_rmsd.dat Production pH=7.00 -fram2time 10000 -dpi 120
+
+
+        $ python3 Analysis_Plots_4.0.py -type two -anatp rmsf -i ph7.00_rmsf.dat Production pH=7.00 ph8.00_rmsf.dat Production pH=8.00
+
+
+        $ python3 Analysis_Plots_4.0.py -type four -stitle Production -anatp radgyr -lblcrd (16.61,200) -i ph7.00_radgyr.dat pH=7.00 ph8.00_radgyr.dat pH=8.00 ph9.00_radgyr.dat pH=9.00 ph10.00_radgyr.dat pH=10.00 -fram2time 10000 -nanosec 
+        
+
 The following was tested only on Linux S.O.:
 
 ASM.py - Molecular Dynamics simulation manager (tested on AMBER18 and AMBERtools18+). Automates the process of performing a molecular dynamics simulation using the AMBER/AMBERtools computational packages.
@@ -32,8 +83,8 @@ ASM.py - Molecular Dynamics simulation manager (tested on AMBER18 and AMBERtools
   
 This programm needs both Python 3.6+ and AMBER/AMBERtools installed on the running machine.
 
-----------------
-About execution:
+-----------------------
+About ASM.py execution:
 
 $ python3 ASM.py -h
 
