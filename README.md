@@ -88,7 +88,7 @@ About ASM.py execution:
 
 $ python3 ASM.py -h
 
-    Welcome to Amber Simulation Manager 1.1:
+    Welcome to Amber Simulation Manager 1.0:
 
     Copyright (C) 2021  Braga, B. C.
     This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.
