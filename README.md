@@ -172,3 +172,64 @@ $ python3 ASM.py -h
 
 
         $ python3 ASM.py -i 6eqe.pdb -arq sander -mpi 4 -mode low -g MD -explicit water
+        
+$ python3 ASM.py -v
+
+    Current version: 1.1
+
+    Manager Alpha - Molecular Dynamics simulation manager (using Amber and Ambertools).
+
+    Manager Beta:
+            *Information_cycle bug corrected.
+            *Tutorial guide made which show how the code works and asks for each variable specifying the formats.
+            *Simulation can now be made directly on Terminal console.
+
+    Manager Version 1.0:
+            *Added option for explicit solvent.
+            *Method 'Amber_run.simulation' now verifies titratable residues and applies cpinutil correctly.
+            *'Amber_run' class rewritten for CpHMD.
+            *Added mpi options.
+            *Code better commented.
+            *__main__ compilation fixed.
+            *Tutorial guide removed and created a better help message.
+            *Added method 'Amber_run.leap_exec' so the code now tries to create mol2 files if the Leap libraries can't deal with your system.
+            *Fixed bug in the explicit solvent MD run.
+            *New mutation option:
+                    **Added attributes to constructor to be able to mutate.
+                    **Amber_mutation class added
+                    **Added random mutation method at the active site (for enzymes).
+                    **Added a mutation of choice option.
+                    OBS: Simulation with mutation needs to run with explicit solvent, if none given the code will use water by default.
+            *Corrected methods:
+                    **'Amber_par.cpptraj_in';
+                    **'Amber_run.analysis'.
+                    **Methods 'Amber_run.sander_run', 'Amber_run.gpu_run' and 'Amber_run.pmemd_only' merged together in the 'Amber_run.minimization_to_analysis'.
+            *Fixed explicit solvent CpHMD BUG, by modifying the following methods from 'Amber_par':
+                    **'input_min';
+                    **'input_heat';
+                    **'input_equil';
+                    **'cpptraj_in' - RMSD, RMSF and RADGYR are correctly done now for CpHMD.
+
+    Manager Version 1.1:
+            *Separation of the simulation.sh in stages to minimize errors from external sources. 
+            *Annealing duration shortened because it was unnecessarily long.
+            *Mutation method fixed.
+            *Error report file created.
+            *An easy restart .sh of current simulation stage created.
+
+
+    Copyright (C) 2021  Braga, B. C. 
+    e-mail: bruno.braga@ufms.br 
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
