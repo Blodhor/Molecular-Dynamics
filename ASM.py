@@ -19,9 +19,11 @@ random.seed()
 
 class Amber_par:
 	'''Creation method of the Amber (or Ambertools) input parameters.'''
-	mode = {'low': (10**-1,1), 'med': (1,10), 'gpu-med': (10,50), 'gpu-high': (50,100), 'gpu-ultra': (100,500)}
+	mode  = {'low': (10**-1,1), 'med': (1,10), 'gpu-med': (10,50), 'gpu-high': (50,100), 'gpu-ultra': (100,500)}
 	steps = 10**5
-	def __init__(self, system='WillThisWork.pdb', simulation='CpHMD', pHstep=1.0, simulation_length='low',
+	AnnealEqFactor  = 0.1
+
+	def __init__(self, system='WillThisWork.pdb', ligand='already_docked_positions.pdb', with_docking= False, simulation='CpHMD', pH=7.0, pHstep=1.0, simulation_length='low',
 	exp_solv= False, solvent_in='water', box_cuttoff= 12.0, information_cycles=200, gpu=0, prot_res='AS4 SER HIP',
 	mpi_use= False, mpicomp='mpiexec', mpicores=2, prep_stop= False, chosen_mut_flag = False,
 	chosen_mut=['SER_160-MET'], active_site={'SER':[160],'HIS':[237],'ASP':[206]}):
@@ -31,9 +33,16 @@ Parameters
 ----------
 system: pdb file.
 
+ligand: The present code doesn't have a docking module (optmization of the ligand's atoms' positions in the active site of the system[if it is an enzyme]).
+		At the present version, it is needed a third party programm to get this PDB. 
+
+with_docking: True/False choice for the creation of a docked ligand-system topology and coordinates file with LEAP.
+
 gpu: Gpu which would be used (if there is two gpu's the choice is between number 0 and 1).
 
 simulation: Goal of the simulation; between a usual Molecular Dynamis (MD) with only a thermal stability analysis or a constant ph dynamics (CpHMD)
+
+pH: Equilibration and Production stages' solvent pH. (Default=7.0)
 
 pHstep: If goal is CpHMD, this variable defines the pH-unit intervals between two productions to be made.
 
@@ -75,7 +84,7 @@ chosen_mut: Specific mutation chosen.'''
 		cmd('rm hmr-in.sh simulation.sh rmsdf.cpptraj BeforeManager.out AfterManager.out')
 		cmd('ls > BeforeManager.out')
 
-		#creating object's attributes
+		# Creating object's attributes
 		bool_class           = 'Amber_mutation' in str(type(self)) 
 		if bool_class:
 			self.exp_solv    = True
@@ -83,10 +92,13 @@ chosen_mut: Specific mutation chosen.'''
 			self.exp_solv    = exp_solv
 		self.pdb             = system
 		self.goal            = simulation
+		self.pH              = pH
 		self.hmr             = True
 		self.gpunumber       = gpu
 		self.cph             = False
 		self.simulation_mode = simulation_length
+		if self.simulation_mode == 'low':
+			self.AnnealEqFactor  = 1
 		self.prmtop          = 'system.prmtop'
 		self.rms             = 'system.rms'
 		self.rmsf            = 'system_rmsf.agr'
@@ -97,7 +109,7 @@ chosen_mut: Specific mutation chosen.'''
 		self.cores           = int(mpicores)
 		self.prep_stop       = prep_stop
 		self.pH_step         = pHstep
-
+		
 		# sorting protonation and active site info for later verification
 		prot_ = prot_res.split()
 		for i in range(len(prot_)):
@@ -114,6 +126,47 @@ chosen_mut: Specific mutation chosen.'''
 		site_.sort()
 		self.ok = True
 		
+		# docking-only options
+		self.docking         = with_docking
+		self.ligand          = ligand
+		self.lig_mol         = ligand[:-3]+"mol2"
+		self.lig_frcmod      = ligand[:-3]+"frcmod"
+		self.lig_name        = "DOK"
+
+		if self.docking:
+			f = open(self.ligand,'r+')
+			temp = f.readlines()
+		
+			f.seek(0)
+			for i in range(len(temp)):
+				j = temp[i]
+				data = j.split()
+				if 'ATOM' in data[0] or 'ANISOU' in data[0] or 'HETATM' in data[0]:
+					if len(data[2]) == 1 and data[2] != data[len(data)-1]:
+						#HETATM    1  C   UNL     1     -27.682  -2.375   1.924  1.00  0.00      .068 A\n
+						bit = j.find(data[len(data)-1],len(data[0])+1,len(j))
+						j = j[:bit]
+						temp[i] = j + data[2]
+					if len(data[3]) == 3:
+						bit2 = j.find(data[3],len(data[0])+1,len(j))
+						jj = j[:bit2]+self.lig_name+j[bit2 +len(self.lig_name):]
+						temp[i] = jj
+						#HETATM    1  C   DOK     1     -27.682  -2.375   1.924  1.00  0.00      .068 A\n
+					else:
+						self.lig_name = data[3]
+
+					if i == len(temp) -1:
+						f.write(temp[i])
+					else:
+						f.write(temp[i]+'\n')
+			f.close()
+			cmd('reduce %s > ligand-reduced.pdb'%self.ligand)
+			cmd('antechamber -fi pdb -fo mol2 -i ligand-reduced.pdb -o %s -c bcc -pf y -nc 0'%self.lig_mol)
+			#
+			# Tem que ver como vou corrigir o problema do DUN e hn!!! linha -- 748 cpptraj 
+			#
+			cmd('parmchk2 -i %s -o %s -f mol2'%(self.lig_mol,self.lig_frcmod))
+
 		# mutation-only parameters
 		self.pdb_string          = ''
 		self.pdb_str_2Mut        = ''
@@ -133,7 +186,7 @@ chosen_mut: Specific mutation chosen.'''
 		resmut_newid             = {}
 		mutid                    = {}
 
-		#adjusting object's attributes
+		# adjusting object's attributes
 		if bool_class:
 			if chosen_mut_flag:
 				# chosen_mut := ['SER_160-MET']
@@ -163,7 +216,7 @@ chosen_mut: Specific mutation chosen.'''
 
 			# the method adjusting_firstep is written on the Amber_mutation class
 			res_newid = self.adjusting_firstep(chosen_res=self.active_site)
-		
+
 		# res_newid now have all coords of the active_site atoms, and with this, it's trivial to look for the new active site atoms' id (after pdb4amber)!
 		if self.ok:
 			self.protonation_res = prot_
@@ -279,33 +332,41 @@ frcmod: File created with parmck2.'''
 		else:
 			f.write('SYS = loadPDB %s\n'%(self.pdb))
 
+		if self.docking:
+			f.write('%s = loadmol2 %s\n'%(self.lig_name, self.lig_mol))
+			f.write('NEW = combine {SYS %s}\n'%self.lig_name)
+			f.write('loadamberparams %s\n'%self.lig_frcmod)
+			sys_temp = 'NEW'
+		else:
+			sys_temp = 'SYS'
+		
 		# The two commands create periodic solvent boxes around solute, which should be a UNIT. solvateBox creates a cuboid box, while solvateOct creates a truncated octahedron.
 		if self.exp_solv: 
 			f.write('loadoff solvents.lib\n')
 			if self.solvent == 'water':
-				f.write('solvateOct SYS TIP3PBOX %.2f\n'%self.cuttoff)
+				f.write('solvateOct %s TIP3PBOX %.2f\n'%(sys_temp, self.cuttoff))
 			elif self.solvent == 'methanol':
 				f.write('loadamberparams frcmod.meoh\n')
-				f.write('solvateOct SYS MEOHBOX %.2f\n'%self.cuttoff)
+				f.write('solvateOct %s MEOHBOX %.2f\n'%(sys_temp, self.cuttoff))
 			elif self.solvent == 'chloroform':
 				f.write('loadamberparams frcmod.chcl3\n')
-				f.write('solvateOct SYS CHCL3BOX %.2f\n'%self.cuttoff)
+				f.write('solvateOct %s CHCL3BOX %.2f\n'%(sys_temp, self.cuttoff))
 			elif self.solvent == 'n-methyacetamide':
 				f.write('loadamberparams frcmod.nma\n')
-				f.write('solvateOct SYS NMABOX %.2f\n'%self.cuttoff)
+				f.write('solvateOct %s NMABOX %.2f\n'%(sys_temp, self.cuttoff))
 			elif self.solvent == 'urea':
 				f.write('loadoff 8Mureabox.off\n')
 				f.write('loadamberparams frcmod.urea\n')
-				f.write('solvateOct SYS UREABOX %.2f\n'%self.cuttoff)
+				f.write('solvateOct %s UREABOX %.2f\n'%(sys_temp, self.cuttoff))
 
 			if charge_fix:
-				f.write('addIonsRand SYS Cl- %d Na+ %d\n'%(add_Cl, add_Na))
+				f.write('addIonsRand %s Cl- %d Na+ %d\n'%(sys_temp, add_Cl, add_Na))
 
 		if not checking:
-			f.write('savepdb SYS systemLeap.pdb\n')
-			f.write('saveAmberParm SYS %s systemLeap.rst7\n'%self.prmtop)
+			f.write('savepdb %s systemLeap.pdb\n'%sys_temp)
+			f.write('saveAmberParm %s %s systemLeap.rst7\n'%(sys_temp, self.prmtop))
 		else:
-			f.write('%s SYS\n'%checking_cmd)
+			f.write('%s %s\n'%(checking_cmd, sys_temp))
 		f.write('quit')
 		f.close()
 
@@ -500,7 +561,7 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 		# ntx=5 Coordinates and velocities will be read from either a NetCDF or a formatted (ASCII) coordinate file. The velocity information will only be used if irest=1
 		f.write(' ntx=5,\n')
 		f.write(' imin=0,\n')
-		f.write(' irest=1,\n')
+		f.write(' irest=1,\n') 
 		f.write(' nstlim=%d,\n'%(mdsteps_factor*self.steps))
 		if self.hmr:
 			f.write(' dt=0.004,\n')
@@ -559,24 +620,11 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 			# The collision frequency can be doubled in the equilibration and production stages
 			f.write(' gamma_ln=6,\n')
 		else:
-			if not self.exp_solv:
+			if self.exp_solv and 'CpHMD_prod' not in step:
+				f.write(' gamma_ln=1.0,\n')
+			else:
 				# The collision frequency can be doubled in the equilibration and production stages
 				f.write(' gamma_ln=5,\n')
-				# Time constant, in ps, for heat bath coupling for the system, if ntt = 1. Default is 1.0. Generally, values for TAUTP should be in the range of 0.5-5.0 ps, with a smaller value providing tighter coupling to the heat bath and, thus, faster heating and a less natural trajectory. Smaller values of TAUTP result in smaller fluctuations in kinetic energy, but larger fluctuations in the total energy. Values much larger than the length of the simulation result in a return to constant energy conditions.
-				f.write(' tautp=2.0,\n')
-				f.write(' tol=0.000001,\n')
-				f.write(' nrespa=1,\n')
-				# Use the salt conc. CpHMD was parametrized for
-				f.write(' saltcon=0.1,\n')
-				# You must set icnstph=1 to turn on constant pH in implicit solvent.
-				f.write(' icnstph=1,\n')
-				f.write(' solvph=%.2f,\n'%ph)
-				f.write(' ntcnstph=%d,\n'%ntph)
-			else:
-				if 'CpHMD_prod' not in step:
-					f.write(' gamma_ln=1.0,\n')
-				else:
-					f.write(' gamma_ln=5.0,\n')
 				
 		# The format of coordinate and velocity trajectory files (mdcrd, mdvel and inptraj). ioutfm=1 -> Binary NetCDF trajectory
 		f.write(' ioutfm=1,\n')
@@ -587,7 +635,7 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 		f.write('/\n')
 		f.close()
 
-	def prod_cph(self, mdsteps_factor=10, ph=[0.0,7.0], trescnt=11):
+	def prod_cph(self, mdsteps_factor=10, ph=[7.0,7.0], trescnt=11):
 		'''Creates the input files for production or cphmd. For cphmd we will run simulations at pH values of ph[0] through ph[1] with 1 pH-unit intervals (the template input file for the cphmd production dynamics is the same as the equilibration stage).
 
 Parameters
@@ -598,56 +646,62 @@ mdsteps_factor: The factor by which the attibute self.steps will be multiplied (
 ph: Range of ph chosen.
 
 trescnt: The number of residues to titrate (the methods on this class defined, will look for this info automatically if needed).'''
+		ph_i  = ph[0]
+		nm_ph = []
+		while ph_i <= ph[1]:
+			nm_ph.append( ('CpHMD_prod_%.2f'%ph_i,ph_i) )
+			ph_i += self.pH_step
 
 		if not self.cph:
-			cmd('rm Production.in')
-			f = open('Production.in','w')
-			f.write('Production\n&cntrl\n')
-			f.write(' ntt=3,\n')
-			f.write(' gamma_ln=6,\n')
-			f.write(' ntx=5,\n')
-			f.write(' imin=0,\n')
-			f.write(' irest=1,\n')
-			f.write(' nstlim=%d\n'%(mdsteps_factor*self.steps))
-			if self.hmr:
-				f.write(' dt=0.004,\n')
-			else:
-				f.write(' dt=0.002,\n')
+			for pp in nm_ph:
+				cmd('rm Production_%.2f.in'%pp[1])
+				f = open('Production_%.2f.in'%pp[1],'w')
+				f.write('Production_pH%.2f\n&cntrl\n'%pp[1])
+				f.write(' ntt=3,\n')
+				f.write(' gamma_ln=6,\n')
+				f.write(' ntx=5,\n')
+				f.write(' imin=0,\n')
+				f.write(' irest=1,\n')
+				f.write(' nstlim=%d\n'%(mdsteps_factor*self.steps))
+				if self.hmr:
+					f.write(' dt=0.004,\n')
+				else:
+					f.write(' dt=0.002,\n')
 
-			f.write(' ntpr=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
-			f.write(' ntwx=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
-			f.write(' ntwr=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
-			f.write(' ntp=0,\n')
-			f.write(' barostat=2,\n')
-			f.write(' pres0=1.0,\n')
-			f.write(' taup=1.0,\n')
-			if not self.exp_solv:
-				# This is used to specify the nonbonded cutoff, in Angstroms. For PME, the cutoff is used to limit direct space sum. When igb > 0, the default is 9999.0 (effectively infinite).
-				f.write(' cut=9999.0,\n')
-				# Flag for using the generalized Born or Poisson-Boltzmann implicit solvent models.
-				f.write(' igb=2,\n')
-				# ntb=0 no periodicity is applied and PME is off (default when igb > 0)
-				f.write(' ntb=0,\n')
-			else:
-				# No generalized Born term is used. (Default).
-				f.write(' igb=0,\n')
-				# This variable controls whether or not periodic boundaries are imposed on the system during the calculation of non-bonded interactions. ntb=1 constant volume;
-				f.write(' ntb=1,\n')
-				# This is used to specify the nonbonded cutoff, in Angstroms.
-				f.write(' cut=%.2f,\n'%self.cuttoff)
+				f.write(' ntpr=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
+				f.write(' ntwx=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
+				f.write(' ntwr=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
+				f.write(' ntp=0,\n')
+				f.write(' barostat=2,\n')
+				f.write(' pres0=1.0,\n')
+				f.write(' taup=1.0,\n')
+				if not self.exp_solv:
+					# This is used to specify the nonbonded cutoff, in Angstroms. For PME, the cutoff is used to limit direct space sum. When igb > 0, the default is 9999.0 (effectively infinite).
+					f.write(' cut=9999.0,\n')
+					# Flag for using the generalized Born or Poisson-Boltzmann implicit solvent models.
+					f.write(' igb=2,\n')
+					# ntb=0 no periodicity is applied and PME is off (default when igb > 0)
+					f.write(' ntb=0,\n')
+				else:
+					# No generalized Born term is used. (Default).
+					f.write(' igb=0,\n')
+					# MD-explicit solvent pH
+					f.write(' solvph=%.2f,\n'%pp[1])
+					# This variable controls whether or not periodic boundaries are imposed on the system during the calculation of non-bonded interactions. ntb=1 constant volume;
+					f.write(' ntb=1,\n')
+					# This is used to specify the nonbonded cutoff, in Angstroms.
+					f.write(' cut=%.2f,\n'%self.cuttoff)
 
-			f.write(' ntc=2,\n')
-			f.write(' ntf=2,\n')
-			f.write(' ioutfm=1,\n')
-			f.write(' temp0=300.0,\n')
-			f.write(' nmropt=0,\n')
-			f.write(' ig=-1,\n/\n')
-			f.close()
+				f.write(' ntc=2,\n')
+				f.write(' ntf=2,\n')
+				f.write(' ioutfm=1,\n')
+				f.write(' temp0=300.0,\n')
+				f.write(' nmropt=0,\n')
+				f.write(' ig=-1,\n/\n')
+				f.close()
 		else:
-			ph_i = ph[0]
-			while ph_i <= ph[1]:
-				self.input_equil(step='CpHMD_prod_%.2f'%ph_i, mdsteps_factor=mdsteps_factor, ph=ph_i, trescnt=trescnt)
-				ph_i += self.pH_step
+			for pointer in nm_ph:
+				self.input_equil(step=pointer[0], mdsteps_factor=mdsteps_factor, ph=pointer[1], trescnt=trescnt)	
 
 	def cpptraj_in(self, input_name='rmsdf.cpptraj', rms_file='system.rms', rmsf_file='system_rmsf.agr',
 	min_name='minimization', annealing_name='annealing', equil_name='equilibration', phr=[0.0,7.0]):
@@ -669,40 +723,49 @@ annealing_name: Annealing's files name.
 equil_name: Equilibration's files name.
 
 phr: Ph range used to titrate.'''
+		ph_i = phr[0]
+		pH   = []
+		while ph_i <= phr[1]:
+			pH.append( ph_i )
+			ph_i += self.pH_step
 
 		if not self.cph:
-			cmd('rm %s'%input_name)
-			f = open(input_name,'w')
-			f.write('parm %s\n'%self.prmtop)
-			f.write('trajin %s.nc\n'%annealing_name)
-			f.write('trajin %s.nc\n'%equil_name)
-			f.write('trajin Production.nc\n')
-			f.write('reference %s.rst7\n'%min_name)
-			f.write('autoimage\n')
-			# See pg. 684 Amer18 guide for rms option, pg. 682 for radgyr and pg. 638 for atomicfluct
-			f.write('rms reference mass out %s\n'%rms_file)
-			f.write('atomicfluct out %s\n'%rmsf_file)
-			f.close()
-		else:
-			ph_i = phr[0]
-			while ph_i <= phr[1]:
-				cmd('rm rmsdf_CpHMD_%.2f.cpptraj'%ph_i)
-				f = open('rmsdf_CpHMD_%.2f.cpptraj'%ph_i,'w')
+			for pp in pH:
+				cmd('rm MD_%.2f_%s'%(pp,input_name))
+				f = open('MD_%.2f_%s'%(pp,input_name),'w')
 				f.write('parm %s\n'%self.prmtop)
-				f.write('trajin CpHMD_prod_%.2f.nc\n'%ph_i)
-				f.write('reference %s.rst7\n'%equil_name)
-				f.write('rmsd reference :6-260@N,CA,C first out ph%.2f_rmsd.dat mass\n'%(ph_i))
-				f.write('atomicfluct out ph%.2f_rmsf.dat :6-260@N,CA,C byres\n'%(ph_i))
-				f.write('radgyr ph%.2f-radgyr :2-260@N,CA,C out ph%.2f_radgyr.dat mass nomax\n'%(ph_i, ph_i))
+				f.write('trajin %s.nc\n'%annealing_name)
+				f.write('trajin %s.nc\n'%equil_name)
+				f.write('trajin Production_%.2f.nc\n'%pp)
+				f.write('reference %s.rst7\n'%min_name)
+				f.write('autoimage\n')
+				# See pg. 684 Amer18 guide for rms option, pg. 682 for radgyr and pg. 638 for atomicfluct
+				f.write('rms reference mass out MD_%.2f_%s\n'%(pp,rms_file))
+				f.write('atomicfluct out MD_%.2f_%s\n'%(pp,rmsf_file))
 				f.close()
-				ph_i += self.pH_step
+		else:
+			for pp in pH:
+				cmd('rm rmsdf_CpHMD_%.2f.cpptraj'%pp)
+				f = open('rmsdf_CpHMD_%.2f.cpptraj'%pp,'w')
+				f.write('parm %s\n'%self.prmtop)
+				f.write('trajin CpHMD_prod_%.2f.nc\n'%pp)
+				f.write('reference %s.rst7\n'%equil_name)
+				#distance dPET-sitio :PET :132,178,209 out dPET-sitio.dat #pg 649-650
+				#f.write('rmsd reference :6-260@N,CA,C first out ph%.2f_rmsd.dat mass\n'%(ph_i))#PETase
+				f.write('rmsd reference first out ph%.2f_rmsd.dat mass\n'%(pp))
+				#f.write('atomicfluct out ph%.2f_rmsf.dat :6-260@N,CA,C byres\n'%(ph_i))
+				f.write('atomicfluct out ph%.2f_rmsf.dat byres\n'%(pp))
+				#f.write('radgyr ph%.2f-radgyr :2-260@N,CA,C out ph%.2f_radgyr.dat mass nomax\n'%(ph_i, ph_i))
+				f.write('radgyr ph%.2f-radgyr out ph%.2f_radgyr.dat mass nomax\n'%(pp, pp))
+				f.close()
 
 class Amber_run(Amber_par):
 	'''Shell script manager (creator of the simulation's executable)'''
-	autor = 'Braga, B. C.'
-	email = 'bruno.braga@ufms.br'
-	linebreak = '#'*60
-
+	autor       = 'Braga, B. C.'
+	email       = 'bruno.braga@ufms.br'
+	linebreak   = '#'*60
+	report_file = 'report_temp.py' 
+	
 	def leap_exec(self, mol2_check=False):
 		'''Run tleap to prepare the system for Amber simulations.
 
@@ -768,7 +831,7 @@ mol2_check: If False, load system pdb on leap; if True, it'll run antechamber to
 			return 0
 
 	def simulation(self,arq='gpu', min_files='Minimization', heating_files='Annealing', equil_files='Equilibration',
-	ph_range=[0.0,7.0]):
+	ph_range=[7.0,7.0]):
 		'''Creation of the shell script that runs the Amber (or Ambertools) simulation packages. 
 
 Returns -3 if there is any FATAL error in trying to build the topology.
@@ -849,7 +912,7 @@ equil_files: Equilibration files name (without .extension).'''
 		print('Preparation step completed.')
 		# creating input for minimization, annealing, equilibration and production
 		self.input_min(min_name=min_files)
-		self.input_heat(annealing_name=heating_files, mdsteps_factor=self.mode[self.simulation_mode][0])
+		self.input_heat(annealing_name=heating_files, mdsteps_factor=self.AnnealEqFactor*self.mode[self.simulation_mode][0])
 		self.input_equil(step=equil_files, mdsteps_factor=self.mode[self.simulation_mode][0], trescnt=int(res_cnt))
 		self.prod_cph(mdsteps_factor=self.mode[self.simulation_mode][1], ph=ph_range, trescnt=int(res_cnt))
 
@@ -858,15 +921,17 @@ equil_files: Equilibration files name (without .extension).'''
 		f = open('simulation.sh','w')
 		description = 'Script - Molecular dynamics in AMBER'
 		f.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
-		f.write('rm -r Minimization Annealing Analysis EquilMD\n')
-		f.write('mkdir Minimization Annealing Analysis EquilMD\nexport CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
-		f.write('mv %s.in Minimization\n'%min_files)
-		f.write('mv %s.in Annealing\n'%heating_files)
-		f.write('mv %s.in EquilMD\n'%equil_files)
+		f.write('rm -r %s %s Analysis %s\n'%(min_files,heating_files,equil_files))
+		f.write('mkdir %s %s Analysis %s\n'%(min_files,heating_files,equil_files))
 		if self.hmr:
 			self.hmr_run()
 			f.write('sh hmr-in.sh\n')
-		f.write('cp %s Analysis/ && cd Minimization\n'%self.prmtop)
+		f.write('cp %s Analysis/ \n'%self.prmtop)
+		# Report program will be created on our "home" directory
+		self.report_program(min_name=min_files, heat_name=heating_files, eq_name=equil_files, phs=ph_range)
+
+		f.write('sh simMin.sh\n')
+		f.write('cd Analysis\n')
 		f.close()
 		if arq.lower() == 'gpu':
 			arq='pmemd.cuda'
@@ -889,6 +954,123 @@ equil_files: Equilibration files name (without .extension).'''
 			print('Stopping simulation. You can continue anytime with:\n $ sh simulation.sh &')
 			return 0
 
+	def report_program(self, reportFile="Simulation_Report.README", min_name='min_files', heat_name='heating_files', eq_name='equil_files', phs='ph_range'):
+		f = open(self.report_file,'w')
+		f.write('from os import system as cmd\n')
+		f.write('from os import stat\n\n')
+		f.write('def report(file="Stage.mdout", reportFile=\"%s\", inputFile = "Stage.in", flag_file = "ContinueMD.in", rst_rename= True, mdStageStep = 5*10**5):\n'%reportFile)
+		f.write('\tf = open(file,"r")\n')
+		f.write('\ttemp = f.readlines()\n')
+		f.write('\tf.close()\n')
+		f.write('\tnstep    = -1\n')
+		f.write('\tresults  = False\n')
+		f.write('\tall_done = False\n')
+		f.write('\tnotes   = \'\'\n')
+		f.write('\tcontinue_sim = True\n\n')
+		## Error verification (reading mdout file)
+		f.write('\tfor i in range(len(temp)):\n')
+		f.write('\t\tif not results:\n')
+		# Did the stage began?
+		f.write('\t\t\tif "4" in temp[i] and "RESULT" in temp[i]:\n')
+		f.write('\t\t\t\tresults = True\n')
+		#else:#if results:
+		f.write('\t\telse:\n')
+		# Since the stage began, "read" the last saved snapshot step number
+		f.write('\t\t\tif "NSTEP" in temp[i]:\n')
+		f.write('\t\t\t\tnstep = i\n')
+		# If it was displayed the timings, it means the stage finished without problems
+		f.write('\t\t\tif "5" in temp[i] and "TIMING" in temp[i]:\n')
+		f.write('\t\t\t\tall_done = True\n')
+		f.write('\t\t\t\tbreak\n\n')
+		## Error report 
+		f.write('\tif not all_done:\n')
+		# If there was some kind of problem
+		f.write('\t\tif not results:\n')
+		# Fatal error -> stop the simulation 
+		f.write('\t\t\tnotes = \'%s stage didn\\\'t started due to unknown reasons, please recheck your system, the input and the mdout files!\\n\'%file[:-6]\n')
+		f.write('\t\t\tcontinue_sim = False\n')
+		f.write('\t\telse:\n')
+		# Non-fatal error -> create input for restart
+		f.write('\t\t\tline_step  = temp[nstep + 1].split()\n')
+		f.write('\t\t\tfinal_step = int(line_step[0])\n')
+		f.write('\t\t\tcalc = final_step/mdStageStep\n')
+		# Verification: if calc<0.4, restart the whole stage; else create a new input with less MD steps
+		f.write('\t\t\tif calc < 1 and calc > 0.4:\n')
+		f.write('\t\t\t\tnotes = \'%s stage stopped due to unknown reasons.\\n\'%file[:-6]\n')
+		# Creating input for restart file: inputFile[:-3]+"_rst.in"
+		f.write('\t\t\t\tif \'%s\' not in inputFile:\n'%min_name) #minimization is not that long so just redo the whole stage
+		f.write('\t\t\t\t\tnotes += \'Generating restart files!\\n\'\n')
+		# Reading old input
+		f.write('\t\t\t\t\tg = open(inputFile,"r")\n')
+		f.write('\t\t\t\t\tg_read = g.readlines()\n') 
+		f.write('\t\t\t\t\tg.close()\n')
+		# Creating restart input
+		f.write('\t\t\t\t\tg = open(inputFile[:-3]+"_rst.in","w")\n')
+		f.write('\t\t\t\t\tfor j in range(len(g_read)):\n')
+		# If MD step flag was found, modify it to the new number 
+		f.write('\t\t\t\t\t\tif "nstlim=" in g_read[j]:\n')
+		# Between bit1 and bit2 was the old number for MD steps
+		f.write('\t\t\t\t\t\t\tbit1 = g_read[j].find("nstlim=",0,len(g_read[j]))+7\n')
+		f.write('\t\t\t\t\t\t\tbit2 = g_read[j].find(",",bit1,len(g_read[j]))\n')
+		# Adjusting MD steps
+		f.write('\t\t\t\t\t\t\tj_temp = g_read[j][:bit1]+str(mdStageStep - final_step)+g_read[j][bit2:]\n')
+		f.write('\t\t\t\t\t\t\tg_read[j] = j_temp\n')
+		# Copy the current line from old input
+		f.write('\t\t\t\t\t\tg.write(g_read[j])\n')
+		f.write('\t\t\t\t\tg.close()\n')
+		# Renaming necessary files - It doesn't matter that this py program may not be on the same directory as the files
+		f.write('\t\t\t\t\tif rst_rename:\n')
+		f.write('\t\t\t\t\t\tcmd("mv %s %s"%(file, file[:-6]+"_rst.mdout"))\n')
+		f.write('\t\t\t\t\t\tcmd("mv %s %s"%(file[:-6]+".rst7", file[:-6]+"_rst.rst7"))\n')
+		f.write('\t\t\t\t\t\tif \'%s\' not in inputFile:\n'%min_name)
+		f.write('\t\t\t\t\t\t\tcmd("mv %s %s"%(file[:-6]+".nc", file[:-6]+"_rst.nc"))\n')
+		f.write('\t\t\t\t\t\t\tcmd("mv %s %s"%(file[:-6]+".cpout", file[:-6]+"_rst.cpout"))\n')
+		# No error -> reporting that everything went well		
+		f.write('\telse:\n')
+		f.write('\t\tnotes = \'%s stage finished without problems!\\n\'%file[:-6]\n')
+		# For the report file we must know if the file alredy exists (from a previous stage)
+		f.write('\ttry:\n')
+		f.write('\t\tinfo_sh = stat(reportFile)\n')
+		f.write('\t\tf = open(reportFile,"r+")\n')
+		# If the file exists, seek the last bit to make sure we are not losing information!
+		f.write('\t\tf.seek(info_sh.st_size)\n')
+		f.write('\texcept FileNotFoundError:\n')
+		f.write('\t\tf = open(reportFile,"w")\n')
+		f.write('\tf.write(notes)\n')
+		f.write('\tf.close()\n')
+		# Creating a flag file to know if it's ok to continue to the next MD stage
+		f.write('\tf = open(flag_file,"w")\n')
+		f.write('\tif continue_sim:\n')
+		f.write('\t\tif not all_done:\n')
+		f.write('\t\t\tf.write("restart")\n')
+		f.write('\t\telse:\n')
+		f.write('\t\t\tf.write("yes")\n')
+		f.write('\telse:\n')
+		f.write('\t\tf.write("no")\n')
+		f.write('\tf.close()\n')
+		## Main
+		f.write('if __name__ == "__main__":\n')
+		f.write('\timport sys\n')
+		f.write('\targ = sys.argv\n')
+		# 'bit' looks for the path of this report code 
+		f.write('\tbit = arg[0].find("%s")\n'%self.report_file)
+		f.write('\treport_name = arg[0][:bit]+\'%s\'\n'%reportFile)
+		f.write('\tflag_name   = "ContinueMD.in"\n')
+		f.write('\trname_flag  = True\n') 
+		f.write('\tif len(arg) == 4:\n\t\tflag_name = arg[3]\n\t\trname_flag = False\n')
+		##                  arg[0]                arg[1]     arg[2]
+		## Use: $ python3 ASMhome/report_temp.py Stage.mdout ASMhome/Stage.in
+		'''mdStageStep => Min: fixed maxcyc=10000# Anneal-Equil-Prod:mdsteps_factor*self.steps;
+		self.input_heat  -> mdsteps_factor=self.AnnealEqFactor*self.mode[self.simulation_mode][0];
+		self.input_equil -> mdsteps_factor=self.mode[self.simulation_mode][0];
+		self.prod_cph    -> mdsteps_factor=self.mode[self.simulation_mode][1].'''
+		f.write('\tif \'%s\' in  arg[1]:\n\t\tmdstep = 10**4\n'%min_name)
+		f.write('\telif \'%s\' in  arg[1]:\n\t\tmdstep = %d\n'%(heat_name, self.AnnealEqFactor*self.mode[self.simulation_mode][0]*self.steps))
+		f.write('\telif \'%s\' in  arg[1]:\n\t\tmdstep = %d\n'%(eq_name, self.mode[self.simulation_mode][0]*self.steps))
+		f.write('\telif \'Production\' in  arg[1] or \'CpHMD_prod\' in  arg[1]:\n\t\tmdstep = %d\n'%(self.mode[self.simulation_mode][1]*self.steps))	
+		f.write('\treport(file=arg[1], reportFile=report_name, inputFile = arg[2], rst_rename=rname_flag, mdStageStep = mdstep, flag_file= flag_name)\n')
+		f.close()
+		
 	def analysis(self, inp = 'rmsdf.cpptraj', mini_name='minimization', heat_name='annealing',
 	eq_name='equilibration', phs=[0.0,7.0]):
 		'''Trajectory analysis.
@@ -909,29 +1091,33 @@ phs: Ph range used to titrate.'''
 		info_sh = stat('simulation.sh')
 		f = open('simulation.sh','r+')
 		f.seek(info_sh.st_size)
+		ph_i = phs[0]
+		pH   = []
+		while ph_i <= phs[1]:
+			pH.append(ph_i)
+			ph_i += self.pH_step
 
 		if not self.cph:
-			self.cpptraj_in(input_name=inp, rms_file=self.rms, rmsf_file=self.rmsf, min_name=mini_name, annealing_name=heat_name, equil_name=eq_name, phr=phs)
-			# we need to look for the rmsd input file in the father directory because 'f' is writting in the simulation.sh file which will run later
-			f.write('cpptraj -i ../%s &> cpptraj.log\n'%inp)
-			f.write('process_mdout.perl %s.mdout %s.mdout Production.mdout\n'%(heat_name, eq_name))
+			for pp in pH:
+				self.cpptraj_in(input_name=inp, rms_file=self.rms, rmsf_file=self.rmsf, min_name=mini_name, annealing_name=heat_name, equil_name=eq_name, phr=phs)
+				# we need to look for the rmsd input file in the father directory because 'f' is writting in the simulation.sh file which will run later
+				f.write('cpptraj -i ../MD_%.2f_%s &> cpptraj.log\n'%(pp,inp))
+				f.write('process_mdout.perl %s.mdout %s.mdout Production.mdout\n'%(heat_name, eq_name))
 		else:
-			ph_i = phs[0]
 			f.write('echo \"Offset: is the difference between the predicted pka and the system pH\" > ph_calcpka_populations.info\n')
 			f.write('echo \"Pred: is the predicted pka\" >> ph_calcpka_populations.info\n')
 			f.write('echo \"Frac Prot: is the fraction of time the residue spends protonated\" >> ph_calcpka_populations.info\n')
 			f.write('echo \"Transitions:gives the number of accpeted protonations state transitions\" >> ph_calcpka_populations.info\n')
 			f.write('echo \"Average total molecular protonation: is the sum of the fractional protonations\\n\" >> ph_calcpka_populations.info\n')
 			f.write('echo \"populations.dat: prints the fraction of snapshots that the system spent in each state for each residue, where 1.0 means 100% of the time.\\n  OBS:The parentheses (*), indicates the number protons present in that state.\" >> ph_calcpka_populations.info\n')
-			while ph_i <= phs[1]:
+			for pp in pH:
 				if not self.exp_solv:
 					# There is a problem in AMBERtools19 with the following command, but it works just fine on AMBERtools18
-					f.write('cphstats -i ../system_%s.cpin CpHMD_prod_%.2f.cpout -o pH%.2f_calcpka.dat --population pH%.2f_populations.dat\n'%(eq_name, ph_i, ph_i, ph_i)) # Look in https://github.com/Amber-MD/cpptraj/pull/816/files
+					f.write('cphstats -i ../system_%s.cpin CpHMD_prod_%.2f.cpout -o pH%.2f_calcpka.dat --population pH%.2f_populations.dat\n'%(eq_name, pp, pp, pp)) # Look in https://github.com/Amber-MD/cpptraj/pull/816/files
 				else:
-					f.write('cphstats -i ../system.cpin CpHMD_prod_%.2f.cpout -o pH%.2f_calcpka.dat --population pH%.2f_populations.dat\n'%(ph_i, ph_i, ph_i))
-				self.cpptraj_in(input_name='rmsdf_CpHMD_%.2f.cpptraj'%ph_i, rms_file=self.rms, rmsf_file=self.rmsf, min_name=mini_name, annealing_name=heat_name, equil_name=eq_name, phr=phs)
-				f.write('cpptraj -i ../rmsdf_CpHMD_%.2f.cpptraj &> cpptraj_%.2f.log\n'%(ph_i,ph_i))
-				ph_i += self.pH_step
+					f.write('cphstats -i ../system.cpin CpHMD_prod_%.2f.cpout -o pH%.2f_calcpka.dat --population pH%.2f_populations.dat\n'%(pp, pp, pp))
+				self.cpptraj_in(input_name='rmsdf_CpHMD_%.2f.cpptraj'%pp, rms_file=self.rms, rmsf_file=self.rmsf, min_name=mini_name, annealing_name=heat_name, equil_name=eq_name, phr=phs)
+				f.write('cpptraj -i ../rmsdf_CpHMD_%.2f.cpptraj &> cpptraj_%.2f.log\n'%(pp,pp))
 		f.close()
 
 	def hmr_run(self, inp1='parmedhmr.in', prmtop_new='systemHMR.prmtop'):
@@ -956,7 +1142,7 @@ prmtop_new: Name chosen for the new topoly file.'''
 		f.close()
 
 	def minimization_to_analysis(self, arq_type='pmemd', min_name='minimization', heat_name='annealing',
-	eq_name='equilibration', phs=[0.0,7.0]):
+	eq_name='equilibration', phs=[7.0,7.0]):
 		'''Amber run without GPU.
 
 Parameters
@@ -978,64 +1164,223 @@ phs: Initial and final ph-value for CpHMD, with self.pH_step pH-unit intervals.'
 		else:
 			process = arq_type.lower()
 
-		info_sh = stat('simulation.sh')
-		f = open('simulation.sh','r+')
-		f.seek(info_sh.st_size)
-		# Stage 0
-		if self.cph:
-			f.write('echo \'Running %s...\\n\'\n'%min_name)
-			f.write('%s -O -i %s.in -o %s.mdout -p ../%s -c ../systemLeap.rst7 -r %s.rst7 -ref ../systemLeap.rst7 -cpin ../system.cpin\n'%(process, min_name, min_name, self.prmtop, min_name))
-		else:
-			f.write('echo \'Running %s...\\n\'\n'%min_name)
-			f.write('%s -O -i %s.in -o %s.mdout -p ../%s -c ../systemLeap.rst7 -r %s.rst7\n'%(process, min_name, min_name, self.prmtop, min_name))
-		f.write('cp %s.rst7 ../Annealing && cp %s.rst7 ../Analysis\n'%(min_name,min_name))
-		# Stage 1
-		f.write('cd ../Annealing\n')
-		if self.cph:
-			f.write('echo \'Running %s...\\n\'\n'%heat_name)
-			f.write('%s -O -i %s.in -o %s.mdout -p ../%s -c %s.rst7 -r %s.rst7 -x %s.nc -ref %s.rst7 -cpin ../system.cpin\n'%(process, heat_name, heat_name, self.prmtop, min_name, heat_name, heat_name, min_name))
-		else:
-			f.write('echo \'Running %s...\\n\'\n'%heat_name)
-			f.write('%s -O -i %s.in -o %s.mdout -p ../%s -c %s.rst7 -r %s.rst7 -x %s.nc\n'%(process, heat_name,heat_name,self.prmtop,min_name,heat_name,heat_name))
-		f.write('cp %s.nc ../Analysis && cp %s.mdout ../Analysis\n'%(heat_name,heat_name))
-		f.write('cp %s.rst7 ../EquilMD\n'%heat_name)
-		# Stage 2
-		f.write('cd ../EquilMD\n')
-		if self.cph:
-			f.write('echo \'Running %s...\\n\'\n'%eq_name)
-			f.write('%s -O -i %s.in -o %s.mdout -p ../%s -c %s.rst7 -r %s.rst7 -x %s.nc -cpin ../system.cpin -cpout system_%s.cpout -cprestrt system_%s.cpin\n'%(process, eq_name, eq_name, self.prmtop, heat_name, eq_name, eq_name, eq_name, eq_name))
-			f.write('cp system_%s.cpin ../\n'%eq_name)
-			f.write('cp %s.nc ../Analysis && cp %s.mdout ../Analysis\n'%(eq_name, eq_name))
-			f.write('cp %s.rst7 ../Cph\n'%(eq_name))
-			f.write('cp %s.rst7 ../Analysis\n'%(eq_name))
-			f.write('cd ../Cph\n')
-			# Stage 3
-			ph_i = phs[0]
-			while ph_i <= phs[1]:
-				f.write('rm -r CpHMD_prod_%.2f\nmkdir CpHMD_prod_%.2f\ncd CpHMD_prod_%.2f\n'%(ph_i, ph_i, ph_i))
-				f.write('echo \'Running CpHMD_%.2f...\\n\'\n'%ph_i)
-				if not self.exp_solv:
-					f.write('%s -O -i ../../CpHMD_prod_%.2f.in -o CpHMD_prod_%.2f.mdout -p ../../%s -c ../%s.rst7 -r CpHMD_prod_%.2f.rst7 -x CpHMD_prod_%.2f.nc -cpin ../../system_%s.cpin -cpout CpHMD_prod_%.2f.cpout -cprestrt CpHMD_prod_%.2f.cpin\n'%(process, ph_i, ph_i, self.prmtop, eq_name, ph_i, ph_i, eq_name, ph_i, ph_i))
-				else:
-					f.write('%s -O -i ../../CpHMD_prod_%.2f.in -o CpHMD_prod_%.2f.mdout -p ../../%s -c ../%s.rst7 -r CpHMD_prod_%.2f.rst7 -x CpHMD_prod_%.2f.nc -cpin ../../system.cpin -cpout CpHMD_prod_%.2f.cpout -cprestrt CpHMD_prod_%.2f.cpin\n'%(process, ph_i, ph_i, self.prmtop, eq_name, ph_i, ph_i, ph_i, ph_i))
-				f.write('cp CpHMD_prod_%.2f.cpout ../../Analysis\n'%ph_i)
-				f.write('cp CpHMD_prod_%.2f.nc ../../Analysis\ncp CpHMD_prod_%.2f.mdout ../../Analysis\n'%(ph_i, ph_i))
-				f.write('cd ..\n')
-				ph_i += self.pH_step
+		# Verification file template
+		sh_verif = '''#!/bin/bash
+read simflag
+if test $simflag = "yes"
+then
+	%s
+	cd ..
+	%s
+elif test $simflag = "restart"
+then
+	%s
+	python3 ../%s %s_rst.mdout %s_rst.in Continue_rst2.in
+	while read RLINE
+	do
+		flag=$RLINE
+	done < Continue_rst2.in
+	if test $flag = "yes"
+	then
+		%s
+		cd ..
+		%s
+	else
+		echo "Stopping run..."
+	fi
+else
+	echo "Stopping run..."
+fi'''
+		keys = []
+		ph_i = phs[0]
+		pH   = []
+		while ph_i <= phs[1]:
+			pH.append(ph_i)
+			ph_i += self.pH_step
+		cphmd_names          = ['CpHMD_prod_%.2f'%p for p in pH]
+		productionMD_names   = ['Production_%.2f'%p for p in pH]
+		cphmd_SHnames        = []
+		productionMD_SHnames = []
+		for pp in range(len(cphmd_names)):
+			if pp == 0:
+				cphmd_SHnames.append( 'sh sim%s.sh'%cphmd_names[pp] )
+			else:
+				cphmd_SHnames.append( 'cd .. && sh sim%s.sh'%cphmd_names[pp] )
+		for pp in range(len(productionMD_names)):
+			if pp == 0:
+				productionMD_SHnames.append( 'sh sim%s.sh'%productionMD_names[pp] )
+			else:
+				productionMD_SHnames.append( 'cd .. && sh sim%s.sh'%productionMD_names[pp] )
 
-			f.write('cd ../Analysis\n')
+		if self.cph:
+			stages    = [min_name, heat_name, eq_name]
+			stages.extend( cphmd_names )
+			stages.append('')
+			stages_sh = ['sh simMin.sh', 'sh simAnneal.sh', 'sh simEquil.sh']
+			stages_sh.extend( cphmd_SHnames )
+			stages_sh.append('') # '' := After production do nothing
 		else:
-			f.write('echo \'Running %s...\\n\'\n'%eq_name)
-			f.write('%s -O -i %s.in -o %s.mdout -p ../%s -c %s.rst7 -r %s.rst7 -x %s.nc\n'%(process, eq_name, eq_name, self.prmtop, heat_name, eq_name, eq_name))
-			f.write('cp %s.nc ../Analysis && cp %s.mdout ../Analysis\n'%(eq_name, eq_name))
-			f.write('cp %s.rst7 ../Analysis\n'%(eq_name))
-			# Stage 3
-			f.write('echo \'Running Production...\\n\'\n')
-			f.write('%s -O -i ../Production.in -o Production.mdout -p ../%s -c %s.rst7 -r Production.rst7 -x Production.nc\n'%(process, self.prmtop, eq_name))
-			f.write('ambpdb -p ../%s -c Production.nc > Production.pdb\n'%self.prmtop)
-			f.write('cp Production.nc ../Analysis && cp Production.mdout ../Analysis\n')
-			f.write('cd ../Analysis\n')
-		f.close()
+			stages    = [min_name, heat_name, eq_name]
+			stages.extend( productionMD_names )
+			stages.append('')
+			stages_sh = ['sh simMin.sh', 'sh simAnneal.sh', 'sh simEquil.sh']
+			stages_sh.extend( productionMD_SHnames )
+			stages_sh.append('') # '' := After production do nothing
+
+		for txt_temp in range(1,len(stages)):
+			txt        = stages[txt_temp-1]
+			next_stage = stages[txt_temp]
+			next_sh    = stages_sh[txt_temp]
+			if self.cph:
+				if txt == min_name:
+					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -ref ../systemLeap.rst7 -cpin ../system.cpin'%(process, txt, txt, self.prmtop, txt, txt)
+					copyingTo     = 'cp %s.rst7 ../%s && cp %s.rst7 ../Analysis'%(txt, next_stage, txt)
+					copyingRstTo  = copyingTo
+				elif txt == heat_name:
+					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -ref %s_rst.rst7 -cpin ../system.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt)
+					copyingTo     = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis  && cp %s.mdout ../Analysis'%(txt, next_stage, txt, txt)
+					copyingRstTo  = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis  && cp %s.mdout ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, next_stage, txt, txt, txt, txt)
+				elif txt == eq_name:
+					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -cpin system_%s.cpin -cpout system_%s.cpout -cprestrt system_%s_rstP2.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt, txt, txt)
+					copyingTo     = 'cp %s.rst7 ../Cph && cp system_%s.cpin ../ && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis'%(txt, txt, txt, txt, txt)
+					copyingRstTo  = 'cp %s.rst7 ../Cph && cp system_%s.cpin ../ && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, txt, txt, txt, txt, txt, txt)
+				elif 'CpHMD' in txt:
+					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -cpin %s.cpin -cpout %s.cpout -cprestrt %s_rstP2.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt, txt, txt)
+					copyingTo     = 'cp %s.cpout ../../Analysis && cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis'%(txt,txt,txt)
+					copyingRstTo  = 'cp %s.cpout ../../Analysis && cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis && cp %s_rst.mdout ../../Analysis && cp %s_rst.nc ../../Analysis'%(txt,txt,txt,txt,txt)
+			else:
+				if txt == min_name:
+					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7'%(process, txt, txt, self.prmtop, txt, txt)
+					copyingTo     = 'cp %s.rst7 ../%s && cp %s.rst7 ../Analysis'%(txt, next_stage, txt)
+					copyingRstTo  = copyingTo
+				elif txt == heat_name:
+					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
+					copyingTo     = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis && cp %s.mdout ../Analysis'%(txt, next_stage, txt, txt)
+					copyingRstTo  = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, next_stage, txt, txt, txt, txt)
+				elif txt == eq_name:
+					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
+					copyingTo     = 'cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis'%(txt, txt, txt)
+					copyingRstTo  = 'cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, txt, txt, txt, txt)
+				elif 'Production' in txt:
+					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
+					copyingTo     = 'cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis'%(txt, txt)
+					copyingRstTo  = 'cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis && cp %s_rst.mdout ../../Analysis && cp %s_rst.nc ../../Analysis'%(txt, txt, txt, txt)
+			
+			keys.append( ( copyingTo, next_sh, redoing_stage, self.report_file, txt, txt, copyingRstTo, next_sh) )
+
+		# Stage Minimization
+		m = open('simMin.sh','w')
+		description = 'Script - Minimization stage'
+		m.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
+		m.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
+		m.write('cd Minimization\n')
+		if self.cph:
+			m.write('echo \'Running %s...\\n\'\n'%min_name)
+			m.write('%s -O -i ../%s.in -o %s.mdout -p ../%s -c ../systemLeap.rst7 -r %s.rst7 -ref ../systemLeap.rst7 -cpin ../system.cpin\n'%(process, min_name, min_name, self.prmtop, min_name))
+		else:
+			m.write('echo \'Running %s...\\n\'\n'%min_name)
+			m.write('%s -O -i ../%s.in -o %s.mdout -p ../%s -c ../systemLeap.rst7 -r %s.rst7\n'%(process, min_name, min_name, self.prmtop, min_name))
+		m.write('python3 ../%s %s.mdout ../%s.in\n'%(self.report_file, min_name, min_name))
+		# ContinueMD.in := "restart"; "yes"; "no".
+		# Verification_sh files are on the same directory of simStage_sh, 
+		# but the verification_sh are being executed inside each stage's directory.
+		m.write('sh ../verify_min.sh < ContinueMD.in\n')
+		m.close()
+		m = open('verify_min.sh','w')
+		m.write(sh_verif%keys[0])
+		m.close()
+		
+		# Stage Annealing
+		a = open('simAnneal.sh','w')
+		description = 'Script - Annealing stage'
+		a.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
+		a.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
+		a.write('cd Annealing\n')
+		if self.cph:
+			a.write('echo \'Running %s...\\n\'\n'%heat_name)
+			a.write('%s -O -i ../%s.in -o %s.mdout -p ../%s -c %s.rst7 -r %s.rst7 -x %s.nc -ref %s.rst7 -cpin ../system.cpin\n'%(process, heat_name, heat_name, self.prmtop, min_name, heat_name, heat_name, min_name))
+		else:
+			a.write('echo \'Running %s...\\n\'\n'%heat_name)
+			a.write('%s -O -i ../%s.in -o %s.mdout -p ../%s -c %s.rst7 -r %s.rst7 -x %s.nc\n'%(process, heat_name,heat_name,self.prmtop,min_name,heat_name,heat_name))
+		a.write('python3 ../%s %s.mdout ../%s.in\n'%(self.report_file, heat_name, heat_name))
+		a.write('sh ../verify_anneal.sh < ContinueMD.in\n')
+		a.close()
+		a = open('verify_anneal.sh','w')
+		a.write(sh_verif%keys[1])
+		a.close()
+
+		# Stage Equilibration
+		e = open('simEquil.sh','w')
+		description = 'Script - Equilibration stage'
+		e.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
+		e.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
+		e.write('cd %s\n'%eq_name)
+		if self.cph:
+			e.write('echo \'Running %s...\\n\'\n'%eq_name)
+			e.write('%s -O -i ../%s.in -o %s.mdout -p ../%s -c %s.rst7 -r %s.rst7 -x %s.nc -cpin ../system.cpin -cpout system_%s.cpout -cprestrt system_%s.cpin\n'%(process, eq_name, eq_name, self.prmtop, heat_name, eq_name, eq_name, eq_name, eq_name))
+			e.write('python3 ../%s %s.mdout ../%s.in\n'%(self.report_file, eq_name, eq_name))
+			e.write('sh ../verify_equil.sh < ContinueMD.in\n')
+			e.close()
+			e = open('verify_equil.sh','w')
+			e.write(sh_verif%keys[2])
+			e.close()
+
+			# Stage Production for constant pH
+
+			cphmd_name_counter = 0
+			for Name in cphmd_names:
+				cph = open('sim%s.sh'%Name,'w')			
+				description = 'Script - Production stage for CpHMD'
+				cph.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
+				cph.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
+				cph.write('cd Cph\n')
+				cph.write('rm -r %s\nmkdir %s\ncd %s\n'%(Name, Name, Name))
+				cph.write('echo \'Running %s...\\n\'\n'%Name)
+				if not self.exp_solv:
+					cph.write('%s -O -i ../../%s.in -o %s.mdout -p ../../%s -c ../%s.rst7 -r %s.rst7 -x %s.nc -cpin ../../system_%s.cpin -cpout %s.cpout -cprestrt %s.cpin\n'%(process, Name, Name, self.prmtop, eq_name, Name, Name, eq_name, Name, Name))
+				else:
+					cph.write('%s -O -i ../../%s.in -o %s.mdout -p ../../%s -c ../%s.rst7 -r %s.rst7 -x %s.nc -cpin ../../system.cpin -cpout %s.cpout -cprestrt %s.cpin\n'%(process, Name, Name, self.prmtop, eq_name, Name, Name, Name, Name))
+				cph.write('python3 ../../%s %s.mdout ../../%s.in\n'%(self.report_file, Name, Name))
+				cph.write('sh ../../verify_%s.sh < ContinueMD.in\n'%Name)
+				cphVerif = open('verify_%s.sh'%Name,'w')
+				cphVerif.write(sh_verif%(keys[3+cphmd_name_counter]))
+				cphmd_name_counter += 1
+				cphVerif.close()
+				if cphmd_name_counter == len(cphmd_names)+1:
+					cph.write('cd ..\n')
+				cph.close()
+		else:
+			e.write('echo \'Running %s...\\n\'\n'%eq_name)
+			e.write('%s -O -i ../%s.in -o %s.mdout -p ../%s -c %s.rst7 -r %s.rst7 -x %s.nc\n'%(process, eq_name, eq_name, self.prmtop, heat_name, eq_name, eq_name))
+			e.write('python3 ../%s %s.mdout ../%s.in\n'%(self.report_file, eq_name, eq_name))
+			e.write('sh ../verify_equil.sh < ContinueMD.in\n')
+			e.close()
+			e = open('verify_equil.sh','w')
+			e.write(sh_verif%keys[2])
+			e.close()
+
+			# Stage Production - we are being redundant here for an easier management of the dynamics stages and the error report.
+
+			name_counter = 0
+			for Name in productionMD_names:
+				prod = open('sim%s.sh'%Name,'w')
+				description = 'Script - Production stage'
+				prod.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
+				prod.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
+				prod.write('cd %s\n'%eq_name)
+				prod.write('rm -r %s\nmkdir %s\ncd %s\n'%(Name, Name, Name))
+				prod.write('echo \'Running %s...\\n\'\n'%Name)
+				prod.write('%s -O -i ../../%s.in -o %s.mdout -p ../../%s -c ../%s.rst7 -r %s.rst7 -x %s.nc\n'%(process,Name,Name, self.prmtop, eq_name,Name,Name))
+				prod.write('ambpdb -p ../../%s -c %s.nc > %s.pdb\n'%(self.prmtop,Name,Name))
+				prod.write('python3 ../../%s %s.mdout ../../%s.in\n'%(self.report_file,Name,Name))
+				prod.write('sh ../../verify_%s.sh < ContinueMD.in\n'%Name)
+				prodVerif = open('verify_%s.sh'%Name,'w')
+				prodVerif.write(sh_verif%keys[3+name_counter])
+				name_counter += 1
+				prodVerif.close()
+				if name_counter == len(productionMD_names)+1:
+					prod.write('cd ..\n')
+				prod.close()
 
 class Amber_mutation(Amber_run):
 	'''Shell script's manager extension for residues mutations'''
@@ -1653,9 +1998,20 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 			self.pdb_str_2Mut = temp
 			return 1
 	
-		# self.pdb_string which was originally the unmodified pdb file needs to be updated to the modified version (after first step of mutation, just before Leap)
-		self.pdb_string = cp(self.pdb_str_not2Mut)
-		self.pdb_string.extend(temp)
+		# self.pdb_str_not2Mut is every line from self.pdb_string wich is not related to mutation possibilities 
+		count_mut = 0
+		# this is done to maintain the residue order
+		for i in range(len(self.pdb_string)):
+			if  self.pdb_string[i] != self.pdb_str_not2Mut[i]:
+				#  self.pdb_string[i] is looking at the old non-mutated residuo
+				count_mut = i
+				break
+		
+		new_pdb_string = self.pdb_str_not2Mut[:count_mut] #self.pdb_string[:count_mut]
+		new_pdb_string.extend(temp)
+		new_pdb_string.extend(self.pdb_str_not2Mut[count_mut:])
+
+		self.pdb_string = new_pdb_string 
 
 		# generating new pdb
 		if not self.not_rand_mut:
@@ -1677,17 +2033,8 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 			f.write(i)
 		f.close()
 
-		'''# Salving the correct naming and ids
-		name_dict = {}
-		for nam in self.chosen_mutation:
-			if self.chosen_mutation[nam] not in name_dict:
-				name_dict[ self.chosen_mutation[nam] ] = [ nam[1] ]
-			else:
-				name_dict[ self.chosen_mutation[nam] ].append( nam[1] )
-	
-		mutaBL_id = self.adjusting_firstep(chosen_res=name_dict)'''
-
 		# renumbering the atoms and preparing for constant pH MD #--reduce
+		# even though it looks unnecessary because we are not modifying the residue order, this prevents a huge error!
 		cmd('pdb4amber -i %s -o %s_renum.pdb --constantph'%(new_filename,new_filename[:-4]))
 		temporary_files.append( self.pdb )
 		self.pdb = '%s_renum.pdb'%new_filename[:-4]
@@ -1748,11 +2095,6 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 		cmd('tleap -f tleap.in')
 		temporary_files.append( 'tleap.in' )
 		self.pdb = 'systemLeap.pdb'
-
-		'''newid_naming = self.adjusting_finalstep(coords=mutaBL_id, id_only=True)
-		# newid_naming := {'SER':[newid, ...], ...}
-		# self.oldid_mut: = self.chosen_mutation := {('SER', '160'): 'MET', ('SER', '125'): 'MET'}
-		# self.newid_info := []'''
 
 		#ok now we can delete all transitory files
 		cmd('ls > temporary_stage_ls.out')
@@ -1857,6 +2199,14 @@ Manager Version 1.0:
 		**'input_equil';
 		**'cpptraj_in' - RMSD, RMSF and RADGYR are correctly done now for CpHMD.
 
+Manager Version 1.1:
+	*Separation of the simulation.sh in stages to minimize errors from external sources. 
+	*Annealing duration shortened because it was unnecessarily long.
+	*Mutation method fixed.
+	*Error report file created.
+	*An easy restart .sh of current simulation stage created.
+
+
 Copyright (C) 2021  Braga, B. C. 
 e-mail: bruno.braga@ufms.br 
 
@@ -1875,7 +2225,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 	# default keys
-	version_n     = '1.0'
+	version_n     = '1.1'
 	inst_only     = False
 	version_only  = False
 	arqui         = 'gpu'
@@ -1906,14 +2256,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 	# if for some reason you don't want to use the HMR method, set the attribute "self.hmr" to False
 
-	flags = ["&","-v","--version","-h","--help",'-arq','gpu','-mode','-res','-mut','-rdmut','-atsite','-rdydone','-icyc','-solv','-g','-i','-mpi','-explicit','-prepstp','-cut','-phdset']
+	flags = ["&","-v","--version","-h","--help",'-arq','gpu','-mode','-res','-mut','-rdmut','-atsite','-rdydone','-icyc','-solv','-g','ph','-i','-mpi','-explicit','-prepstp','-cut','-phdset']
 	
-	# Ignore this
-	'''#for i in arg:
-	# pense em como checar se as flags estao escritas corretamente!!'''
+	# Flag verification
+	for i in arg:
+		if i[0] == '-' and i.lower() not in flags:
+			print("Unkown Flag used: ", i)
+			inst_only = True
 
 	cut   = 0 # counter for input flags
 	for i in range(len(arg)):
+		if inst_only:
+			break
 		if cut == i:
 			if arg[i].lower() == "&":
 				break
@@ -1929,22 +2283,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\nUsage:\n\t-v or --version\t\tPrints current version and its corrections relating previous versions.\n")
 				print("\t-h or --help\t\tPrints this message.\n")
 				print("\t-i\t\tInput PDB file.\n")
-				print("\t-g\t\tGoal as MD or CpHMD. If CpHMD was chosen, one pH must be given right after this flag. Default: MD.\n\t\t\tOBS: If you choose CpHMD and don't use flag 'res' the code will choose by default to tritate %s.\n"%prt_res)
-				print("\t-phdset\t\t(This option has priority over the pH of option -g) Defines the pH list (only if you'll do multiple pH CpHMD production). After this flag an initial pH, a final pH and an interval unit must be given in this order (Ex: -phdset 4.0 7.0 0.5). Which represents pH:[4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0].\n")
+				print("\t-g\t\tGoal as MD or CpHMD. Default: MD.\n\t\t\tOBS: If you choose CpHMD and don't use flag 'res' the code will choose by default to tritate %s.\n"%prt_res)
+				print("\t-ph\t\tEquilibration and Production pH. Default: 7.0.\n")
+				print("\t-phdset\t\t(This option has priority over the -ph option) Defines the pH list (only if you'll do multiple pH CpHMD production). After this flag an initial pH, a final pH and an interval unit must be given in this order (Ex: -phdset 4.0 7.0 0.5). Which represents pH:[4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0].\n")
 				print("\t-res\t\tResidues to tritate, for CpHMD (which must be informed right after this flag).\n")
 				print("\t-rdmut\t\tRandom active site mutation.\n\t\t\t1:random aminoacid mutates to a similar one (eg. SER_160-THR). \n\t\t\t2:random aminoacid mutates to one not so similar (eg. SER_160-MET).\n")
 				print("\t-atsite\t\t(Auxiliary option for -rdmut) Active site - for enzymes only. Must be informed right after this flag as eg: -atsite SER_160 HIS_237 ASP_206. Necessary only if a mutation will be done. Defaut: set as petase's active site.\n")
 				print("\t-rdydone\t(Auxiliary option for -rdmut) Informs which mutation you're restricting from the \"random\" choice. Eg. -rdydone SER_160-MET ASP_206-GLY ASP_206-ILE.\n")
 				print("\t-mut\t\tMutation of choice. Eg: -mut SER_160-MET.\n\t\t\t\tObs: For the mutation options (-mut and -rdmut) a solvent must be used. If none given, water will be used by default.\n")
-				print("\t-mode\t\tDuration of the simulation's stages (in time steps).\n\t\t\tlow: Annealing/Equilibration: 10**4 |  Production: 10**5\n\t\t\tmed: Annealing/Equilibration: 10**5 |  Production: 10**6\n\t\t\tgpu-med: Annealing/Equilibration: 10**6 |  Production: 5*10**6\n\t\t\tgpu-high: Annealing/Equilibration: 5*10**6 |  Production: 10**7\n\t\t\tgpu-ultra: Annealing/Equilibration: 10**7 |  Production: 5*10**7\n")
+				print("\t-mode\t\tDuration of the simulation's stages (in time steps).\n\t\t\tlow: Annealing: 10**4 | Equilibration: 10**4 |  Production: 10**5\n\t\t\tmed: Annealing: 10**4 | Equilibration: 10**5 |  Production: 10**6\n\t\t\tgpu-med: Annealing: 10**5 | Equilibration: 10**6 |  Production: 5*10**6\n\t\t\tgpu-high: Annealing: 5*10**5 | Equilibration: 5*10**6 |  Production: 10**7\n\t\t\tgpu-ultra: Annealing: 10**6 | Equilibration: 10**7 |  Production: 5*10**7\n")
 				print("\t-explicit\tExplicit solvent will be used. One of the following options must be given after this flag:\n\t\t\twater\n\t\t\tmethanol\n\t\t\tchloroform\n\t\t\tN-methyacetamide\n\t\t\turea\n")
 				print("\t-icyc\t\t(Integer between 50 and 1000) Number of times information regarding energy, rmsd, rmsf, coordinates, etc, are saved for each simulation stage (Default: 200).\n\t\t\t\tObs: For -mode gpu-ultra, this is set between 800 and 1000.\n")
 				print("\t-arq\t\tChoice in architecture\n\t\t\tgpu (if chosen, the GPU id must be informed right after this flag)\n\t\t\tsander\n\t\t\tpmemd\n")
 				print("\t-mpi\t\tMulticore run (the number of cores must be informed right after this flag). Default compiler: mpiexec.\n\t\t\t\tObs: Not implemented for -arq gpu.\n")
 				print("\t-cut\t\tNonbonded cutoff in angstrom (Default: 12).\n")
-				print("\t-prepstp\tStops the run after all preparations are complete (right before minimization).\n\t\t\t\tObs: The shell script, to run the simulation, will still be created for you.\n")
-				print("\nExamples:\n\t$ python3 ASM.py -i 1UBQ.pdb -arq sander -mpi 4 -mode low -g CpHMD 6 -phdset 6.0 7.0 0.5\n")
-				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq pmemd -mpi 4 -mode low -g CpHMD 6.5 -explicit water\n")
+				print("\t-prepstp\t(Option for Devs.) Stops the run after all preparations are complete (right before minimization).\n\t\t\t\tObs: The shell script, to run the simulation, will still be created for you.\n")
+				print("\nExamples:\n\t$ python3 ASM.py -i 1UBQ.pdb -arq sander -mpi 4 -mode low -g CpHMD -phdset 6.0 7.0 0.5\n")
+				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq pmemd -mpi 4 -mode low -g CpHMD -ph 6.5 -explicit water\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -rdmut 1\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET HIS_237-ALA\n")
@@ -2044,8 +2399,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				continue
 			elif arg[i].lower() == '-g':
 				sim_goal = arg[i+1]
-				if sim_goal.lower() == 'cphmd':
-					initial_ph = float(arg[i+2])
+				continue
+			elif arg[i].lower() == '-ph':
+				initial_ph = float(arg[i+1])
 				continue
 			elif arg[i].lower() == '-phdset':
 				multiple_pH = True
@@ -2086,7 +2442,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				
 	if not inst_only and not version_only:
 		if sim_pdb == 'WillThisWork.pdb':
-			print("No system choosen!\n")
+			print("No system choosen!\nUse: python3 ASM.py --help\n")
 		else:
 			if not multiple_pH:
 				pH_ini = initial_ph
@@ -2096,10 +2452,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				pH_fin = fin_pH 
 
 			if not mut_rand and not mut_choice:
-				objeto = Amber_run(system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
+				objeto = Amber_run(system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
 				objeto.simulation(arq=arqui, ph_range=[pH_ini,pH_fin])
 			elif mut_rand and not mut_choice:
-				objeto = Amber_mutation(system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only, active_site=atv_site)
+				objeto = Amber_mutation(system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only, active_site=atv_site)
 				objeto.mutations_restricted = mut_done
 				if objeto.chosen_residues != -1:
 					# there wasn't a problem with the mutation residues
@@ -2113,7 +2469,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 						print("\nAll possible mutations were already made for the chosen mutation type.\n")
 			elif not mut_rand and mut_choice:
 				# mut := ['SER_160-MET']
-				objeto = Amber_mutation(chosen_mut_flag = True, chosen_mut=mut, system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
+				objeto = Amber_mutation(chosen_mut_flag = True, chosen_mut=mut, system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
 				objeto.mutations_restricted = {}
 				if objeto.chosen_mutation != {}:
 					# there wasn't a problem with the mutation residues
