@@ -88,7 +88,7 @@ About ASM.py execution:
 
 $ python3 ASM.py -h
 
-    Welcome to Amber Simulation Manager 1.0:
+    Welcome to Amber Simulation Manager 1.1:
 
     Copyright (C) 2021  Braga, B. C.
     This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.
@@ -101,10 +101,12 @@ $ python3 ASM.py -h
 
         -i              Input PDB file.
 
-        -g              Goal as MD or CpHMD. If CpHMD was chosen, one pH must be given right after this flag. Default: MD.
+        -g              Goal as MD or CpHMD. Default: MD.
                         OBS: If you choose CpHMD and don't use flag 'res' the code will choose by default to tritate AS4 SER HIP.
 
-        -phdset         (This option has priority over the pH of option -g) Defines the pH list (only if you'll do multiple pH CpHMD production). After this flag an initial pH, a final pH and an interval unit must be given in this order (Ex: -phdset 4.0 7.0 0.5). Which represents pH:[4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0].
+        -ph             Equilibration and Production pH. Default: 7.0.
+
+        -phdset         (This option has priority over the -ph option) Defines the pH list (only if you'll do multiple pH CpHMD production). After this flag an initial pH, a final pH and an interval unit must be given in this order (Ex: -phdset 4.0 7.0 0.5). Which represents pH:[4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0].
 
         -res            Residues to tritate, for CpHMD (which must be informed right after this flag).
 
@@ -120,11 +122,11 @@ $ python3 ASM.py -h
                                 Obs: For the mutation options (-mut and -rdmut) a solvent must be used. If none given, water will be used by default.
 
         -mode           Duration of the simulation's stages (in time steps).
-                        low: Annealing/Equilibration: 10**4 |  Production: 10**5
-                        med: Annealing/Equilibration: 10**5 |  Production: 10**6
-                        gpu-med: Annealing/Equilibration: 10**6 |  Production: 5*10**6
-                        gpu-high: Annealing/Equilibration: 5*10**6 |  Production: 10**7
-                        gpu-ultra: Annealing/Equilibration: 10**7 |  Production: 5*10**7
+                        low: Annealing: 10**4 | Equilibration: 10**4 |  Production: 10**5
+                        med: Annealing: 10**4 | Equilibration: 10**5 |  Production: 10**6
+                        gpu-med: Annealing: 10**5 | Equilibration: 10**6 |  Production: 5*10**6
+                        gpu-high: Annealing: 5*10**5 | Equilibration: 5*10**6 |  Production: 10**7
+                        gpu-ultra: Annealing: 10**6 | Equilibration: 10**7 |  Production: 5*10**7
 
         -explicit       Explicit solvent will be used. One of the following options must be given after this flag:
                         water
@@ -146,15 +148,15 @@ $ python3 ASM.py -h
 
         -cut            Nonbonded cutoff in angstrom (Default: 12).
 
-        -prepstp        Stops the run after all preparations are complete (right before minimization).
+        -prepstp        (Option for Devs.) Stops the run after all preparations are complete (right before minimization).
                                 Obs: The shell script, to run the simulation, will still be created for you.
 
 
     Examples:
-        $ python3 ASM.py -i 1UBQ.pdb -arq sander -mpi 4 -mode low -g CpHMD 6 -phdset 6.0 7.0 0.5
+        $ python3 ASM.py -i 1UBQ.pdb -arq sander -mpi 4 -mode low -g CpHMD -phdset 6.0 7.0 0.5
 
 
-        $ python3 ASM.py -i 6eqe.pdb -arq pmemd -mpi 4 -mode low -g CpHMD 6.5 -explicit water
+        $ python3 ASM.py -i 6eqe.pdb -arq pmemd -mpi 4 -mode low -g CpHMD -ph 6.5 -explicit water
 
 
         $ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -rdmut 1
