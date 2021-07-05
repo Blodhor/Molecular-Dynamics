@@ -2284,7 +2284,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-h or --help\t\tPrints this message.\n")
 				print("\t-i\t\tInput PDB file.\n")
 				print("\t-g\t\tGoal as MD or CpHMD. Default: MD.\n\t\t\tOBS: If you choose CpHMD and don't use flag 'res' the code will choose by default to tritate %s.\n"%prt_res)
-				print("\t-ph\t\tEquilibration and Production pH. Default: 7.0.\n")
+				print("\t-ph\t\tProduction pH. Default: 7.0.\n")
 				print("\t-phdset\t\t(This option has priority over the -ph option) Defines the pH list (only if you'll do multiple pH CpHMD production). After this flag an initial pH, a final pH and an interval unit must be given in this order (Ex: -phdset 4.0 7.0 0.5). Which represents pH:[4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0].\n")
 				print("\t-res\t\tResidues to tritate, for CpHMD (which must be informed right after this flag).\n")
 				print("\t-rdmut\t\tRandom active site mutation.\n\t\t\t1:random aminoacid mutates to a similar one (eg. SER_160-THR). \n\t\t\t2:random aminoacid mutates to one not so similar (eg. SER_160-MET).\n")
