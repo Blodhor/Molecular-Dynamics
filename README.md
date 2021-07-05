@@ -104,7 +104,7 @@ $ python3 ASM.py -h
         -g              Goal as MD or CpHMD. Default: MD.
                         OBS: If you choose CpHMD and don't use flag 'res' the code will choose by default to tritate AS4 SER HIP.
 
-        -ph             Equilibration and Production pH. Default: 7.0.
+        -ph             Production pH. Default: 7.0.
 
         -phdset         (This option has priority over the -ph option) Defines the pH list (only if you'll do multiple pH CpHMD production). After this flag an initial pH, a final pH and an interval unit must be given in this order (Ex: -phdset 4.0 7.0 0.5). Which represents pH:[4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0].
 
