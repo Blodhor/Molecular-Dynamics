@@ -931,7 +931,6 @@ equil_files: Equilibration files name (without .extension).'''
 		self.report_program(min_name=min_files, heat_name=heating_files, eq_name=equil_files, phs=ph_range)
 
 		f.write('sh simMin.sh\n')
-		f.write('cd Analysis\n')
 		f.close()
 		if arq.lower() == 'gpu':
 			arq='pmemd.cuda'
@@ -991,19 +990,30 @@ equil_files: Equilibration files name (without .extension).'''
 		f.write('\t\t\tcontinue_sim = False\n')
 		f.write('\t\telse:\n')
 		# Non-fatal error -> create input for restart
-		f.write('\t\t\tline_step  = temp[nstep + 1].split()\n')
-		f.write('\t\t\tfinal_step = int(line_step[0])\n')
+		f.write('\t\t\tline_step  = temp[nstep].split()\n')
+		f.write('\t\t\tif "NSTEP=" in line_step[0] and len(line_step[0]) > 6:\n')
+		f.write('\t\t\t\t#NSTEP=500\n')
+		f.write('\t\t\t\tfinal_step = int(line_step[0][6:])\n')
+		f.write('\t\t\telif "NSTEP=" == line_step[0]:\n')
+		f.write('\t\t\t\t#NSTEP= 500\n')
+		f.write('\t\t\t\tfinal_step = int(line_step[1])\n')
+		f.write('\t\t\telif "NSTEP" == line_step[0] and "=" in line_step[1] and len(line_step[1]) > 1:\n')
+		f.write('\t\t\t\t#NSTEP =500\n')
+		f.write('\t\t\t\tfinal_step = int(line_step[1][1:])\n')
+		f.write('\t\t\telif "NSTEP" == line_step[0] and "=" == line_step[1]:\n')
+		f.write('\t\t\t\t#NSTEP = 500\n')
+		f.write('\t\t\t\tfinal_step = int(line_step[2])\n')
 		f.write('\t\t\tcalc = final_step/mdStageStep\n')
-		# Verification: if calc<0.4, restart the whole stage; else create a new input with less MD steps
-		f.write('\t\t\tif calc < 1 and calc > 0.4:\n')
+		# Verification: if calc<1, restart the whole stage
+		f.write('\t\t\tif calc < 1:\n')
 		f.write('\t\t\t\tnotes = \'%s stage stopped due to unknown reasons.\\n\'%file[:-6]\n')
 		# Creating input for restart file: inputFile[:-3]+"_rst.in"
 		f.write('\t\t\t\tif \'%s\' not in inputFile:\n'%min_name) #minimization is not that long so just redo the whole stage
 		f.write('\t\t\t\t\tnotes += \'Generating restart files!\\n\'\n')
 		# Reading old input
-		f.write('\t\t\t\t\tg = open(inputFile,"r")\n')
-		f.write('\t\t\t\t\tg_read = g.readlines()\n') 
-		f.write('\t\t\t\t\tg.close()\n')
+		f.write('\t\t\t\t\tg_old = open(inputFile,"r")\n')
+		f.write('\t\t\t\t\tg_read = g_old.readlines()\n') 
+		f.write('\t\t\t\t\tg_old.close()\n')
 		# Creating restart input
 		f.write('\t\t\t\t\tg = open(inputFile[:-3]+"_rst.in","w")\n')
 		f.write('\t\t\t\t\tfor j in range(len(g_read)):\n')
@@ -1088,15 +1098,20 @@ eq_name: Equilibration's files name.
 
 phs: Ph range used to titrate.'''
 
-		info_sh = stat('simulation.sh')
+		'''info_sh = stat('simulation.sh')
 		f = open('simulation.sh','r+')
-		f.seek(info_sh.st_size)
+		f.seek(info_sh.st_size)'''
 		ph_i = phs[0]
 		pH   = []
 		while ph_i <= phs[1]:
 			pH.append(ph_i)
 			ph_i += self.pH_step
 
+		f = open('simAnalysis.sh','w')
+		description = 'Script - Minimization stage'
+		f.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
+		f.write('cd Analysis\n')
+		
 		if not self.cph:
 			for pp in pH:
 				self.cpptraj_in(input_name=inp, rms_file=self.rms, rmsf_file=self.rmsf, min_name=mini_name, annealing_name=heat_name, equil_name=eq_name, phr=phs)
@@ -1175,7 +1190,7 @@ then
 elif test $simflag = "restart"
 then
 	%s
-	python3 ../%s %s_rst.mdout %s_rst.in Continue_rst2.in
+	%s
 	while read RLINE
 	do
 		flag=$RLINE
@@ -1212,20 +1227,24 @@ fi'''
 			else:
 				productionMD_SHnames.append( 'cd .. && sh sim%s.sh'%productionMD_names[pp] )
 
+		comp_report = 'python3 ../%s %s_rst.mdout %s_rst.in Continue_rst2.in'
 		if self.cph:
+			comp_report = 'python3 ../../%s %s_rst.mdout %s_rst.in Continue_rst2.in'
 			stages    = [min_name, heat_name, eq_name]
 			stages.extend( cphmd_names )
 			stages.append('')
 			stages_sh = ['sh simMin.sh', 'sh simAnneal.sh', 'sh simEquil.sh']
 			stages_sh.extend( cphmd_SHnames )
-			stages_sh.append('') # '' := After production do nothing
+			stages_sh.append('sh simAnalysis.sh')
+			#stages_sh.append('') # '' := After production do nothing
 		else:
 			stages    = [min_name, heat_name, eq_name]
 			stages.extend( productionMD_names )
 			stages.append('')
 			stages_sh = ['sh simMin.sh', 'sh simAnneal.sh', 'sh simEquil.sh']
 			stages_sh.extend( productionMD_SHnames )
-			stages_sh.append('') # '' := After production do nothing
+			stages_sh.append('sh simAnalysis.sh')
+			#stages_sh.append('') # '' := After production do nothing
 
 		for txt_temp in range(1,len(stages)):
 			txt        = stages[txt_temp-1]
@@ -1233,40 +1252,40 @@ fi'''
 			next_sh    = stages_sh[txt_temp]
 			if self.cph:
 				if txt == min_name:
-					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -ref ../systemLeap.rst7 -cpin ../system.cpin'%(process, txt, txt, self.prmtop, txt, txt)
+					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -ref ../systemLeap.rst7 -cpin ../system.cpin'%(process, txt, txt, self.prmtop, txt, txt)
 					copyingTo     = 'cp %s.rst7 ../%s && cp %s.rst7 ../Analysis'%(txt, next_stage, txt)
 					copyingRstTo  = copyingTo
 				elif txt == heat_name:
-					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -ref %s_rst.rst7 -cpin ../system.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt)
+					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -ref %s_rst.rst7 -cpin ../system.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt)
 					copyingTo     = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis  && cp %s.mdout ../Analysis'%(txt, next_stage, txt, txt)
 					copyingRstTo  = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis  && cp %s.mdout ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, next_stage, txt, txt, txt, txt)
 				elif txt == eq_name:
-					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -cpin system_%s.cpin -cpout system_%s.cpout -cprestrt system_%s_rstP2.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt, txt, txt)
+					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -cpin system_%s.cpin -cpout system_%s.cpout -cprestrt system_%s_rstP2.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt, txt, txt)
 					copyingTo     = 'cp %s.rst7 ../Cph && cp system_%s.cpin ../ && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis'%(txt, txt, txt, txt, txt)
 					copyingRstTo  = 'cp %s.rst7 ../Cph && cp system_%s.cpin ../ && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, txt, txt, txt, txt, txt, txt)
 				elif 'CpHMD' in txt:
-					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -cpin %s.cpin -cpout %s.cpout -cprestrt %s_rstP2.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt, txt, txt)
+					redoing_stage = '%s -O -i ../../%s_rst.in -o %s_rst.mdout -p ../../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -cpin %s.cpin -cpout %s.cpout -cprestrt %s_rstP2.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt, txt, txt)
 					copyingTo     = 'cp %s.cpout ../../Analysis && cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis'%(txt,txt,txt)
 					copyingRstTo  = 'cp %s.cpout ../../Analysis && cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis && cp %s_rst.mdout ../../Analysis && cp %s_rst.nc ../../Analysis'%(txt,txt,txt,txt,txt)
 			else:
 				if txt == min_name:
-					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7'%(process, txt, txt, self.prmtop, txt, txt)
+					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7'%(process, txt, txt, self.prmtop, txt, txt)
 					copyingTo     = 'cp %s.rst7 ../%s && cp %s.rst7 ../Analysis'%(txt, next_stage, txt)
 					copyingRstTo  = copyingTo
 				elif txt == heat_name:
-					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
+					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
 					copyingTo     = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis && cp %s.mdout ../Analysis'%(txt, next_stage, txt, txt)
 					copyingRstTo  = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, next_stage, txt, txt, txt, txt)
 				elif txt == eq_name:
-					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
+					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
 					copyingTo     = 'cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis'%(txt, txt, txt)
 					copyingRstTo  = 'cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, txt, txt, txt, txt)
 				elif 'Production' in txt:
-					redoing_stage = '%s -O -i %s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
+					redoing_stage = '%s -O -i ../../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
 					copyingTo     = 'cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis'%(txt, txt)
 					copyingRstTo  = 'cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis && cp %s_rst.mdout ../../Analysis && cp %s_rst.nc ../../Analysis'%(txt, txt, txt, txt)
 			
-			keys.append( ( copyingTo, next_sh, redoing_stage, self.report_file, txt, txt, copyingRstTo, next_sh) )
+			keys.append( ( copyingTo, next_sh, redoing_stage, comp_report%(self.report_file, txt, txt), copyingRstTo, next_sh) )
 
 		# Stage Minimization
 		m = open('simMin.sh','w')
