@@ -1261,8 +1261,8 @@ fi'''
 					copyingRstTo  = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis  && cp %s.mdout ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, next_stage, txt, txt, txt, txt)
 				elif txt == eq_name:
 					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -cpin system_%s.cpin -cpout system_%s.cpout -cprestrt system_%s_rstP2.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt, txt, txt)
-					copyingTo     = 'cp %s.rst7 ../Cph && cp system_%s.cpin ../ && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis'%(txt, txt, txt, txt, txt)
-					copyingRstTo  = 'cp %s.rst7 ../Cph && cp system_%s.cpin ../ && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, txt, txt, txt, txt, txt, txt)
+					copyingTo     = 'cp %s.rst7 ../Cph && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis && cp system_%s.cpin ../'%(txt, txt, txt, txt, txt)
+					copyingRstTo  = 'cp %s.rst7 ../Cph && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis && cp system_%s.cpin ../'%(txt, txt, txt, txt, txt, txt, txt)
 				elif 'CpHMD' in txt:
 					redoing_stage = '%s -O -i ../../%s_rst.in -o %s_rst.mdout -p ../../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -cpin %s.cpin -cpout %s.cpout -cprestrt %s_rstP2.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt, txt, txt)
 					copyingTo     = 'cp %s.cpout ../../Analysis && cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis'%(txt,txt,txt)
