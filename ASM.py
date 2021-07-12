@@ -1252,36 +1252,36 @@ fi'''
 			next_sh    = stages_sh[txt_temp]
 			if self.cph:
 				if txt == min_name:
-					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -ref ../systemLeap.rst7 -cpin ../system.cpin'%(process, txt, txt, self.prmtop, txt, txt)
+					redoing_stage = '%s -O -i ../%s_rst.in -o %s.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -ref ../systemLeap.rst7 -cpin ../system.cpin'%(process, txt, txt, self.prmtop, txt, txt)
 					copyingTo     = 'cp %s.rst7 ../%s && cp %s.rst7 ../Analysis'%(txt, next_stage, txt)
 					copyingRstTo  = copyingTo
 				elif txt == heat_name:
-					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -ref %s_rst.rst7 -cpin ../system.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt)
+					redoing_stage = '%s -O -i ../%s_rst.in -o %s.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -ref %s_rst.rst7 -cpin ../system.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt)
 					copyingTo     = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis  && cp %s.mdout ../Analysis'%(txt, next_stage, txt, txt)
 					copyingRstTo  = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis  && cp %s.mdout ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, next_stage, txt, txt, txt, txt)
 				elif txt == eq_name:
-					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -cpin system_%s.cpin -cpout system_%s.cpout -cprestrt system_%s_rstP2.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt, txt, txt)
+					redoing_stage = '%s -O -i ../%s_rst.in -o %s.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -cpin system_%s.cpin -cpout system_%s.cpout -cprestrt system_%s_rstP2.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt, txt, txt)
 					copyingTo     = 'cp %s.rst7 ../Cph && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis && cp system_%s.cpin ../'%(txt, txt, txt, txt, txt)
 					copyingRstTo  = 'cp %s.rst7 ../Cph && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis && cp system_%s.cpin ../'%(txt, txt, txt, txt, txt, txt, txt)
 				elif 'CpHMD' in txt:
-					redoing_stage = '%s -O -i ../../%s_rst.in -o %s_rst.mdout -p ../../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -cpin %s.cpin -cpout %s.cpout -cprestrt %s_rstP2.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt, txt, txt)
+					redoing_stage = '%s -O -i ../../%s_rst.in -o %s.mdout -p ../../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc -cpin %s.cpin -cpout %s.cpout -cprestrt %s_rstP2.cpin'%(process, txt, txt, self.prmtop, txt, txt, txt, txt, txt, txt)
 					copyingTo     = 'cp %s.cpout ../../Analysis && cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis'%(txt,txt,txt)
 					copyingRstTo  = 'cp %s.cpout ../../Analysis && cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis && cp %s_rst.mdout ../../Analysis && cp %s_rst.nc ../../Analysis'%(txt,txt,txt,txt,txt)
 			else:
 				if txt == min_name:
-					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7'%(process, txt, txt, self.prmtop, txt, txt)
+					redoing_stage = '%s -O -i ../%s_rst.in -o %s.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7'%(process, txt, txt, self.prmtop, txt, txt)
 					copyingTo     = 'cp %s.rst7 ../%s && cp %s.rst7 ../Analysis'%(txt, next_stage, txt)
 					copyingRstTo  = copyingTo
 				elif txt == heat_name:
-					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
+					redoing_stage = '%s -O -i ../%s_rst.in -o %s.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
 					copyingTo     = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis && cp %s.mdout ../Analysis'%(txt, next_stage, txt, txt)
 					copyingRstTo  = 'cp %s.rst7 ../%s && cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, next_stage, txt, txt, txt, txt)
 				elif txt == eq_name:
-					redoing_stage = '%s -O -i ../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
+					redoing_stage = '%s -O -i ../%s_rst.in -o %s.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
 					copyingTo     = 'cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis'%(txt, txt, txt)
 					copyingRstTo  = 'cp %s.nc ../Analysis && cp %s.mdout ../Analysis && cp %s.rst7 ../Analysis && cp %s_rst.mdout ../Analysis && cp %s_rst.nc ../Analysis'%(txt, txt, txt, txt, txt)
 				elif 'Production' in txt:
-					redoing_stage = '%s -O -i ../../%s_rst.in -o %s_rst.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
+					redoing_stage = '%s -O -i ../../%s_rst.in -o %s.mdout -p ../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
 					copyingTo     = 'cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis'%(txt, txt)
 					copyingRstTo  = 'cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis && cp %s_rst.mdout ../../Analysis && cp %s_rst.nc ../../Analysis'%(txt, txt, txt, txt)
 			
@@ -1313,7 +1313,7 @@ fi'''
 		a = open('simAnneal.sh','w')
 		description = 'Script - Annealing stage'
 		a.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
-		a.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
+		#a.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
 		a.write('cd Annealing\n')
 		if self.cph:
 			a.write('echo \'Running %s...\\n\'\n'%heat_name)
@@ -1332,7 +1332,7 @@ fi'''
 		e = open('simEquil.sh','w')
 		description = 'Script - Equilibration stage'
 		e.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
-		e.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
+		#e.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
 		e.write('cd %s\n'%eq_name)
 		if self.cph:
 			e.write('echo \'Running %s...\\n\'\n'%eq_name)
@@ -1351,7 +1351,7 @@ fi'''
 				cph = open('sim%s.sh'%Name,'w')			
 				description = 'Script - Production stage for CpHMD'
 				cph.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
-				cph.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
+				#cph.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
 				cph.write('cd Cph\n')
 				cph.write('rm -r %s\nmkdir %s\ncd %s\n'%(Name, Name, Name))
 				cph.write('echo \'Running %s...\\n\'\n'%Name)
@@ -1385,7 +1385,7 @@ fi'''
 				prod = open('sim%s.sh'%Name,'w')
 				description = 'Script - Production stage'
 				prod.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
-				prod.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
+				#prod.write('export CUDA_VISIBLE_DEVICES=%s\n'%self.gpunumber)
 				prod.write('cd %s\n'%eq_name)
 				prod.write('rm -r %s\nmkdir %s\ncd %s\n'%(Name, Name, Name))
 				prod.write('echo \'Running %s...\\n\'\n'%Name)
