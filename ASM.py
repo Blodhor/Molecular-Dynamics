@@ -740,8 +740,10 @@ phr: Ph range used to titrate.'''
 				f.write('reference %s.rst7\n'%min_name)
 				f.write('autoimage\n')
 				# See pg. 684 Amer18 guide for rms option, pg. 682 for radgyr and pg. 638 for atomicfluct
-				f.write('rms reference mass out MD_%.2f_%s\n'%(pp,rms_file))
-				f.write('atomicfluct out MD_%.2f_%s\n'%(pp,rmsf_file))
+				f.write('rms reference @CA,C,O,N,H&!(:WAT) mass out MD_%.2f_%s\n'%(pp,rms_file))
+				# @ => atom  # : => residue
+				# @CA,C,O,N,H&!(:WAT) := means all these atoms of backbone and not in water
+				f.write('atomicfluct out MD_%.2f_%s @CA,C,O,N,H&!(:WAT)\n'%(pp,rmsf_file))
 				f.close()
 		else:
 			for pp in pH:
@@ -751,12 +753,9 @@ phr: Ph range used to titrate.'''
 				f.write('trajin CpHMD_prod_%.2f.nc\n'%pp)
 				f.write('reference %s.rst7\n'%equil_name)
 				#distance dPET-sitio :PET :132,178,209 out dPET-sitio.dat #pg 649-650
-				#f.write('rmsd reference :6-260@N,CA,C first out ph%.2f_rmsd.dat mass\n'%(ph_i))#PETase
-				f.write('rmsd reference first out ph%.2f_rmsd.dat mass\n'%(pp))
-				#f.write('atomicfluct out ph%.2f_rmsf.dat :6-260@N,CA,C byres\n'%(ph_i))
-				f.write('atomicfluct out ph%.2f_rmsf.dat byres\n'%(pp))
-				#f.write('radgyr ph%.2f-radgyr :2-260@N,CA,C out ph%.2f_radgyr.dat mass nomax\n'%(ph_i, ph_i))
-				f.write('radgyr ph%.2f-radgyr out ph%.2f_radgyr.dat mass nomax\n'%(pp, pp))
+				f.write('rmsd reference @CA,C,O,N,H&!(:WAT) first out ph%.2f_rmsd.dat mass\n'%(pp))
+				f.write('atomicfluct out ph%.2f_rmsf.dat @CA,C,O,N,H&!(:WAT) byres\n'%(pp))
+				f.write('radgyr ph%.2f-radgyr out ph%.2f_radgyr.dat @CA,C,O,N,H&!(:WAT) mass nomax\n'%(pp, pp))
 				f.close()
 
 class Amber_run(Amber_par):
