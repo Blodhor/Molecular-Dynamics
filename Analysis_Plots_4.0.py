@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 class Analysis_plot:
 	def __init__(self, type = 'one', names=[('file.dat','analysis_title')], analysisType = 'rmsd', largerYaxis = False, 
 	Yenlarger = 2, frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
-	labelpx = 35.0, labelpy = 0.50, dpi = 100, text_fc = 'darkblue'):
+	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue'):
 		'''Parameters:
 		
 		type: Plot 'one' dataset, 'two' datasets beside each other or 'four' datasets in a matrix fashion.
@@ -31,43 +31,33 @@ class Analysis_plot:
 		
 		labelpy: Y position of internal labelling.
 		
-		dpi: Sets the picture quality.
+		dpi: Sets the picture quality.'''
 		
-		text_fc: Text color in the four-type plot.'''
-
 		self.X = []
 		self.Y = []
 		self.frameToTime = frameToTime
-		self.frameStep = frameStep
-		self.timeStep = timeStep
-		self.nanosec = nanosec
-		self.dpi = dpi
-		self.suptitle = suptitle
-		self.labelpx = labelpx
-		self.labelpy = labelpy
-		 
+		self.frameStep   = frameStep
+		self.timeStep    = timeStep
+		self.nanosec     = nanosec
+		self.dpi         = dpi
+		self.suptitle    = suptitle
+		self.label_color = label_color
+		self.labelpx     = labelpx
+		self.labelpy     = labelpy
 		if 'radgyr' in analysisType:
 			self.ana_type = 'Raio de giro (Angstrom)'
 		else:
 			self.ana_type = analysisType.upper()
-
 		XTlabels = self.XY(files=names)
-
 		if XTlabels != -1 and type == 'one':
-
 			self.plot_one(X=self.X[0], Y=self.Y[0], Xaxis=XTlabels[0][0], 
 			name= XTlabels[0][1], EnlargeYaxis=largerYaxis, Ymax=Yenlarger)
-
 		elif XTlabels != -1 and type == 'two':
-
 			self.plot_two(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
 			name= [XTlabels[0][1], XTlabels[1][1]])
-
 		elif XTlabels != -1 and type == 'four':
-
 			self.plot_four(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
-			name= [XTlabels[0][1], XTlabels[1][1], XTlabels[2][1], XTlabels[3][1]], color=text_fc)
-
+			name= [XTlabels[0][1], XTlabels[1][1], XTlabels[2][1], XTlabels[3][1]])
 		else:
 			print("Type must be one, two or four!\n")
 
@@ -75,20 +65,15 @@ class Analysis_plot:
 		''' Gets X and Y datasets and returns its respectives x-label and title as a list of tuples.'''
 
 		if len(files) == 1 or len(files) == 2 or len(files) == 4:
-
 			xname = 'T'
 			XTlabel = []
-
 			for fs in files:
 				f = open(fs[0])
 				t = f.readlines()
 				f.close()
-
 				plot_title = fs[1]
-
 				x = []
 				y = []
-
 				for i in t:
 					data = i.split()
 					if i != '' and i[0] == '#':
@@ -113,35 +98,23 @@ class Analysis_plot:
 								x.append( float(data[0])* self.frameStep * self.timeStep)
 						else:
 							x.append( float(data[0]) )
-
 						y.append( float(data[1]) )
-
 				self.X.append(x)
 				self.Y.append(y)
 				XTlabel.append( (xname,plot_title) )
-
 			return XTlabel
 		else:
 			return -1
 
 	def plot_one(self, X = [], Y = [], Xaxis = "Frames", name = "Título", EnlargeYaxis = False, Ymax = 2):
 		'''Plots one X-Y dataset.'''
-		plt.figure(dpi=self.dpi)
 
+		plt.figure(dpi=self.dpi)
 		if EnlargeYaxis:
-			#lines below set x and y axis limits
 			axes = plt.axes()
 			axes.set_xlim([0,X[len(X)-1]])
 			axes.set_ylim([0,Ymax*Y[len(Y)-1]])
-			#if for some reason the plot differente than expected you can try changing the x,y spacements.
-			#axes.set_xticks(np.arange(0,X[len(X)-1],X[len(X)-1]/8.0)) #numpy bugged hard with the last windows patch
-			#axes.set_yticks(np.arange(0,Ymax*Y[len(Y)-1],Ymax*Y[len(Y)-1]/5.0))
-
 		plt.plot(X,Y)
-		#It's possible to make a log, dilog,... 
-		#plt.xscale('linear') #'log'
-		#plt.yscale('linear')
-
 		plt.title(name)
 		plt.ylabel(self.ana_type)
 		plt.xlabel(Xaxis)
@@ -151,54 +124,41 @@ class Analysis_plot:
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 		
 		fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True, dpi=self.dpi)
-
 		ax1.plot(X[0],Y[0])
 		ax1.set_title(name[0])
-
 		ax2.plot(X[1],Y[1])
 		ax2.set_title(name[1])
-
 		for ts in [ax1,ax2]:
 			ts.set(xlabel=Xaxis, ylabel=self.ana_type)
-		
 		#pyplot.subplots can hide redundant axes
 		for ts in [ax1,ax2]:
 			ts.label_outer()
-		
 		plt.show()
 
-	def plot_four(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"], color = 'darkblue'):
+	def plot_four(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"]):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 		
 		plt.figure(dpi=self.dpi)
-
 		ax1 = plt.subplot(221)
 		plt.plot(X[0],Y[0])
-		plt.text(x=self.labelpx, y=self.labelpy, s=name[0], color=color)
+		plt.text(x=self.labelpx, y=self.labelpy, s=name[0], color=self.label_color)
 		plt.ylabel(self.ana_type)
-		#plt.xlabel(Xaxis) #Showing this will interfere with the quality of the pict.
 		plt.grid(True)
-		
 		ax2 = plt.subplot(222, sharey=ax1)		
 		plt.plot(X[1],Y[1])
-		plt.text(x=self.labelpx, y=self.labelpy, s=name[1], color=color)
-		#plt.ylabel(self.ana_type) #Showing this will interfere with the quality of the pict.
-		#plt.xlabel(Xaxis) #Showing this will interfere with the quality of the pict.
+		plt.text(x=self.labelpx, y=self.labelpy, s=name[1], color=self.label_color)
 		plt.grid(True)
-
 		ax3 = plt.subplot(223, sharex=ax1)
 		plt.plot(X[2],Y[2])
-		plt.text(x=self.labelpx, y=self.labelpy, s=name[2], color=color)
+		plt.text(x=self.labelpx, y=self.labelpy, s=name[2], color=self.label_color)
 		plt.ylabel(self.ana_type)
 		plt.xlabel(Xaxis)
 		plt.grid(True)
-		
 		ax4 = plt.subplot(224, sharex=ax2, sharey=ax3)
 		plt.plot(X[3],Y[3])
-		plt.text(x=self.labelpx, y=self.labelpy, s=name[3], color=color)
+		plt.text(x=self.labelpx, y=self.labelpy, s=name[3], color=self.label_color)
 		plt.xlabel(Xaxis)
 		plt.grid(True)
-		
 		plt.suptitle(self.suptitle)
 		plt.show()
 
@@ -246,25 +206,31 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	
 '''
-	mut_name = 'ASP206-GLU'
-	path = 'gpu-ultra/no_warp/mutation/%s/'%mut_name
+	analysis_name = ['rmsd','rmsf','radgyr']
+	path          = 'PETase_Dynamics/gpu-ultra/nativaHotfix1.1/' #ASP206_GLU_Hotfix1.1
 
 	#default keys
 	version_only = False
 	inst_only    = False
 	tpe          = 'four'  # 'one'
-	anatp        = 'rmsf'  # 'radgyr'# 'rmsd' # 'rmsf'
+	anatp        = analysis_name[2]
+	color        = 'black' #'red' #'darkblue' #label only
 	File         = [('%sph7.00_%s.dat'%(path,anatp),'pH=7.00'),
 	('%sph8.00_%s.dat'%(path,anatp),'pH=8.00'),
 	('%sph9.00_%s.dat'%(path,anatp),'pH=9.00'),
 	('%sph10.00_%s.dat'%(path,anatp),'pH=10.00')]
-	supertitle   = 'Produção Mut: %s'%mut_name
-	labx, laby   = (90, 1.5) # rmsf: (150, 2.25) # radgyr: (160, 16.61)
-	cor = 'darkblue' # 'darkblue' # 'darkred'
+	supertitle   = 'Produção'#'Petase nativa - Produção'
+	labx, laby   = (100.5, 1.51) #rmsd
 	fram2time    = True  # False
 	framstp      = 62500 # Ultra #gpu-high: 50 000
 	nano         = True  # False
 	dpi          = 100
+	if anatp == 'rmsf':
+		fram2time    = False
+		nano         = False
+		labx, laby   = (150, 2.25) 
+	elif anatp == 'radgyr':
+		labx, laby   = (130, 16.7)
 
 	flags = ["&","-v","--version","-h","--help",'-type', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd']
 
@@ -370,4 +336,4 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			cut = i+1
 
 	if not inst_only and not version_only:
-		ob4 = Analysis_plot(type=tpe,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, text_fc=cor)
+		ob4 = Analysis_plot(type=tpe,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color)
