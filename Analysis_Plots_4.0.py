@@ -207,34 +207,42 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	
 '''
 	analysis_name = ['rmsd','rmsf','radgyr']
-	path          = 'PETase_Dynamics/gpu-ultra/nativaHotfix1.1/' #ASP206_GLU_Hotfix1.1
+	dic_Type      = {1:'one', 2:'two', 4:'four'}
 
 	#default keys
 	version_only = False
 	inst_only    = False
-	tpe          = 'four'  # 'one'
-	anatp        = analysis_name[2]
+	tpe          = dic_Type[4]
+	anatp        = analysis_name[0]
 	color        = 'black' #'red' #'darkblue' #label only
-	File         = [('%sph7.00_%s.dat'%(path,anatp),'pH=7.00'),
-	('%sph8.00_%s.dat'%(path,anatp),'pH=8.00'),
-	('%sph9.00_%s.dat'%(path,anatp),'pH=9.00'),
-	('%sph10.00_%s.dat'%(path,anatp),'pH=10.00')]
-	supertitle   = 'Produção'#'Petase nativa - Produção'
-	labx, laby   = (100.5, 1.51) #rmsd
-	fram2time    = True  # False
-	framstp      = 62500 # Ultra #gpu-high: 50 000
-	nano         = True  # False
-	dpi          = 100
+	if tpe == 'four':
+		path          = 'PETase_Dynamics/gpu-ultra/nativaHotfix1.1/All_backbone'
+		supertitle = 'Produção'#'Petase nativa - Produção' 
+		File       = [('%sph7.00_%s.dat'%(path,anatp),'pH=7.00'),
+		('%sph8.00_%s.dat'%(path,anatp),'pH=8.00'),
+		('%sph9.00_%s.dat'%(path,anatp),'pH=9.00'),
+		('%sph10.00_%s.dat'%(path,anatp),'pH=10.00')]
+	elif tpe == 'two':
+		path          = 'PETase_Dynamics/gpu-ultra/nativaHotfix1.1/'
+		ph_comp = 7
+		ff      = [('%sAll_backbone/ph%d.00_%s.dat'%(path,ph_comp,anatp),'pH=%d.00'%ph_comp),
+		('%sCA_C_N/ph%d.00_%s.dat'%(path,ph_comp,anatp),'pH=%d.00'%ph_comp)]
+		
+	labx, laby  = (100.5, 1.51) #rmsd
+	fram2time   = True  # False
+	framstp     = 62500 # Ultra #gpu-high: 50 000
+	nano        = True  # False
+	dpi         = 100
 	if anatp == 'rmsf':
-		fram2time    = False
-		nano         = False
-		labx, laby   = (150, 2.25) 
+		fram2time  = False
+		nano       = False
+		labx, laby = (150, 2.25) 
 	elif anatp == 'radgyr':
-		labx, laby   = (130, 16.7)
+		labx, laby = (130, 16.7)
 
 	flags = ["&","-v","--version","-h","--help",'-type', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd']
 
-	cut =0 # counter for input flags
+	cut = 0 # counter for input flags
 
 	for i in range(len(arg)):
 		if cut == i:
