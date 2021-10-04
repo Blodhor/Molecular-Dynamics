@@ -1,6 +1,6 @@
 '''
 Extension of ASM.py for RMSD, RMSF and Radgyr analysis plot.
- 
+
 Author: Braga, B. C.
 E-mail: bruno.braga@ufms.br
 '''
@@ -193,6 +193,9 @@ class Analysis_plot:
 			ap.grid()
 			big_pp += 2
 		
+		if self.ana_type in ['RMSD']:#, 'RMSF'
+			self.ana_type += ' (Angstrom)'
+
 		for ts in axs:
 			ts.set(xlabel=Xaxis, ylabel=self.ana_type)
 		#pyplot.subplots can hide redundant axes
@@ -252,7 +255,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	#default keys
 	version_only = False
 	inst_only    = False
-	anatp        = analysis_name[1]
+	anatp        = analysis_name[0]
 	tpe          = dic_Type[42]
 	color        = 'black' #'red' #'darkblue' #label only
 	mut          = ['HIS 237 - GLU','ASP 206 - GLU'][1]
