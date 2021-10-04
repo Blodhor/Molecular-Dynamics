@@ -25,11 +25,11 @@ The following was tested on both Windows and Linux S.O.:
 Analysis_Plots_4.0.py - RMSD, RMSF and Radgyr data analysis. This code needs numpy and matplotlib modules with an python 3.6+ compiler (if you dont usually use Terminal, install Visual Studio Code, which runs on Windows and Linux). 
 
 --------------------------------------
-About Analysis_Plots_4.0.py execution:
+About Analysis_Plots.py execution:
 
-$ python3 Analysis_Plots_4.0.py -h
+$ python3 Analysis_Plots.py -h
 
-    Welcome to Analysis plot 4.0:
+    Welcome to Analysis plot 1.1:
 
     Copyright (C) 2021  Braga, B. C.
     This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.
