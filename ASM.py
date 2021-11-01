@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Molecular Dynamics simulation manager (using AMBER18 and AMBERtools18+). 
+AMBER molecular dynamics Simulation Manager (works on AMBER18+ and AMBERtools18+). 
 
 Automates the process of performing a molecular dynamics simulation using the Amber/Ambertools computational packages.
+
+Needs AMBER/AMBERtools installed and with its binaries on the computer's PATH. Works on Linux operating systems.
 
 Author: Braga, B. C.
 E-mail: bruno.braga@ufms.br
@@ -17,13 +19,48 @@ from copy import deepcopy as cp
 Titratable_Residue_Names = ['AS4', 'Gl4', 'HIP', 'CYS', 'LYS', 'TYR', 'DAP', 'DCP', 'DG', 'DT', 'AP', 'CP', 'G', 'U', 'HEH', 'PRN']
 random.seed()
 
+def IntTransNumb(a):
+	'''Translate string number into integer'''
+
+	if '*' not in a and 'E' in a.upper():
+		# 10e6
+		a_e = a.upper().split('E')
+		res = int(a_e[0])**int(a_e[1])
+	elif '*' in a and 'E' in a.upper() and '**' not in a:
+		# 5*10e6
+		temp = a.split('*')
+		a_e  = temp[1].upper().split('E')
+		res  = int(temp[0])*int(a_e[0])**int(a_e[1])
+	elif 'E' not in a.upper() and '**' in a:
+		temp0 = a.split('**')
+		f = False
+		for i in temp0:
+			f = f or '*' in i
+		if not f:
+			# 10**6
+			res = int(temp0[0])**int(temp0[1])
+		else:
+			# 6*10**6
+			temp1 = temp0[0].split('*')
+			res = int(temp1[0])*int(temp1[1])**int(temp0[1])
+	elif 'E' not in a.upper() and '**' not in a and '*' in a:
+		# 10*6
+		temp = a.split('*')
+		res = int(temp[0])*int(temp[1])
+	else:
+		# 52
+		res = int(a)
+
+	return res
+
 class Amber_par:
 	'''Creation method of the Amber (or Ambertools) input parameters.'''
-	mode  = {'low': (10**-1,1), 'med': (1,10), 'gpu-med': (10,50), 'gpu-high': (50,100), 'gpu-ultra': (100,500)}
+	mode  = {'L': (10**-1,1), 'M': (1,10), 'GM': (10,50), 'GH': (50,100), 'GU': (100,500), 'CT': ''}
 	steps = 10**5
-	AnnealEqFactor  = 0.1
+	AnnealEqFactor = 0.1
 
 	def __init__(self, system='WillThisWork.pdb', ligand='already_docked_positions.pdb', with_docking= False, simulation='CpHMD', pH=7.0, pHstep=1.0, simulation_length='low',
+	custom_mode = False, custom_min = 10**4, custom_a = 10**6, custom_e = 10**7, custom_p = 10**8,
 	exp_solv= False, solvent_in='water', box_cuttoff= 12.0, information_cycles=200, gpu=0, prot_res='AS4 SER HIP',
 	mpi_use= False, mpicomp='mpiexec', mpicores=2, prep_stop= False, chosen_mut_flag = False,
 	chosen_mut=['SER_160-MET'], active_site={'SER':[160],'HIS':[237],'ASP':[206]}):
@@ -33,10 +70,14 @@ Parameters
 ----------
 system: pdb file.
 
+-----
+Docking options are not complete on version 1.1 and will work properly only on future versions!
+
 ligand: The present code doesn't have a docking module (optmization of the ligand's atoms' positions in the active site of the system[if it is an enzyme]).
 		At the present version, it is needed a third party programm to get this PDB. 
 
 with_docking: True/False choice for the creation of a docked ligand-system topology and coordinates file with LEAP.
+-----
 
 gpu: Gpu which would be used (if there is two gpu's the choice is between number 0 and 1).
 
@@ -47,11 +88,23 @@ pH: Equilibration and Production stages' solvent pH. (Default=7.0)
 pHstep: If goal is CpHMD, this variable defines the pH-unit intervals between two productions to be made.
 
 simulation_length: Duration of an average stage's simulation, between 0.1 and 500 (where this factor is multiplied by a default quantity [self.steps] of time steps of 2fs or 4fs with HMR method). Based on the class' dict, self.mode, keys:
-	'low': (10**-1,1);
-	'med': (1,10);
-	'gpu-med': (10,50);
-	'gpu-high': (50,100);
-	'gpu-ultra': (100,500); where the second position of the tuple is only for production/CpHMD and the first for annealing and equilibration.
+	'L': (10**-1,1);
+	'M': (1,10);
+	'GM': (10,50);
+	'GH': (50,100);
+	'GU': (100,500); 
+	where the second position of the tuple is only for production/CpHMD and the first for annealing and equilibration.
+	'CT': custom option.
+
+custom_mode: True/False flag for 'simulation_length' custom.
+
+custom_min: (For simulation_length = CT only) Max number of Minimization steps. 
+
+custom_a: (For simulation_length = CT only) Duration of the Annealing stage.
+
+custom_e: (For simulation_length = CT only) Duration of the Equilibration stage.
+
+custom_p: (For simulation_length = CT only) Duration of the Production stage.
 
 information_cycles: Number of times information regarding energy, rmsd, rmsf, coordinates, etc, are saved (too high of a number requires too much memory, but too few cycles can't help in the system properties' analysis). Directly proportional to the number of frames.
 
@@ -97,7 +150,12 @@ chosen_mut: Specific mutation chosen.'''
 		self.gpunumber       = gpu
 		self.cph             = False
 		self.simulation_mode = simulation_length
-		if self.simulation_mode == 'low':
+		self.mode_custom     = custom_mode
+		self.mode_custom_min = custom_min
+		self.mode_custom_a   = custom_a
+		self.mode_custom_e   = custom_e
+		self.mode_custom_p   = custom_p
+		if self.simulation_mode == 'L':
 			self.AnnealEqFactor  = 1
 		self.prmtop          = 'system.prmtop'
 		self.rms             = 'system.rms'
@@ -110,7 +168,7 @@ chosen_mut: Specific mutation chosen.'''
 		self.prep_stop       = prep_stop
 		self.pH_step         = pHstep
 		
-		# sorting protonation and active site info for later verification
+		# Sorting protonation and active site information for later verification
 		prot_ = prot_res.split()
 		for i in range(len(prot_)):
 			if prot_[i] == 'AS4':
@@ -126,12 +184,12 @@ chosen_mut: Specific mutation chosen.'''
 		site_.sort()
 		self.ok = True
 		
-		# docking-only options
-		self.docking         = with_docking
-		self.ligand          = ligand
-		self.lig_mol         = ligand[:-3]+"mol2"
-		self.lig_frcmod      = ligand[:-3]+"frcmod"
-		self.lig_name        = "DOK"
+		# Docking-only options
+		self.docking    = with_docking
+		self.ligand     = ligand
+		self.lig_mol    = ligand[:-3]+"mol2"
+		self.lig_frcmod = ligand[:-3]+"frcmod"
+		self.lig_name   = "DOK"
 
 		if self.docking:
 			f = open(self.ligand,'r+')
@@ -163,11 +221,13 @@ chosen_mut: Specific mutation chosen.'''
 			cmd('reduce %s > ligand-reduced.pdb'%self.ligand)
 			cmd('antechamber -fi pdb -fo mol2 -i ligand-reduced.pdb -o %s -c bcc -pf y -nc 0'%self.lig_mol)
 			#
-			# Tem que ver como vou corrigir o problema do DUN e hn!!! linha -- 748 cpptraj 
+			# Docking related only:
+			#  There is a problem with "DUN" and "hn" atom types on the mol2 file
+			#  Needs to be fixed on later versions! 
 			#
 			cmd('parmchk2 -i %s -o %s -f mol2'%(self.lig_mol,self.lig_frcmod))
 
-		# mutation-only parameters
+		# Mutation-only parameters
 		self.pdb_string          = ''
 		self.pdb_str_2Mut        = ''
 		self.pdb_str_not2Mut     = ''
@@ -186,7 +246,7 @@ chosen_mut: Specific mutation chosen.'''
 		resmut_newid             = {}
 		mutid                    = {}
 
-		# adjusting object's attributes
+		# Adjusting (mutation) object's attributes
 		if bool_class:
 			if chosen_mut_flag:
 				# chosen_mut := ['SER_160-MET']
@@ -214,7 +274,7 @@ chosen_mut: Specific mutation chosen.'''
 					if i not in site_ and input("Residue %s not in active site. Do you wanna procced? (Please answer only with [Yes/No])\n"%i).lower() == "no":
 						self.ok = False
 
-			# the method adjusting_firstep is written on the Amber_mutation class
+			# The method adjusting_firstep is written on the Amber_mutation class
 			res_newid = self.adjusting_firstep(chosen_res=self.active_site)
 
 		# res_newid now have all coords of the active_site atoms, and with this, it's trivial to look for the new active site atoms' id (after pdb4amber)!
@@ -317,7 +377,7 @@ frcmod: File created with parmck2.'''
 
 		cmd('rm tleap.in')
 		# CpHMD or not...it doesn't make a difference in leap if you just use all libraries in both
-		# flag 'w' one open() function -> if there is a file 'tleap.in', it'll be overwritten
+		# The flag 'w' on the open() function -> if there is a file 'tleap.in', it'll be overwritten
 		f = open('tleap.in','w')
 		f.write('source leaprc.gaff2\n')
 		f.write('source leaprc.DNA.OL15\n')
@@ -340,7 +400,8 @@ frcmod: File created with parmck2.'''
 		else:
 			sys_temp = 'SYS'
 		
-		# The two commands create periodic solvent boxes around solute, which should be a UNIT. solvateBox creates a cuboid box, while solvateOct creates a truncated octahedron.
+		# The two commands create periodic solvent boxes around the solute, which should be a UNIT. 
+		#  solvateBox creates a cuboid box, while solvateOct creates a truncated octahedron.
 		if self.exp_solv: 
 			f.write('loadoff solvents.lib\n')
 			if self.solvent == 'water':
@@ -382,13 +443,19 @@ min_name: Name for the minimization input.
 		f = open('%s.in'%min_name,'w')
 		f.write('Energy Minimization Stage\n')
 		f.write('&cntrl\n')
-		# imin=1  -> Flag to run minimization.
+		# imin=1 -> Flag to run minimization.
 		f.write(' imin=1,\n')
 		# The maximum number of cycles of minimization.
-		f.write(' maxcyc=10000,\n')
+		if not self.mode_custom:
+			f.write(' maxcyc=10000,\n')
+		else:
+			f.write(' maxcyc=%d,\n'%self.mode_custom_min)
+			change = 2000
+			if self.mode_custom_min <= 2000:
+				change = int(0.8*self.mode_custom_min)
 		# If ntmin=1 then the method of minimization will be switched from steepest descent to conjugate gradient after ncyc cycles.
 		f.write(' ntmin=1,\n')
-		f.write(' ncyc=2000,\n')
+		f.write(' ncyc=%d,\n'%change)
 		# Every ntpr steps, energy information will be printed in human-readable form to files "mdout"
 		f.write(' ntpr=250,\n')
 		if not self.exp_solv:
@@ -424,7 +491,7 @@ min_name: Name for the minimization input.
 		f.write('/\n')
 		f.close()
 
-	def input_heat(self, annealing_name='annealing', mdsteps_factor=1):
+	def input_heat(self, annealing_name='annealing', mdsteps_factor=1, custom=False):
 		'''Creates the input file for annealing.
 
 Parameters
@@ -432,7 +499,8 @@ Parameters
 
 annealing_name: Name for the annealing stage input.
 
-mdsteps_factor: The factor by which the attibute self.steps will be multiplied (defining the simulation's length.'''
+mdsteps_factor: The factor by which the attibute self.steps will be multiplied (defining the simulation's length).
+'''
 
 		cmd('rm %s.in'%annealing_name)
 		f = open('%s.in'%annealing_name,'w')
@@ -446,7 +514,10 @@ mdsteps_factor: The factor by which the attibute self.steps will be multiplied (
 		# Flag to restart a simulation. = 0 run as a new simulation.
 		f.write(' irest=0,\n')
 		# Number of MD-steps to be performed.
-		f.write(' nstlim=%d,\n'%(mdsteps_factor*self.steps))
+		if not self.mode_custom:
+			f.write(' nstlim=%d,\n'%(mdsteps_factor*self.steps))
+		else:
+			f.write(' nstlim=%d,\n'%self.mode_custom_a)
 		# The time step (psec). Recommended MAXIMUM is .002 if SHAKE is used, or .001 if it isn't. The use of Hydrogen Mass Repartitioning (HMR) together with SHAKE, allows the time step to be increased in a stable fashion by about a factor of two (up to .004) by slowing down the high frequency hydrogen motion in the system. To use HMR, the masses in the topology file need to be altered before starting the simulation. ParmEd can do this automatically with the HMassRepartition option.
 		if self.hmr:
 			f.write(' dt=0.004,\n')
@@ -562,7 +633,13 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 		f.write(' ntx=5,\n')
 		f.write(' imin=0,\n')
 		f.write(' irest=1,\n') 
-		f.write(' nstlim=%d,\n'%(mdsteps_factor*self.steps))
+		if not self.mode_custom:
+			f.write(' nstlim=%d,\n'%(mdsteps_factor*self.steps))
+		else:
+			if 'CpHMD_prod' in step:
+				f.write(' nstlim=%d,\n'%self.mode_custom_p)
+			else:
+				f.write(' nstlim=%d,\n'%self.mode_custom_e)
 		if self.hmr:
 			f.write(' dt=0.004,\n')
 			# ntcnstph times the number of residues (TRESCNT in the cpin file) times our 'dt' (in ps) should be ~100 fs = 0.1 ps if possible.# ntcnstph = 100/ (dt*1000*TRESCNT)
@@ -596,17 +673,17 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 			# This is used to specify the nonbonded cutoff, in Angstroms.
 			f.write(' cut=%.2f,\n'%self.cuttoff)
 			if 'CpHMD_prod' in step:
-				# cphmd explicit solvent PRODUCTION
+				# Cphmd explicit solvent (PRODUCTION)
 				f.write(' ntb=1,\n') # default value when igb=ntp=0
 				f.write(' ntp=0,\n') # default value
-				# format of the final 'restrt' file
+				# Format of the final 'restrt' file
 				f.write(' ntxo=2,\n')# default value (NetCDF)
 				# icnstph=2, indicates that CpHMD should be run in explicit solvent.
 				f.write(' icnstph=2,\n')
 				# Use the salt conc. CpHMD was parametrized for
 				f.write(' saltcon=0.1,\n')
 				f.write(' solvph=%.2f,\n'%ph)
-				# good results with ntcnstph set between 100 and 500 steps (dt=0.002).
+				# Good results are expected with ntcnstph set between 100 and 500 steps (dt=0.002).
 				f.write(' ntcnstph=100,\n') ## %d,\n'%ntph
 				# ntrelax: This is the number of steps of relaxation dynamics you wish to run. 200 fs is sufficient to account for the bulk of the solvent relaxation.(This is unique to running in explicit solvent)
 				f.write(' ntrelax=100,\n')
@@ -662,7 +739,10 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 				f.write(' ntx=5,\n')
 				f.write(' imin=0,\n')
 				f.write(' irest=1,\n')
-				f.write(' nstlim=%d\n'%(mdsteps_factor*self.steps))
+				if not self.mode_custom:
+					f.write(' nstlim=%d,\n'%(mdsteps_factor*self.steps))
+				else:
+					f.write(' nstlim=%d,\n'%self.mode_custom_p)
 				if self.hmr:
 					f.write(' dt=0.004,\n')
 				else:
@@ -752,7 +832,8 @@ phr: Ph range used to titrate.'''
 				f.write('parm %s\n'%self.prmtop)
 				f.write('trajin CpHMD_prod_%.2f.nc\n'%pp)
 				f.write('reference %s.rst7\n'%equil_name)
-				#distance dPET-sitio :PET :132,178,209 out dPET-sitio.dat #pg 649-650
+				# For future reference:
+				#  distance dPET-sitio :PET :132,178,209 out dPET-sitio.dat #pg 649-650
 				f.write('rmsd reference @CA,C,O,N,H&!(:WAT) first out ph%.2f_rmsd.dat mass\n'%(pp))
 				f.write('atomicfluct out ph%.2f_rmsf.dat @CA,C,O,N,H&!(:WAT) byres\n'%(pp))
 				f.write('radgyr ph%.2f-radgyr out ph%.2f_radgyr.dat @CA,C,O,N,H&!(:WAT) mass nomax\n'%(pp, pp))
@@ -780,7 +861,7 @@ mol2_check: If False, load system pdb on leap; if True, it'll run antechamber to
 		if not mol2_check:
 			self.leap_in()
 		else:
-			# Leap library don't know your system so we'll try to create the mol2 file and load it on leap
+			# Leap library doesn't know your system so we'll try to create the mol2 file and load it on Leap
 			cmd('reduce %s > system-amber-reduced.pdb'%self.pdb)
 			cmd('antechamber -fi pdb -fo mol2 -i system-amber-reduced.pdb -o system-amber.mol2 -c bcc -pf y -nc 0')
 			cmd('parmchk2 -i system-amber.mol2 -o system-amber.frcmod -f mol2')
@@ -807,13 +888,14 @@ mol2_check: If False, load system pdb on leap; if True, it'll run antechamber to
 			elif cha < 0:
 				self.leap_in(charge_fix=True, add_Na=3-cha, add_Cl=3)
 
-			# this will check for any fatal errors, proximity warnings don't matter (minimization can fix it). And in order to check for the true error we need to delete all leap log before attempting the leapfix
+			# This will check for any fatal errors, proximity warnings don't matter (minimization can fix it).
+			#  In order to check for true errors we need to delete all leap log before attempting the leapfix
 			cmd('rm leap.log')
 			cmd('tleap -f tleap.in')
 
-		# in the check system, we are looking for something troubling like this:
+		# In the check system, we are looking for something troubling like this:
 		# FATAL:  Atom .R<ALA 100>.A<HG2 11> does not have a type.
-		# with this kind of error it's impossible to build the topology 		
+		# With this kind of error it's impossible to build the topology 		
 		f = open('leap.log','r')
 		temp = f.readlines()
 		error = []
@@ -854,20 +936,21 @@ heating_files: Annealing files name (without .extension).
 equil_files: Equilibration files name (without .extension).'''
 
 		if self.pdb_string == '':
-			# no mutation done
+			# No mutation was done
 			leap_checking = self.leap_exec()
 			if leap_checking == -2:
 				return -2
 			elif leap_checking == -3:
 				return -3
 
-		# cphmd variable. It doesn't matter its value if not self.cph, see the g = open('system.cpin','r') line in the if-box below
+		# Cphmd variable. It doesn't matter its value if not self.cph
 		res_cnt = 1 
 		if self.cph:
 			cmd('rm -r Cph')
 			cmd('mkdir Cph')
 
-			# the following will adjust the residues to names Amber understands and test if any of them are in the Amber's database (it's no walk in the park adding a residue in the database, feel free to try yourself)
+			# The following will adjust the residues to names AMBER understands and test if any of them are in the AMBER's database.
+			#  It's no walk in the park adding a residue in the database, feel free to try it yourself!
 			ss = ''
 			for i in range(len(self.protonation_res)):
 				if self.protonation_res[i] == 'ASP':
@@ -909,13 +992,19 @@ equil_files: Equilibration files name (without .extension).'''
 					break
 
 		print('Preparation step completed.')
-		# creating input for minimization, annealing, equilibration and production
-		self.input_min(min_name=min_files)
-		self.input_heat(annealing_name=heating_files, mdsteps_factor=self.AnnealEqFactor*self.mode[self.simulation_mode][0])
-		self.input_equil(step=equil_files, mdsteps_factor=self.mode[self.simulation_mode][0], trescnt=int(res_cnt))
-		self.prod_cph(mdsteps_factor=self.mode[self.simulation_mode][1], ph=ph_range, trescnt=int(res_cnt))
-
-		# minimization-annealing-equilibration-MD/CpHMD
+		# Creating input for minimization, annealing, equilibration and production
+		if not self.mode_custom:
+			self.input_min(min_name=min_files)
+			self.input_heat(annealing_name=heating_files, mdsteps_factor=self.AnnealEqFactor*self.mode[self.simulation_mode][0])
+			self.input_equil(step=equil_files, mdsteps_factor=self.mode[self.simulation_mode][0], trescnt=int(res_cnt))
+			self.prod_cph(mdsteps_factor=self.mode[self.simulation_mode][1], ph=ph_range, trescnt=int(res_cnt))
+		else:
+			self.input_min(min_name=min_files)
+			self.input_heat(annealing_name=heating_files)
+			self.input_equil(step=equil_files, trescnt=int(res_cnt))
+			self.prod_cph(ph=ph_range, trescnt=int(res_cnt))
+			
+		# Minimization-annealing-equilibration-prodMD/CpHMD
 		cmd('rm simulation.sh')
 		f = open('simulation.sh','w')
 		description = 'Script - Molecular dynamics in AMBER'
@@ -939,7 +1028,7 @@ equil_files: Equilibration files name (without .extension).'''
 		cmd('diff BeforeManager.out AfterManager.out > diff.out')
 		print('\nThe Following files were created:')
 		dii = open('diff.out','r')
-		diit = dii.readlines() # poor naming skills
+		diit = dii.readlines()
 		dii.close()
 		for i in diit:
 			if '>' in i and 'AfterManager' not in i:
@@ -971,9 +1060,8 @@ equil_files: Equilibration files name (without .extension).'''
 		# Did the stage began?
 		f.write('\t\t\tif "4" in temp[i] and "RESULT" in temp[i]:\n')
 		f.write('\t\t\t\tresults = True\n')
-		#else:#if results:
 		f.write('\t\telse:\n')
-		# Since the stage began, "read" the last saved snapshot step number
+		# Since the stage began, "read" the last saved snapshot's step number
 		f.write('\t\t\tif "NSTEP" in temp[i]:\n')
 		f.write('\t\t\t\tnstep = i\n')
 		# If it was displayed the timings, it means the stage finished without problems
@@ -1073,10 +1161,16 @@ equil_files: Equilibration files name (without .extension).'''
 		self.input_heat  -> mdsteps_factor=self.AnnealEqFactor*self.mode[self.simulation_mode][0];
 		self.input_equil -> mdsteps_factor=self.mode[self.simulation_mode][0];
 		self.prod_cph    -> mdsteps_factor=self.mode[self.simulation_mode][1].'''
-		f.write('\tif \'%s\' in  arg[1]:\n\t\tmdstep = 10**4\n'%min_name)
-		f.write('\telif \'%s\' in  arg[1]:\n\t\tmdstep = %d\n'%(heat_name, self.AnnealEqFactor*self.mode[self.simulation_mode][0]*self.steps))
-		f.write('\telif \'%s\' in  arg[1]:\n\t\tmdstep = %d\n'%(eq_name, self.mode[self.simulation_mode][0]*self.steps))
-		f.write('\telif \'Production\' in  arg[1] or \'CpHMD_prod\' in  arg[1]:\n\t\tmdstep = %d\n'%(self.mode[self.simulation_mode][1]*self.steps))	
+		if not self.mode_custom:
+			f.write('\tif \'%s\' in  arg[1]:\n\t\tmdstep = 10**4\n'%min_name)
+			f.write('\telif \'%s\' in  arg[1]:\n\t\tmdstep = %d\n'%(heat_name, self.AnnealEqFactor*self.mode[self.simulation_mode][0]*self.steps))
+			f.write('\telif \'%s\' in  arg[1]:\n\t\tmdstep = %d\n'%(eq_name, self.mode[self.simulation_mode][0]*self.steps))
+			f.write('\telif \'Production\' in  arg[1] or \'CpHMD_prod\' in  arg[1]:\n\t\tmdstep = %d\n'%(self.mode[self.simulation_mode][1]*self.steps))	
+		else:
+			f.write('\tif \'%s\' in  arg[1]:\n\t\tmdstep = %d\n'%(min_name, self.mode_custom_min))
+			f.write('\telif \'%s\' in  arg[1]:\n\t\tmdstep = %d\n'%(heat_name, self.mode_custom_a))
+			f.write('\telif \'%s\' in  arg[1]:\n\t\tmdstep = %d\n'%(eq_name, self.mode_custom_e))
+			f.write('\telif \'Production\' in  arg[1] or \'CpHMD_prod\' in  arg[1]:\n\t\tmdstep = %d\n'%(self.mode_custom_p))	
 		f.write('\treport(file=arg[1], reportFile=report_name, inputFile = arg[2], rst_rename=rname_flag, mdStageStep = mdstep, flag_file= flag_name)\n')
 		f.close()
 		
@@ -1097,9 +1191,6 @@ eq_name: Equilibration's files name.
 
 phs: Ph range used to titrate.'''
 
-		'''info_sh = stat('simulation.sh')
-		f = open('simulation.sh','r+')
-		f.seek(info_sh.st_size)'''
 		ph_i = phs[0]
 		pH   = []
 		while ph_i <= phs[1]:
@@ -1114,7 +1205,7 @@ phs: Ph range used to titrate.'''
 		if not self.cph:
 			for pp in pH:
 				self.cpptraj_in(input_name=inp, rms_file=self.rms, rmsf_file=self.rmsf, min_name=mini_name, annealing_name=heat_name, equil_name=eq_name, phr=phs)
-				# we need to look for the rmsd input file in the father directory because 'f' is writting in the simulation.sh file which will run later
+				# We need to look for the rmsd input file in the father directory because 'f' is writting in the simulation.sh file which will run later
 				f.write('cpptraj -i ../MD_%.2f_%s &> cpptraj.log\n'%(pp,inp))
 				f.write('process_mdout.perl %s.mdout %s.mdout Production.mdout\n'%(heat_name, eq_name))
 		else:
@@ -1126,7 +1217,7 @@ phs: Ph range used to titrate.'''
 			f.write('echo \"populations.dat: prints the fraction of snapshots that the system spent in each state for each residue, where 1.0 means 100% of the time.\\n  OBS:The parentheses (*), indicates the number protons present in that state.\" >> ph_calcpka_populations.info\n')
 			for pp in pH:
 				if not self.exp_solv:
-					# There is a problem in AMBERtools19 with the following command, but it works just fine on AMBERtools18
+					# There is a problem in AMBERtools20 with the following command, but it works just fine on AMBERtools18
 					f.write('cphstats -i ../system_%s.cpin CpHMD_prod_%.2f.cpout -o pH%.2f_calcpka.dat --population pH%.2f_populations.dat\n'%(eq_name, pp, pp, pp)) # Look in https://github.com/Amber-MD/cpptraj/pull/816/files
 				else:
 					f.write('cphstats -i ../system.cpin CpHMD_prod_%.2f.cpout -o pH%.2f_calcpka.dat --population pH%.2f_populations.dat\n'%(pp, pp, pp))
@@ -1344,7 +1435,6 @@ fi'''
 			e.close()
 
 			# Stage Production for constant pH
-
 			cphmd_name_counter = 0
 			for Name in cphmd_names:
 				cph = open('sim%s.sh'%Name,'w')			
@@ -1378,7 +1468,6 @@ fi'''
 			e.close()
 
 			# Stage Production - we are being redundant here for an easier management of the dynamics stages and the error report.
-
 			name_counter = 0
 			for Name in productionMD_names:
 				prod = open('sim%s.sh'%Name,'w')
@@ -1487,7 +1576,7 @@ class Amber_mutation(Amber_run):
 					if len(data[3]) == 1:
 						# ATOM    356  NH1AARG A  53 ..coords....
 						if data[2][-3:] in res_newid:
-							# if we are complementing a residue already initiated above
+							# If we are complementing a residue already initiated above
 							for res_p in res_newid[data[2][-3:]]:
 								if res_p[0] == int(data[4]):
 									# res_p := [53, [coords1]]
@@ -1495,16 +1584,16 @@ class Amber_mutation(Amber_run):
 									# res_p := [53, [coords1,coords2]] 
 									break
 						elif data[2][-3:] in chosen_res and int(data[4]) in chosen_res[ data[2][-3:] ]:
-							# actual line is a different aminoacid, but still one from the chosen_res list
+							# The current line is a different aminoacid, but still one from the chosen_res list
 							coord_pos = i.find(data[5],0,len(i))
 							res_newid[data[2][-3:]]=[[ int(data[4]), [i[coord_pos:]] ]]
 						else:
-							# actual line is a different aminoacid and not one from the chosen_res list
+							# The current line is a different aminoacid and not one from the chosen_res list
 							found_res = False
 					elif len(data[3]) == 3:
 						# ANISOU   83  NH2 ARG A  34 #coords....
 						if data[3] in res_newid:
-							# if we are complementing a residue already initiated above
+							# If we are complementing a residue already initiated above
 							for res_p in res_newid[data[3]]:
 								if res_p[0] == int(data[5]):
 									# res_p := [53, [coords1]]
@@ -1512,11 +1601,11 @@ class Amber_mutation(Amber_run):
 									# res_p := [53, [coords1,coords2]] 
 									break
 						elif data[3] in chosen_res and int(data[5]) in chosen_res[ data[3] ]:
-							# actual line is a different aminoacid, but still one from the active site
+							# The current line is a different aminoacid, but still one from the active site
 							coord_pos = i.find(data[6],0,len(i))
 							res_newid[data[3]]=[[int(data[5]), [ i[coord_pos:] ]]]
 						else:
-							# actual line is a different aminoacid and not one from the active site
+							# The current line is a different aminoacid and not one from the active site
 							found_res = False
 
 		# res_newid := {'ARG': [ [34, ['coords1','coords2',...]], [53, ['coords1','coords2',...]], ... ], ... }
@@ -1610,11 +1699,11 @@ id_only: If True, self.chosen_mutation won't change.
 			bool1 = 'ATOM' in line[0] or 'ANISOU' in line[0] or 'HETATM' in line[0]
 			bool2 = len(line) > 3
 			if bool1 and bool2:
-				# now we are looking only at the atoms coords info
+				# Now we are looking only at the atoms coords info
 				numbs = re.findall(r'[0-9]+',i) # list of numbers in string format
 				debug = '' # res id
 
-				# correcting the numbs problem that occurs when we have:
+				# Correcting the numbs problem that occurs when we have:
 				if 'ATOM' in line[0] or 'HETATM' in line[0]:
 					if len(numbs) == 14:
 						# ATOM   2530  OD1 AS4 A 178  -24 969  -8 049  11 709  1 00  6 51  O
@@ -1663,7 +1752,7 @@ id_only: If True, self.chosen_mutation won't change.
 			if bool1 and bool2:
 				numbs = re.findall(r'[0-9]+',self.pdb_str_2Mut[i])
 				debug = '' # debug is the res id counter
-				# correcting the numbs problem that occurs when we have:
+				# Correcting the numbs problem that occurs when we have:
 				if 'ATOM' in line[0] or 'HETATM' in line[0]:
 					if len(numbs) == 14:
 						# ATOM   2530  OD1 AS4 A 178  -24 969  -8 049  11 709  1 00  6 51  O
@@ -1685,12 +1774,12 @@ id_only: If True, self.chosen_mutation won't change.
 				if bool3:
 					# ATOM   3389  H  BSER A 245
 					if debug != res_number:
-						# first residue of pdb or a different residue from the line above
+						# First residue of pdb or a different residue from the line above
 						res_number = debug
 						prev_res = res_Flag
 						res_Flag = line[3]
 						if res_Flag not in self.mut_pos:
-							# res first appearance
+							# Residuo first appearance
 							# Phase A (new residue)
 							# self.mut_pos := {'residueA': [(pos_i,pos_i)]} # pos_i is the first position, in self.pdb_str_2Mut, of residueA 
 							self.mut_pos[res_Flag] = [(i,i)]
@@ -1743,7 +1832,7 @@ id_only: If True, self.chosen_mutation won't change.
 
 		# x, y positions from self.pdb_str_2Mut, which is given by 'res_ids'
 		# self.mut_pos := {'residueA': [(xa1,ya1), ..., (xan,yan)], ..., 'residueZ': [(xz1,yz1), ..., (xzn,yzn)]}
-		# filling self.res_atm
+		# Filling self.res_atm
 		self.atm_detail()
 		# self.res_atm := {'MET': [(0th appearance,{'C':[line 32 of self.pdb_str_2Mut, line 35 of self.pdb_str_2Mut,...]})]}
 		
@@ -1770,7 +1859,7 @@ id_only: If True, self.chosen_mutation won't change.
 						else:
 							self.res_atm[i][len(self.res_atm[i])-1][1][line[len(line)-1]].append(z)
 					else:
-						# res 'i' is in res_atm and last position of self.res_atm[i] is not about the residue you are treating, i.e., the res type "i" already appeared somewhere before.
+						# Residuo 'i' is in res_atm and last position of self.res_atm[i] is not about the residue you are treating, i.e., the res type "i" already appeared somewhere before.
 						self.res_atm[i].append( (j,{line[len(line)-1]:[z]}) )
 
 	def choose_mutation(self, mutation_type = 1):
@@ -1792,13 +1881,10 @@ mutation_type:
 	2 - One mutation from the attribute 'improbable_mutation'. 
 	3 - Mutations of choice (not restricted to active site).'''
 		
-		# filling self.mut_pos and self.res_atm
+		# Filling self.mut_pos and self.res_atm
 		if mutation_type == 1 or mutation_type == 2: #!= 3
 			# self.active_site := {'SER':[newid, ...], ...}
 			self.res_detail(res_ids=self.active_site)
-
-			# Just ignore this little reminder for my future self
-			'''Se eu usar um loop para ficar rodando esse codigo de mutacao, essas duas linhas saem daqui e vao para cima deste loop!!'''
 			self.mutation_temp_prob   = cp(self.mutation_links)
 			self.mutation_temp_improb = cp(self.improbable_mutation)
 		elif mutation_type == 3:
@@ -1822,8 +1908,8 @@ mutation_type:
 				# self.mut_pos := {'AS4': [(xa1,ya1), ..., (xan,yan)], ..., 'residueZ': [(xz1,yz1), ..., (xzn,yzn)]}
 				self.mut_count += 1
 				if self.mut_count == len(self.chosen_mutation):
-					# this triggers if only one mutation will be made
-					# or if its the last of multiple multations
+					# This triggers if only one mutation will be made
+					#  or if its the last of multiple multations
 					multiple = False
 				for t_r in range( len(self.chosen_residues[t[0]]) ):
 					# t_r := position in the list of aminoacids t[0]
@@ -1845,7 +1931,7 @@ mutation_type:
 					return -3
 		else:
 			# mutation_type != 3
-			# choosing a random aminoacid from the active site to mutate
+			# Choosing a random aminoacid from the active site to mutate
 			res_chosen = random.sample(self.mut_pos.keys(),1)[0]
 			res_not_amber = res_chosen
 			if res_chosen == 'AS4':
@@ -1856,19 +1942,19 @@ mutation_type:
 				res_not_amber = 'GLU'
 
 			if mutation_type == 1:
-				# gonna make a "probable" mutation
+				# Making a "probable" mutation
 				temp_mutations = self.mutation_temp_prob
 			elif mutation_type == 2:
-				# gonna make a "improbable" mutation
+				# Making an "improbable" mutation
 				temp_mutations = self.mutation_temp_improb
 		
 			if res_not_amber in temp_mutations and len(temp_mutations[res_not_amber]) > 0:
-				# there is a mutation for the res_chosen. So, for simplicity, take the last mutation on the list (If you are going to test multiple mutations, it's a good thing not to try the same thing more than once).
+				# There is a mutation for the res_chosen. So, for simplicity, take the last mutation on the list (If you are going to test multiple mutations, it's a good thing not to try the same thing more than once).
 				# x, y positions from self.pdb_str_2Mut, which is given by 'res_ids'
 				# self.mut_pos := {'residueA': [(xa1,ya1), ..., (xan,yan)], ..., 'residueZ': [(xz1,yz1), ..., (xzn,yzn)]}
 				if len(self.mut_pos[res_chosen]) == 1:
-					# if there is only one res_chosen in the self.pdb_str_2Mut
-					# popping the mutation from the list and applying it (next time the process won't see this mutation as possible).
+					# If there is only one res_chosen in the self.pdb_str_2Mut
+					# Popping the mutation from the list and applying it (next time the process won't see this mutation as possible).
 					for j in range(len(temp_mutations[res_not_amber])):
 						mut_chosen = temp_mutations[res_not_amber].pop()
 						# REMINDER - AFTER AMBER:
@@ -1883,7 +1969,7 @@ mutation_type:
 								print("Go check what went wrong with the mutation %s to %s"%(res_chosen,mut_chosen))
 								return -3
 							else:
-								# taking notes on which mutations were made
+								# Taking notes on which mutations were made
 								# self.mutations_restricted[res_not_amber] = [(0,mut_chosen)]
 								self.mutations_restricted[res_chosen_flag] = [mut_chosen]
 								return 0
@@ -1894,22 +1980,22 @@ mutation_type:
 								print("Go check what went wrong with the mutation %s to %s"%(res_chosen,mut_chosen))
 								return -3
 							else:
-								# taking notes on which mutations were made
+								# Taking notes on which mutations were made
 								# self.mutations_restricted[res_not_amber].append( (0,mut_chosen) )
 								self.mutations_restricted[res_chosen_flag].append( mut_chosen )
 								return 0
 
 				elif len(self.mut_pos[res_chosen]) > 1:
 					'''This block seems fine and we could use it for the case len(self.mut_pos[res_chosen]) == 1, but since it wasn't tested yet it is too risky to assemble this if-elif block.'''
-					# there may be more than one appearance of res_chosen in the active site in some families of enzymes
+					# There may be more than one appearance of res_chosen in the active site in some families of enzymes
 					mut_chosen = temp_mutations[res_not_amber].pop()
 					for i in range(len(self.mut_pos[res_chosen])):
 						appearance_chosen = self.mut_pos[res_chosen][i] #(xa,ya)
-						# we may want to try the "same" mut SER_ALA (this "new" SER has a different res id ), so we need to deepcopy a temporary variable to make sure all combinations were done 
+						# We may want to try the "same" mut SER_ALA (this "new" SER has a different res id ), so we need to deepcopy a temporary variable to make sure all combinations were done 
 						temp_jmut = cp(temp_mutations[res_not_amber])
 						for j in range(len(temp_mutations[res_not_amber])):
 							mut_chosen = temp_jmut.pop()
-							# this mut_chosen might have been restricted, so this loop will go on until it finds a mutation not prohibited (by self.mutations_restricted) or stop after finding none
+							# This mut_chosen might have been restricted, so this loop will go on until it finds a mutation not prohibited (by self.mutations_restricted) or stop after finding none
 							# self.beforeAmber_res2mut := {'SER':[old_id, ...], ...}
 							res_chosen_flag = '%s_%d'%(res_not_amber,self.beforeAmber_res2mut[res_not_amber][i])
 							# self.mutations_restricted eg:= {'SER_160': ['GLY']}
@@ -1920,24 +2006,24 @@ mutation_type:
 									print("Go check what went wrong with the mutation %s%d to %s"%(res_chosen,i,mut_chosen))
 									return -3
 								else:
-									# taking notes on which mutations were made
+									# Taking notes on which mutations were made
 									self.mutations_restricted[res_chosen_flag] = [mut_chosen]
-									# remember, the original system will suffer only one mutation # if it's need to do multiple mutations use mutation_type == 3!
+									# Remember, the original system will suffer only one mutation # if it's need to do multiple mutations use mutation_type == 3!
 									return 0
 							elif mut_chosen not in self.mutations_restricted[res_chosen_flag]:
-								# like {res_chosen_flag: []}
+								# {res_chosen_flag: []}
 								verif = self.mutation(res=res_chosen, old_res_id=res_chosen_flag, pos_id=i, pos=appearance_chosen, mut_res=mut_chosen)
 								if verif == -1:
 									print("Go check what went wrong with the mutation %s%d to %s"%(res_chosen,i,mut_chosen))
 									return -3
 								else:
-									# taking notes on which mutations were made
+									# Taking notes on which mutations were made
 									self.mutations_restricted[res_chosen_flag].append( mut_chosen )
 									return 0
 
-						# if the process ends up here at the final line of the "i-loop" block then it will look for another residuo to mutate
+						# If the process ends up here at the final line of the "i-loop" block then it will look for another residuo to mutate
 			else:
-				# if the process ends here it's because all probable mutations were already made
+				# If the process ends here it's because all probable mutations were already made
 				return -1
 
 		return 0
@@ -1966,16 +2052,16 @@ mut_res: Residue you wish for the mutation.
 mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb_str_2Mut. It must use LEap (False option) only after all wanted modifications.
 '''
 
-		# lines to be modified
+		# Lines to be modified
 		# self.pdb_str_2Mut is about the system-amber.pdb
 		atom_list = cp(self.pdb_str_2Mut[pos[0]:pos[1]+1])
 		temporary_files = []
 		# self.res_atm := {'MET': [(0th appearance,{'C':[line 32 of self.pdb_str_2Mut, line 35 of self.pdb_str_2Mut,...]})]}
-		# can't modify directly the self.res_atm because it uses tuples..so you need to change a tuple for another
+		# Can't modify directly the self.res_atm because it uses tuples..so you need to change a tuple for another
 		temp_flag = False
 		for i in self.res_atm[res]:
 			if i[0] == pos_id:
-				# to be sure it is the correct appearance
+				# To be sure it is the correct appearance
 				temp_flag = True
 				atom_pos = cp(self.res_atm[res][pos_id][1])
 				break
@@ -1984,12 +2070,12 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 		for i in atom_pos:
 			for j in range(len(atom_pos[i])):
 				atom_pos[i][j] -= pos[0]
-		# now atom_pos holds the correct positioning of atoms in the atom_list
+		# Now atom_pos holds the correct positioning of atoms in the atom_list
 		
 		modified_text = self.aminoacid_mutation(transform=mut_res, atm_list = atom_list, atm_pos= atom_pos)
 		
 		# modified_text probably hasn't the same size as the text before the mutation change!
-		# it's necessary to update self.mut_pos and self.res_atm for multiple mutations!
+		# It's necessary to update self.mut_pos and self.res_atm for multiple mutations!
 		orig_size = pos[1] - pos[0] +1
 		new_size = len(modified_text)
 		diff_size = orig_size - new_size
@@ -2004,34 +2090,57 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 
 		# temp holds all the info from pdb_str_2Mut, mutated and non-mutated parts (in the random active site mutation there are residues which will not be modified) # see self.res_detail
 		temp = cp(self.pdb_str_2Mut[:pos[0]])
-		# in case pos[0] ==0 -> self.pdb_str_2Mut[:0] := []
+		# In case pos[0] ==0 -> self.pdb_str_2Mut[:0] := []
 		for i in modified_text:
 			temp.append( i )
-		# in case pos[1]+1 is out of range -> self.pdb_str_2Mut[pos[1]+1:] := []
+		# In case pos[1]+1 is out of range -> self.pdb_str_2Mut[pos[1]+1:] := []
 		temp.extend(self.pdb_str_2Mut[pos[1]+1:])
 
-		# if there are more mutations to make, it is not recommended to pass through Leap before making all modifications
-		# since if we use Leap in every iteration we'll acumulate erros from numerical aproximations.
+		# If there are more mutations to make, it is not recommended to pass through Leap before making all modifications
+		#  since if we use Leap in every iteration we'll acumulate erros from numerical aproximations.
 		if mult_flag:
 			self.pdb_str_2Mut = temp
 			return 1
 	
 		# self.pdb_str_not2Mut is every line from self.pdb_string wich is not related to mutation possibilities 
 		count_mut = 0
-		# this is done to maintain the residue order
+		# This is done to maintain the residue order
 		for i in range(len(self.pdb_string)):
 			if  self.pdb_string[i] != self.pdb_str_not2Mut[i]:
 				#  self.pdb_string[i] is looking at the old non-mutated residuo
 				count_mut = i
 				break
 		
+		####################################################################################
+		####################################################################################
+		####################################################################################
+		####################################################################################
+		####################################################################################
+		####################################################################################
+
+		# FAZER DEPOIS DA QUALIFICACAO!
+		# numbs = re.findall(r'[0-9]+',self.pdb_str_2Mut[i])
+		# len(numbs) == 14: 
+		#  ATOM   2530  OD1 AS4 A 178  -24 969  -8 049  11 709  1 00  6 51  O
+		# self.chosen_residues := {'SER':[newid, ...], ...} eg: {'ASP':[178], 'HIP': [209]}
+
 		new_pdb_string = self.pdb_str_not2Mut[:count_mut] #self.pdb_string[:count_mut]
 		new_pdb_string.extend(temp)
 		new_pdb_string.extend(self.pdb_str_not2Mut[count_mut:])
 
+		####################################################################################
+		####################################################################################
+		####################################################################################
+		####################################################################################
+		####################################################################################
+		####################################################################################
+		####################################################################################
+		####################################################################################
+		####################################################################################
+
 		self.pdb_string = new_pdb_string 
 
-		# generating new pdb
+		# Generating a new pdb with the mutation
 		if not self.not_rand_mut:
 			new_filename = '%s_mut_%s-%s.pdb'%(self.pdb[:-4],old_res_id,mut_res)	
 		else:
@@ -2051,8 +2160,8 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 			f.write(i)
 		f.close()
 
-		# renumbering the atoms and preparing for constant pH MD #--reduce
-		# even though it looks unnecessary because we are not modifying the residue order, this prevents a huge error!
+		# Renumbering the atoms and preparing for constant pH MD #--reduce
+		# Even though it looks unnecessary because we are not modifying the residue order, this prevents a huge error!
 		cmd('pdb4amber -i %s -o %s_renum.pdb --constantph'%(new_filename,new_filename[:-4]))
 		temporary_files.append( self.pdb )
 		self.pdb = '%s_renum.pdb'%new_filename[:-4]
@@ -2067,7 +2176,7 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 		cmd('rm leap.log')
 		cmd('tleap -f tleap.in')
 		
-		# checking the total charge, if it's not zero, the code below will neutralize the system adding ions
+		# Checking the total charge, if it's not zero, the code below will neutralize the system adding ions
 		tt = open('leap.log','r')
 		temp = tt.readlines()
 		tt.close()
@@ -2087,12 +2196,12 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 			else:
 				self.leap_in(checking=True, checking_cmd='check', charge_fix=True, add_Na=cha+3, add_Cl=3)
 
-			# this will check for any fatal errors, proximity warnings don't matter (minimization can fix it). And in order to check for the true error we need to delete all leap log before attempting the leapfix
+			# This will check for any fatal errors, proximity warnings don't matter (minimization can fix it). And in order to check for the true error we need to delete all leap log before attempting the leapfix
 			cmd('rm leap.log')
 			cmd('tleap -f tleap.in')
-			# in the check system, we are looking for something troubling like this:
+			# In the check system, we are looking for something troubling like this:
 			# FATAL:  Atom .R<ALA 100>.A<HG2 11> does not have a type.
-			# with this kind of error it's impossible to build the topology 		
+			# With this kind of error it's impossible to build the topology 		
 			f = open('leap.log','r')
 			temp = f.readlines()
 			error = []
@@ -2104,7 +2213,7 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 					print(i[:-1])
 				return -1
 
-		# if the process survived until here, then everything seems ok and we now need to create the topology
+		# If the process survived until here, then everything seems ok and we now need to create the topology
 		if cha > 0:
 			self.leap_in(checking=False, charge_fix=True, add_Na=3, add_Cl=cha+3)
 		else:
@@ -2114,7 +2223,7 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 		temporary_files.append( 'tleap.in' )
 		self.pdb = 'systemLeap.pdb'
 
-		#ok now we can delete all transitory files
+		# Now we can delete all transitory files
 		cmd('ls > temporary_stage_ls.out')
 		for i in temporary_files:
 			if '.py' in i:
@@ -2143,21 +2252,21 @@ atm pos: Atoms' positions respectively to the sequence in atm_list.
 
 		new_list = []
 		for i in atm_pos:
-			# chose an element
+			# Loop chose an element
 			elem_pos = []
 			for j in atm_pos[i]:
-				# chose a position
+				# Loop chose a position
 				temp = atm_list[j].split()
 				if temp[2] in self.restypeatoms[transform]:
-					# ex: if 'HB2' in restypeatoms['MET'], then add to the list
-					# before confirming this atom to new_list, we'll change the residue, temp[3], to the 'transform' variable residue
+					# Ex: if 'HB2' in restypeatoms['MET'], then add to the list
+					# Before confirming this atom to new_list, we'll change the residue, temp[3], to the 'transform' variable residue
 					data_pos = atm_list[j].find(temp[3],0,len(atm_list[j]))
 					temp2 = atm_list[j][:data_pos]
 					temp2 += transform
 					temp2 += atm_list[j][data_pos+3:]
 					elem_pos.append( temp2 )
 
-			# maybe now there are some missing atoms, but there is no strange atom names
+			# Maybe now there are some missing atoms, but there is no strange atom names
 			new_list.extend( elem_pos )
  
 		if self.mut_count > 1:
@@ -2224,6 +2333,9 @@ Manager Version 1.1:
 	*Error report file created.
 	*An easy restart .sh of current simulation stage created.
 
+Manager Version 1.2:
+	*Added a custom option for the duration of each stage of simulation 
+
 
 Copyright (C) 2021  Braga, B. C. 
 e-mail: bruno.braga@ufms.br 
@@ -2242,12 +2354,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-	# default keys
-	version_n     = '1.1'
+	# Default keys
+	version_n     = '1.2'
 	inst_only     = False
 	version_only  = False
 	arqui         = 'gpu'
-	mode          = 'low'
+	mode          = 'L'
+	custom_mode   = False
+	custom_min    = 10**4
+	custom_a      = 10**6
+	custom_e      = 10**6
+	custom_p      = 10**6
 	gpu_unit      = 0
 	icyc          = 200
 	sim_goal      = 'MD'
@@ -2272,9 +2389,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	fin_pH        = ini_pH
 	pHInterval    = 1.0
 
-	# if for some reason you don't want to use the HMR method, set the attribute "self.hmr" to False
+	# If for some reason you don't want to use the HMR method, set the attribute "self.hmr" to False
 
-	flags = ["&","-v","--version","-h","--help",'-arq','gpu','-mode','-res','-mut','-rdmut','-atsite','-rdydone','-icyc','-solv','-g','ph','-i','-mpi','-explicit','-prepstp','-cut','-phdset']
+	flags = ["&","-v","--version","-h","--help",'-arq','gpu','-mode','-res','-mut','-rdmut','-atsite','-rdydone','-icyc','-solv','-g','ph','-i','-mpi','-explicit','-prepstp','-cut','-phdset','MIN','A','E','P']
 	
 	# Flag verification
 	for i in arg:
@@ -2282,7 +2399,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("Unkown Flag used: ", i)
 			inst_only = True
 
-	cut   = 0 # counter for input flags
+	cut   = 0 # Counter for input flags
 	for i in range(len(arg)):
 		if inst_only:
 			break
@@ -2309,23 +2426,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-atsite\t\t(Auxiliary option for -rdmut) Active site - for enzymes only. Must be informed right after this flag as eg: -atsite SER_160 HIS_237 ASP_206. Necessary only if a mutation will be done. Defaut: set as petase's active site.\n")
 				print("\t-rdydone\t(Auxiliary option for -rdmut) Informs which mutation you're restricting from the \"random\" choice. Eg. -rdydone SER_160-MET ASP_206-GLY ASP_206-ILE.\n")
 				print("\t-mut\t\tMutation of choice. Eg: -mut SER_160-MET.\n\t\t\t\tObs: For the mutation options (-mut and -rdmut) a solvent must be used. If none given, water will be used by default.\n")
-				print("\t-mode\t\tDuration of the simulation's stages (in time steps).\n\t\t\tlow: Annealing: 10**4 | Equilibration: 10**4 |  Production: 10**5\n\t\t\tmed: Annealing: 10**4 | Equilibration: 10**5 |  Production: 10**6\n\t\t\tgpu-med: Annealing: 10**5 | Equilibration: 10**6 |  Production: 5*10**6\n\t\t\tgpu-high: Annealing: 5*10**5 | Equilibration: 5*10**6 |  Production: 10**7\n\t\t\tgpu-ultra: Annealing: 10**6 | Equilibration: 10**7 |  Production: 5*10**7\n")
+				print("\t-mode\t\tDuration of the simulation's stages (in time steps).\n\t\t\tL: Annealing: 10**4 | Equilibration: 10**4 |  Production: 10**5\n\t\t\tM: Annealing: 10**4 | Equilibration: 10**5 |  Production: 10**6\n\t\t\tGM: Annealing: 10**5 | Equilibration: 10**6 |  Production: 5*10**6\n\t\t\tGH: Annealing: 5*10**5 | Equilibration: 5*10**6 |  Production: 10**7\n\t\t\tGU: Annealing: 10**6 | Equilibration: 10**7 |  Production: 5*10**7\n\t\t\tCT: Minimization: MIN | Annealing: A | Equilibration: E |  Production: P | Ex: -mode CT MIN 10**4 A 10e6 E 10e7 P 10e9\n")
 				print("\t-explicit\tExplicit solvent will be used. One of the following options must be given after this flag:\n\t\t\twater\n\t\t\tmethanol\n\t\t\tchloroform\n\t\t\tN-methyacetamide\n\t\t\turea\n")
-				print("\t-icyc\t\t(Integer between 50 and 1000) Number of times information regarding energy, rmsd, rmsf, coordinates, etc, are saved for each simulation stage (Default: 200).\n\t\t\t\tObs: For -mode gpu-ultra, this is set between 800 and 1000.\n")
+				print("\t-icyc\t\t(Integer between 50 and 1000) Number of times information regarding energy, rmsd, rmsf, coordinates, etc, are saved for each simulation stage (Default: 200).\n\t\t\t\tObs: For -mode GU, this is set between 800 and 1000.\n")
 				print("\t-arq\t\tChoice in architecture\n\t\t\tgpu (if chosen, the GPU id must be informed right after this flag)\n\t\t\tsander\n\t\t\tpmemd\n")
 				print("\t-mpi\t\tMulticore run (the number of cores must be informed right after this flag). Default compiler: mpiexec.\n\t\t\t\tObs: Not implemented for -arq gpu.\n")
 				print("\t-cut\t\tNonbonded cutoff in angstrom (Default: 12).\n")
 				print("\t-prepstp\t(Option for Devs.) Stops the run after all preparations are complete (right before minimization).\n\t\t\t\tObs: The shell script, to run the simulation, will still be created for you.\n")
-				print("\nExamples:\n\t$ python3 ASM.py -i 1UBQ.pdb -arq sander -mpi 4 -mode low -g CpHMD -phdset 6.0 7.0 0.5\n")
-				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq pmemd -mpi 4 -mode low -g CpHMD -ph 6.5 -explicit water\n")
-				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -rdmut 1\n")
-				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET\n")
-				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET HIS_237-ALA\n")
-				print("\n\t$ python3 ASM.py -i paracetamol.pdb -arq sander -mode med\n")
-				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq sander -mpi 4 -mode low -g MD -explicit water\n")
+				print("\nExamples:\n\t$ python3 ASM.py -i 1UBQ.pdb -arq sander -mpi 4 -mode L -g CpHMD -phdset 6.0 7.0 0.5\n")
+				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq pmemd -mpi 4 -mode L -g CpHMD -ph 6.5 -explicit water\n")
+				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GM -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -rdmut 1\n")
+				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GM -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET\n")
+				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GM -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET HIS_237-ALA\n")
+				print("\n\t$ python3 ASM.py -i paracetamol.pdb -arq sander -mode M\n")
+				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq sander -mpi 4 -mode L -g MD -explicit water\n")
 				break
 
-			# key verifications
+			# Key verifications
 			elif arg[i].lower() == '-arq':
 				arqui = arg[i+1]
 				if arqui.lower() == 'gpu':
@@ -2333,6 +2450,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				continue
 			elif arg[i].lower() == '-mode':
 				mode = arg[i+1]
+				if mode.upper() == 'CT':
+					custom_mode = True
+					cc = i+2
+					while cc < len(arg):
+						if arg[cc].upper() == 'MIN':
+							cc += 1
+							custom_min = IntTransNumb(arg[cc])
+						elif arg[cc].upper() == 'A':
+							cc += 1
+							custom_a = IntTransNumb(arg[cc])
+						elif arg[cc].upper() == 'E':
+							cc += 1
+							custom_e = IntTransNumb(arg[cc])
+						elif arg[cc].upper() == 'P':
+							cc += 1
+							custom_p = IntTransNumb(arg[cc])
+						else:
+							i = cc-1 
+							break
+						cc += 1
 				continue
 			elif arg[i].lower() == '-res':
 				res_i = arg[i+1]
@@ -2341,7 +2478,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 					if arg[cc] not in flags:
 						res_i += arg[cc]
 					else:
-						# this is a 'for-loop' so 'i' will increase at the end of iteration
+						# This is a 'for-loop' so 'i' will increase at the end of iteration
 						i = cc-1 
 						break
 					cc += 1
@@ -2354,7 +2491,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 					if arg[cc] not in flags:
 						site_i.append( arg[cc] )
 					else:
-						# this is a 'for-loop' so 'i' will increase at the end of iteration
+						# This is a 'for-loop' so 'i' will increase at the end of iteration
 						i = cc-1 
 						break
 					cc += 1
@@ -2455,7 +2592,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			# cut!= i means that the current arg[i] was used in the previous iteration
 			cut = i+1
 
-	if mode == 'gpu-ultra' and icyc < 800:
+	if mode == 'GU' and icyc < 800:
 		icyc = 800
 				
 	if not inst_only and not version_only:
@@ -2470,13 +2607,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				pH_fin = fin_pH 
 
 			if not mut_rand and not mut_choice:
-				objeto = Amber_run(system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
+				objeto = Amber_run(system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, custom_mode = custom_mode, custom_min = custom_min, custom_a = custom_a, custom_e = custom_e, custom_p = custom_p, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
 				objeto.simulation(arq=arqui, ph_range=[pH_ini,pH_fin])
 			elif mut_rand and not mut_choice:
-				objeto = Amber_mutation(system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only, active_site=atv_site)
+				objeto = Amber_mutation(system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, custom_mode = custom_mode, custom_min = custom_min, custom_a = custom_a, custom_e = custom_e, custom_p = custom_p, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only, active_site=atv_site)
 				objeto.mutations_restricted = mut_done
 				if objeto.chosen_residues != -1:
-					# there wasn't a problem with the mutation residues
+					# There wasn't a problem with the mutation residues
 					# objeto.chosen_mutation != {} 
 					okMutation_flag = objeto.choose_mutation(mutation_type = mut_type)
 					if okMutation_flag == 0:
@@ -2487,10 +2624,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 						print("\nAll possible mutations were already made for the chosen mutation type.\n")
 			elif not mut_rand and mut_choice:
 				# mut := ['SER_160-MET']
-				objeto = Amber_mutation(chosen_mut_flag = True, chosen_mut=mut, system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
+				objeto = Amber_mutation(chosen_mut_flag = True, chosen_mut=mut, system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, custom_mode = custom_mode, custom_min = custom_min, custom_a = custom_a, custom_e = custom_e, custom_p = custom_p, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
 				objeto.mutations_restricted = {}
 				if objeto.chosen_mutation != {}:
-					# there wasn't a problem with the mutation residues
+					# There wasn't a problem with the mutation residues
 					okMutation_flag = objeto.choose_mutation(mutation_type = 3)
 					if okMutation_flag == 0:
 						objeto.simulation(arq=arqui, ph_range=[pH_ini,pH_fin])
