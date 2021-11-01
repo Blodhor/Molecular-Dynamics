@@ -176,7 +176,7 @@ $ python3 ASM.py -h
         
 $ python3 ASM.py -v
 
-    Current version: 1.1
+    Current version: 1.2
 
     Manager Alpha - Molecular Dynamics simulation manager (using Amber and Ambertools).
 
