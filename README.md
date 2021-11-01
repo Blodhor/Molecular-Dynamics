@@ -88,7 +88,7 @@ About ASM.py execution:
 
 $ python3 ASM.py -h
 
-    Welcome to Amber Simulation Manager 1.1:
+    Welcome to Amber Simulation Manager 1.2:
 
     Copyright (C) 2021  Braga, B. C.
     This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.
@@ -122,11 +122,12 @@ $ python3 ASM.py -h
                                 Obs: For the mutation options (-mut and -rdmut) a solvent must be used. If none given, water will be used by default.
 
         -mode           Duration of the simulation's stages (in time steps).
-                        low: Annealing: 10**4 | Equilibration: 10**4 |  Production: 10**5
-                        med: Annealing: 10**4 | Equilibration: 10**5 |  Production: 10**6
-                        gpu-med: Annealing: 10**5 | Equilibration: 10**6 |  Production: 5*10**6
-                        gpu-high: Annealing: 5*10**5 | Equilibration: 5*10**6 |  Production: 10**7
-                        gpu-ultra: Annealing: 10**6 | Equilibration: 10**7 |  Production: 5*10**7
+                        L: Annealing: 10**4 | Equilibration: 10**4 |  Production: 10**5
+                        M: Annealing: 10**4 | Equilibration: 10**5 |  Production: 10**6
+                        GM: Annealing: 10**5 | Equilibration: 10**6 |  Production: 5*10**6
+                        GH: Annealing: 5*10**5 | Equilibration: 5*10**6 |  Production: 10**7
+                        GU: Annealing: 10**6 | Equilibration: 10**7 |  Production: 5*10**7
+                        CT: Minimization: MIN | Annealing: A | Equilibration: E |  Production: P | Ex: -mode CT MIN 10**4 A 10e6 E 10e7 P 10e9
 
         -explicit       Explicit solvent will be used. One of the following options must be given after this flag:
                         water
@@ -153,25 +154,25 @@ $ python3 ASM.py -h
 
 
     Examples:
-        $ python3 ASM.py -i 1UBQ.pdb -arq sander -mpi 4 -mode low -g CpHMD -phdset 6.0 7.0 0.5
+        $ python3 ASM.py -i 1UBQ.pdb -arq sander -mpi 4 -mode L -g CpHMD -phdset 6.0 7.0 0.5
 
 
-        $ python3 ASM.py -i 6eqe.pdb -arq pmemd -mpi 4 -mode low -g CpHMD -ph 6.5 -explicit water
+        $ python3 ASM.py -i 6eqe.pdb -arq pmemd -mpi 4 -mode L -g CpHMD -ph 6.5 -explicit water
 
 
-        $ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -rdmut 1
+        $ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GM -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -rdmut 1
 
 
-        $ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET
+        $ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GH -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET
 
 
-        $ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode gpu-med -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET HIS_237-ALA
+        $ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GU -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET HIS_237-ALA
 
 
-        $ python3 ASM.py -i paracetamol.pdb -arq sander -mode med
+        $ python3 ASM.py -i paracetamol.pdb -arq sander -mode M
 
 
-        $ python3 ASM.py -i 6eqe.pdb -arq sander -mpi 4 -mode low -g MD -explicit water
+        $ python3 ASM.py -i 6eqe.pdb -arq sander -mpi 4 -mode L -g MD -explicit water
         
 $ python3 ASM.py -v
 
@@ -216,6 +217,9 @@ $ python3 ASM.py -v
             *Mutation method fixed.
             *Error report file created.
             *An easy restart .sh of current simulation stage created.
+            
+    Manager Version 1.2:
+	        *Added a custom option for the duration of each stage of simulation
 
 
     Copyright (C) 2021  Braga, B. C. 
