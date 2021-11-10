@@ -46,8 +46,9 @@ def multi_inp(cent_x = -18.287, cent_y = -9.034, cent_z = 7.361, max_dv = 5,
 
 	coords_done = []
 	sh = open('exec_vina.sh','w')
-	sh.write('#!/bin/bash\n#\n#\n#Autor:Braga, B. C.\n#Email:bruno.braga@ufms.br\n%s\n\n'%'#'*30)
-	sh.write('mkdir Useless_dock Ok_dock Nice_dock\n')
+	sh.write('#!/bin/bash\n#\n#\n# Autor:Braga, B. C.\n# Email:bruno.braga@ufms.br\n#\n')
+	sh.write('#'*30)
+	sh.write('\nmkdir Useless_dock Ok_dock Nice_dock\n')
 
 	i = 1
 	while i <= multi:
@@ -60,18 +61,18 @@ def multi_inp(cent_x = -18.287, cent_y = -9.034, cent_z = 7.361, max_dv = 5,
 			f = open('config4vina_%d.inp'%i, 'w')
 			f.write('receptor = %s\n'%recpt)
 			f.write('ligand = %s\n\n'%ligand)
-			f.write('out = R%d_%s'%(i,out_na))
+			f.write('out = R%d_%s\n\n'%(i,out_na))
 			f.write('center_x = %f\n'%r_x)
 			f.write('center_y = %f\n'%r_y)
 			f.write('center_z = %f\n\n'%r_z)
 			f.write('size_ = %.1f\n'%box_x)
 			f.write('size_ = %.1f\n'%box_y)
 			f.write('size_ = %.1f\n\n'%box_z)
-			f.write('exhaustiveness = %d'%exh)
+			f.write('exhaustiveness = %d\n'%exh)
 			f.close()
 
 			sh.write('%s/vina --config config4vina_%d.inp --log Log_R%d.out\n'%(vina_home,i,i))
-			sh.write('python3 verify_log.py Log_R%d.out'%i)
+			sh.write('python3 verify_log.py Log_R%d.out\n'%i)
 		else:
 			continue
 		i +=1
@@ -93,7 +94,7 @@ if __name__ == "__main__":
 	cent_z    = 7.361
 	recpt     = '' #'6eqe.pdbqt'
 	ligand    = '' #'C8X_BHET.pdbqt'
-	out_na    = 'Docked_%s'%ligand
+	out_na    = ''
 	max_dv    = 5
 	multi     = 10
 	vina_home = '~/autodock_vina_1_1_2_linux_x86/bin'
@@ -108,7 +109,7 @@ if __name__ == "__main__":
 			inst_only = True
 			break
 
-	i = 0 
+	i = 0
 	while i < len(arg):
 		if inst_only:
 			break
@@ -141,6 +142,7 @@ if __name__ == "__main__":
 		elif arg[i].lower() == '-lig':
 			i+=1
 			ligand = arg[i]
+			out_na = 'Docked_%s'%ligand
 		elif arg[i].lower() == '-out':
 			i+=1
 			out_na = arg[i]
