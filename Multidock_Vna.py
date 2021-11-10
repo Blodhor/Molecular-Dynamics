@@ -126,9 +126,9 @@ if __name__ == "__main__":
 			print("\t-e\t\tExhaustiveness used. Default: 10.\n")
 			print("\t-maxdev\t\tMaximum deviation from the gridbox center, for the random multiple random choices of gridboxes. Default: 5 angstrom.\n")
 			print("\t-mult\t\tNumber of multiple docking tries. Default: 10.\n")
-			print("\nExamples:\n\t$ python3 multidock_vina.py -recpt 6eqe.pdbqt -lig C8X_BHET.pdbqt\n")
-			print("\n\t$ python3 multidock_vina.py -recpt 6eqe.pdbqt -lig C8X_BHET.pdbqt -out docked_C8X.pdbqt -vnh -dcenter -18.287 -9.034 7.361\n\t\tObs: '-vnh' used without any information if vina on your PC PATH\n")
-			print("\n\t$ python3 multidock_vina.py -recpt 6eqe.pdbqt -lig C8X_BHET.pdbqt -out docked_C8X.pdbqt -dcenter -18.287 -9.034 7.361 -e 50 -maxdev 2.5 -mult 100\n")
+			print("\nExamples:\n\t$ python3 Multidock_Vna.py -recpt 6eqe.pdbqt -lig C8X_BHET.pdbqt\n")
+			print("\n\t$ python3 Multidock_Vna.py -recpt 6eqe.pdbqt -lig C8X_BHET.pdbqt -out docked_C8X.pdbqt -vnh -dcenter -18.287 -9.034 7.361\n\t\tObs: '-vnh' used without any information if vina on your PC PATH\n")
+			print("\n\t$ python3 Multidock_Vna.py -recpt 6eqe.pdbqt -lig C8X_BHET.pdbqt -out docked_C8X.pdbqt -dcenter -18.287 -9.034 7.361 -e 50 -maxdev 2.5 -mult 100\n")
 			break
 
 		# Key verifications
