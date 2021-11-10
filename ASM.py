@@ -2597,7 +2597,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				
 	if not inst_only and not version_only:
 		if sim_pdb == 'WillThisWork.pdb':
-			print("No system choosen!\nUse: python3 ASM.py --help\n")
+			print("No system chosen!\nUse: python3 ASM.py --help\n")
 		else:
 			if not multiple_pH:
 				pH_ini = initial_ph
