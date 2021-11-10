@@ -65,9 +65,9 @@ def multi_inp(cent_x = -18.287, cent_y = -9.034, cent_z = 7.361, max_dv = 5,
 			f.write('center_x = %f\n'%r_x)
 			f.write('center_y = %f\n'%r_y)
 			f.write('center_z = %f\n\n'%r_z)
-			f.write('size_ = %.1f\n'%box_x)
-			f.write('size_ = %.1f\n'%box_y)
-			f.write('size_ = %.1f\n\n'%box_z)
+			f.write('size_x = %.1f\n'%box_x)
+			f.write('size_y = %.1f\n'%box_y)
+			f.write('size_z = %.1f\n\n'%box_z)
 			f.write('exhaustiveness = %d\n'%exh)
 			f.close()
 
