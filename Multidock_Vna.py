@@ -113,10 +113,16 @@ if __name__ == "__main__":
 
 	# Flag verification
 	for i in arg:
-		if i[0] == '-' and i.lower() not in flags:
-			print("Unkown Flag used: ", i)
-			inst_only = True
-			break
+		if i[0] == '-':
+			try:
+				if type(float(i)) == type(2.3):
+					continue
+			except ValueError:
+				if i.lower() not in flags:
+					print("Unkown Flag used: ", i)
+					inst_only = True
+					break
+
 
 	i = 0
 	while i < len(arg):
