@@ -22,50 +22,6 @@ https://blog.eldernode.com/install-python-3-ubuntu-20/
 
 The following was tested on both Windows and Linux S.O.:
 
-Multidock_Vna.py - This code makes it easy to rerun Vina as many times as you want. Docking uses sampling techniques so trying a few times is better than accepting the first "best model" given by vina.
-
---------------------------------------
-About Multidock_Vna.py execution:
-
-$ python3 Multidock_Vna.py -h
-
-    Copyright (C) 2021  Braga, B. C.
-    This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions.
-
-
-    Usage:
-        -h or --help            Prints this message.
-
-        -vnh            Vina home directory.
-
-        -recpt          Receptor file.
-        -lig            Ligand file.
-
-        -out            Name of the pdbqt output file with all models vina propose. (Default: Docked_YOURLIGAND.pdbqt).
-
-        -pdbqt2pdb      (If openBabel is installed) Converts the PDBQT format of vina output to PDB with obabel.
-
-        -dcenter        XYZ-Coordinates of the center of the gridbox for docking.
-
-        -dbox           Dimensions XYZ of the gridbox.
-
-        -e              Exhaustiveness used. Default: 10.
-
-        -maxdev         Maximum deviation from the gridbox center, for the random multiple random choices of gridboxes. Default: 5 angstrom.
-
-        -mult           Number of multiple docking tries. Default: 10.
-
-
-    Examples:
-        $ python3 Multidock_Vna.py -recpt 6eqe.pdbqt -lig C8X_BHET.pdbqt
-
-
-        $ python3 Multidock_Vna.py -recpt 6eqe.pdbqt -lig C8X_BHET.pdbqt -out docked_C8X.pdbqt -pdbqt2pdb -vnh -dcenter -18.287 -9.034 7.361
-                Obs: '-vnh' used without any information if vina is on your PC PATH
-
-
-        $ python3 Multidock_Vna.py -recpt 6eqe.pdbqt -lig C8X_BHET.pdbqt -out docked_C8X.pdbqt -dcenter -18.287 -9.034 7.361 -e 50 -maxdev 2.5 -mult 100
-
 Analysis_Plots_4.0.py - RMSD, RMSF and Radgyr data analysis. This code needs numpy and matplotlib modules with an python 3.6+ compiler (if you dont usually use Terminal, install Visual Studio Code, which runs on Windows and Linux). 
 
 --------------------------------------
@@ -119,7 +75,52 @@ $ python3 Analysis_Plots.py -h
         $ python3 Analysis_Plots_4.0.py -type four -stitle Production -anatp radgyr -lblcrd (16.61,200) -i ph7.00_radgyr.dat pH=7.00 ph8.00_radgyr.dat pH=8.00 ph9.00_radgyr.dat pH=9.00 ph10.00_radgyr.dat pH=10.00 -fram2time 10000 -nanosec 
         
 
-The following was tested only on Linux S.O.:
+The following was tested only on Linux S.O. or on the Windows Subsystem for Linux (WSL):
+
+Multidock_Vna.py - This code makes it easy to rerun Vina as many times as you want. Docking uses sampling techniques so trying a few times is better than accepting the first "best model" given by vina.
+
+--------------------------------------
+About Multidock_Vna.py execution:
+
+$ python3 Multidock_Vna.py -h
+
+    Copyright (C) 2021  Braga, B. C.
+    This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions.
+
+
+    Usage:
+        -h or --help            Prints this message.
+
+        -vnh            Vina home directory.
+
+        -recpt          Receptor file.
+        -lig            Ligand file.
+
+        -out            Name of the pdbqt output file with all models vina propose. (Default: Docked_YOURLIGAND.pdbqt).
+
+        -pdbqt2pdb      (If openBabel is installed) Converts the PDBQT format of vina output to PDB with obabel.
+
+        -dcenter        XYZ-Coordinates of the center of the gridbox for docking.
+
+        -dbox           Dimensions XYZ of the gridbox.
+
+        -e              Exhaustiveness used. Default: 10.
+
+        -maxdev         Maximum deviation from the gridbox center, for the random multiple random choices of gridboxes. Default: 5 angstrom.
+
+        -mult           Number of multiple docking tries. Default: 10.
+
+
+    Examples:
+        $ python3 Multidock_Vna.py -recpt 6eqe.pdbqt -lig C8X_BHET.pdbqt
+
+
+        $ python3 Multidock_Vna.py -recpt 6eqe.pdbqt -lig C8X_BHET.pdbqt -out docked_C8X.pdbqt -pdbqt2pdb -vnh -dcenter -18.287 -9.034 7.361
+                Obs: '-vnh' used without any information if vina is on your PC PATH
+
+
+        $ python3 Multidock_Vna.py -recpt 6eqe.pdbqt -lig C8X_BHET.pdbqt -out docked_C8X.pdbqt -dcenter -18.287 -9.034 7.361 -e 50 -maxdev 2.5 -mult 100
+
 
 ASM.py - Molecular Dynamics simulation manager (tested on AMBER18 and AMBERtools18+). Automates the process of performing a molecular dynamics simulation using the AMBER/AMBERtools computational packages.
 
