@@ -20,6 +20,9 @@ https://blog.eldernode.com/install-python-3-ubuntu-20/
 
 #Molecular-Dynamics related files.
 
+AvR_DockingPlot.py - This code is a matplolib script for a very specific analysis and is useless for most, but it could help you if you are not that familiar with matplotlib.
+------------------
+
 The following was tested on both Windows and Linux S.O.:
 
 Analysis_Plots_4.0.py - RMSD, RMSF and Radgyr data analysis. This code needs numpy and matplotlib modules with an python 3.6+ compiler (if you dont usually use Terminal, install Visual Studio Code, which runs on Windows and Linux). 
