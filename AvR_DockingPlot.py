@@ -106,73 +106,86 @@ def plot_AEvsR(dpi=100,Xg=[],Xw=[],Yg=[],Yw=[],titulo ="Amostras_Docking",eixoy=
     plt.xlabel(eixox)
     plt.show()
 
+def Main(ref = (-20.465,-10.036,7.369), arg = ['AvR_DockingPlot.py', 'PDBFILE.pdb']):
+
+	# ref := hydroxyl on serine 160 from 6eqe.pdb
+
+	# list of models == [('model i', (float('ae'), float('r')) ), ('model i+1', (float('ae'), float('r')) )]
+	data = list_AEvsR(ser_hydroxyl=ref,file=arg[1])
+	# Good models
+	r_g      = [] # X
+	ae_g     = [] # Y
+
+	# Worse models
+	r_w      = [] # X
+	ae_w     = [] # Y
+		
+	# Lists for top 5 smallest dist. 'r' and smallest sum of 'r' and 'ae'
+	rVmodel    = []
+	rPaeVmodel = []
+
+	for i in data:
+		rVmodel.append( (i[1][1], i[0], "Ae = %f"%i[1][0]) ) 
+		rPaeVmodel.append( (i[1][0]+i[1][1], i[0], "Ae = %f; r_hc = %f"%(i[1][0],i[1][1])) )
+		if i[1][0] <= -4.5:
+			ae_g.append(i[1][0])
+			r_g.append(i[1][1])
+		else:
+			ae_w.append(i[1][0])
+			r_w.append(i[1][1])
+
+	# Top 5 with label
+	top        = []
+	top_r      = []
+		
+	print("Finding best 10 fits...\n")
+		
+	# Quick sorting
+	SortZerothTupple(t=rVmodel,begin=0,end=len(rVmodel)-1)
+	SortZerothTupple(t=rPaeVmodel,begin=0,end=len(rPaeVmodel)-1)
+
+	if len(rVmodel) < 5:
+		top_r = rVmodel
+	else:
+		top_r = rVmodel[0:5]
+
+	if len(rPaeVmodel) < 5:
+		top = rPaeVmodel
+	else:
+		top = rPaeVmodel[0:5]
+
+	print('\nSmallest 5 "r_hc" found:\n')
+	for i in top_r:
+		print(i)
+
+	print('\nSmallest 5 sum of absolute values "r_hc plus affinity" found:\n')
+	for i in top:
+		print(i)
+		
+	f = open('Best10Fits.txt','w')
+	f.write('Smallest 5 "r_hc" found:\n')
+	f.write(str(top_r))
+	f.write('\n')
+	f.write('Smallest 5 sum of absolute values "r_hc plus affinity" found:\n')
+	f.write(str(top))
+	f.write('\n')
+	f.close()
+
+	plot_AEvsR(Xg=r_g,Yg=ae_g,Xw=r_w,Yw=ae_w)
+	
+def Help(arg = ['AvR_DockingPlot.py', '-h']):
+	print("Please run this code as follows:\n(Option 1): $ pythonCompilerV3+ %s PDBFILE.pdb\n"%arg[0])
+	print("(Option 2): $ pythonCompilerV3+ %s PDBFILE.pdb ref Xcoord Ycoord Zcoord"%arg[0])
+
 if __name__ == "__main__":
 	from os import system as cmd
 	import sys
 	arg = sys.argv
 	
-	# list of models == [('model i', (float('ae'), float('r')) ), ('model i+1', (float('ae'), float('r')) )]
-	if len(arg) == 2:
-		data = list_AEvsR(file=arg[1])
-		# Good models
-		r_g      = [] # X
-		ae_g     = [] # Y
-
-		# Worse models
-		r_w      = [] # X
-		ae_w     = [] # Y
-		
-		# Lists for top 5 smallest dist. 'r' and smallest sum of 'r' and 'ae'
-		rVmodel    = []
-		rPaeVmodel = []
-
-		for i in data:
-			rVmodel.append( (i[1][1], i[0], "Ae = %f"%i[1][0]) ) 
-			rPaeVmodel.append( (i[1][0]+i[1][1], i[0], "Ae = %f; r_hc = %f"%(i[1][0],i[1][1])) )
-			if i[1][0] <= -4.5:
-				ae_g.append(i[1][0])
-				r_g.append(i[1][1])
-			else:
-				ae_w.append(i[1][0])
-				r_w.append(i[1][1])
-
-		# Top 5 with label
-		top        = []
-		top_r      = []
-		
-		print("Finding best 10 fits...\n")
-		
-		# Quick sorting
-		SortZerothTupple(t=rVmodel,begin=0,end=len(rVmodel)-1)
-		SortZerothTupple(t=rPaeVmodel,begin=0,end=len(rPaeVmodel)-1)
-
-		if len(rVmodel) < 5:
-			top_r = rVmodel
-		else:
-			top_r = rVmodel[0:5]
-
-		if len(rPaeVmodel) < 5:
-			top = rPaeVmodel
-		else:
-			top = rPaeVmodel[0:5]
-
-		print('\nSmallest 5 "r_hc" found:\n')
-		for i in top_r:
-			print(i)
-
-		print('\nSmallest 5 sum of absolute values "r_hc plus affinity" found:\n')
-		for i in top:
-			print(i)
-		
-		f = open('Best10Fits.txt','w')
-		f.write('Smallest 5 "r_hc" found:\n')
-		f.write(str(top_r))
-		f.write('\n')
-		f.write('Smallest 5 sum of absolute values "r_hc plus affinity" found:\n')
-		f.write(str(top))
-		f.write('\n')
-		f.close()
-
-		plot_AEvsR(Xg=r_g,Yg=ae_g,Xw=r_w,Yw=ae_w)
-	else:
-		print("Please run this as follows: pythonCompilerV3+ %s PDBFILE.pdb\n"%arg[0])
+	try:
+		if len(arg) == 2:
+			Main(arg=arg)
+		elif arg[2].lower() == 'ref' and len(arg) == 6:
+			Main(ref=(float(arg[3]),float(arg[4]),float(arg[5])),arg=arg)
+	except:
+		Help()
