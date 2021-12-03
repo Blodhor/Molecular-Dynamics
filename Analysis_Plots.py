@@ -1,10 +1,3 @@
-'''
-Extension of ASM.py for RMSD, RMSF and Radgyr analysis plot.
-
-Author: Braga, B. C.
-E-mail: bruno.braga@ufms.br
-'''
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -14,7 +7,7 @@ class Analysis_plot:
 	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = ''):
 		'''Parameters:
 		
-		type: Plot 'one' dataset, 'two' datasets beside each other or 'four' and 'four_2merge' datasets in a matrix fashion.
+		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other or 'four'/'four_2merge' datasets in a matrix fashion.
 
 		names: Data Files, the format expected is .dat, if any other is used do not expect a pretty result.
 		
@@ -58,7 +51,7 @@ class Analysis_plot:
 		if 'radgyr' in analysisType:
 			self.ana_type = 'Raio de giro (Angstrom)'
 		else:
-			self.ana_type = analysisType.upper()
+			self.ana_type = analysisType.upper()+' (Angstrom)'
 		XTlabels = self.XY(files=names)
 		if XTlabels != -1 and type == 'one':
 			self.plot_one(X=self.X[0], Y=self.Y[0], Xaxis=XTlabels[0][0], 
@@ -66,6 +59,9 @@ class Analysis_plot:
 		elif XTlabels != -1 and type == 'two':
 			self.plot_two(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
 			name= [XTlabels[0][1], XTlabels[1][1]])
+		elif XTlabels != -1 and type == '2ph_2merge': 
+			self.plot_two_2merge(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
+			name= [XTlabels[i][1] for i in range(len(XTlabels))])
 		elif XTlabels != -1 and type == 'four':
 			self.plot_four(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
 			name= [XTlabels[i][1] for i in range(len(XTlabels))]) #[XTlabels[0][1], XTlabels[1][1], XTlabels[2][1], XTlabels[3][1]]
@@ -73,7 +69,7 @@ class Analysis_plot:
 			self.plot_four_2merge(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
 			name= [XTlabels[i][1] for i in range(len(XTlabels))])
 		else:
-			print("Type must be one, two, four or four_2merge!\n")
+			print("Type must be one, two, 2ph_2merge, four or four_2merge!\n")
 
 	def XY(self, files = [('file1.dat','title1'), ('file2.dat','title2')]):
 		''' Gets X and Y datasets and returns its respectives x-label and title as a list of tuples.'''
@@ -151,6 +147,30 @@ class Analysis_plot:
 			ts.label_outer()
 		plt.show()
 
+	def plot_two_2merge(self, X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"]):
+		'''Plots two X-Y datasets sharing x,y - axis.'''
+		
+		fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True, sharey=True, dpi=self.dpi)
+		big_pp = 0
+		axs = [ax1, ax2]
+		for ap in axs:
+			ap.plot(X[big_pp],Y[big_pp], label= self.merge_legend[0])
+			ap.plot(X[big_pp+1],Y[big_pp+1], label= self.merge_legend[1])
+			ap.legend()
+			ap.set_title(name[big_pp])
+			#ap.text(x=self.labelpx, y=self.labelpy, s=name[big_pp], color=self.label_color)
+			ap.grid()
+			big_pp += 2
+		
+		for ts in axs:
+			ts.set(xlabel=Xaxis, ylabel=self.ana_type)
+		#pyplot.subplots can hide redundant axes
+		for ts in axs:
+			ts.label_outer()
+
+		plt.suptitle(self.suptitle)
+		plt.show()
+
 	def plot_four(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"]):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 		
@@ -193,9 +213,6 @@ class Analysis_plot:
 			ap.grid()
 			big_pp += 2
 		
-		if self.ana_type in ['RMSD']:#, 'RMSF'
-			self.ana_type += ' (Angstrom)'
-
 		for ts in axs:
 			ts.set(xlabel=Xaxis, ylabel=self.ana_type)
 		#pyplot.subplots can hide redundant axes
@@ -250,16 +267,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	
 '''
 	analysis_name = ['rmsd','rmsf','radgyr']
-	dic_Type      = {1:'one', 2:'two', 4:'four', 42: 'four_2merge'}
+	dic_Type      = {1:'one', 2:'two', 22: '2ph_2merge', 4:'four', 42: 'four_2merge'}
 
 	#default keys
 	version_only = False
 	inst_only    = False
-	anatp        = analysis_name[0]
-	tpe          = dic_Type[42]
+	anatp        = analysis_name[1]
+	tpe          = dic_Type[22]
 	color        = 'black' #'red' #'darkblue' #label only
 	mut          = ['HIS 237 - GLU','ASP 206 - GLU'][1]
-	supertitle   = ['Produção - Mutação %s'%mut,'Petase nativa - Produção'][1]
+	supertitle   = '' #['Produção - Mutação %s'%mut,'Petase nativa - Produção'][1]
 	bckbne_comp  = False 
 	merge_legend = ''
 	if tpe == 'four':
@@ -275,6 +292,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 		for value in ['7.00','8.00','9.00','10.00']:
 			for p in path:
 				File.append( ('%sph%s_%s.dat'%(p,value,anatp),'pH='+value) )
+	elif tpe == '2ph_2merge':
+		oneTwo       = 1
+		path         = [['PETase_Dynamics/gpu-ultra/Jan_no_warp/','PETase_Dynamics/gpu-ultra/Julho_no_warpReplicata/'][oneTwo], 'PETase_Dynamics/gpu-ultra/Mutation_Hotfix_1.1/ASP206_GLU_Hotfix1.1/']
+		merge_legend = [['NativaS1','NativaS2'][oneTwo], 'D206E']
+		File         = []
+		supertitle   = '' #'Produção'
+		for value in ['7.00','9.00']:
+			for p in path:
+				File.append( ('%sph%s_%s.dat'%(p,value,anatp),'pH='+value) )
 	elif tpe == 'two':
 		if bckbne_comp:
 			path    = 'nativaHotfix1.1/'
@@ -282,10 +308,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			File    = [('%sAll_backbone/ph%s_%s.dat'%(path,ph_comp,anatp),'Todo Backbone a pH=%s'%ph_comp),
 			('%sCA_C_N/ph%s_%s.dat'%(path,ph_comp,anatp),'CA,C,N do Backbone a pH=%s'%ph_comp)]
 		else:
-			path = 'HIS237_GLU/' #'ASP206_GLU-replicata/'
+			path = 'PETase_Dynamics/gpu-ultra/Julho_no_warpReplicata/' #'HIS237_GLU/' #'ASP206_GLU-replicata/'
 			File = []
-			for value in ['5.00','7.00']:
-				File.append( ('%sph%s_%s.dat'%(path,value,anatp),'Produção a pH='+value) )
+			for value in ['7.00','9.00']:
+				File.append( ('%sph%s_%s.dat'%(path,value,anatp),'pH='+value) )
 	else:
 		path = 'HIS237_GLU/' #'ASP206_GLU-replicata/'
 		File = [('%sph%s_%s.dat'%(path,'5.00',anatp),'')]
