@@ -59,7 +59,7 @@ class Amber_par:
 	steps = 10**5
 	AnnealEqFactor = 0.1
 
-	def __init__(self, system='WillThisWork.pdb', ligand='already_docked_positions.pdb', with_docking= False, simulation='CpHMD', pH=7.0, pHstep=1.0, simulation_length='low',
+	def __init__(self, system='WillThisWork.pdb',  docked_run= False, docked_pdb='already_docked_configuration.pdb', simulation='CpHMD', pH=7.0, pHstep=1.0, simulation_length='low',
 	custom_mode = False, custom_min = 10**4, custom_a = 10**6, custom_e = 10**7, custom_p = 10**8,
 	exp_solv= False, solvent_in='water', box_cuttoff= 12.0, information_cycles=200, gpu=0, prot_res='AS4 SER HIP',
 	mpi_use= False, mpicomp='mpiexec', mpicores=2, prep_stop= False, chosen_mut_flag = False,
@@ -73,10 +73,10 @@ system: pdb file.
 -----
 Docking options are not complete on version 1.1 and will work properly only on future versions!
 
-ligand: The present code doesn't have a docking module (optmization of the ligand's atoms' positions in the active site of the system[if it is an enzyme]).
+docked_pdb: The present code doesn't have a docking module (optmization of the ligand's atoms' positions in the active site of the system[if it is an enzyme]).
 		At the present version, it is needed a third party programm to get this PDB. 
 
-with_docking: True/False choice for the creation of a docked ligand-system topology and coordinates file with LEAP.
+docked_run: True/False choice for the creation of a docked ligand-system topology and coordinates file with LEAP.
 -----
 
 gpu: Gpu which would be used (if there is two gpu's the choice is between number 0 and 1).
@@ -185,48 +185,52 @@ chosen_mut: Specific mutation chosen.'''
 		self.ok = True
 		
 		# Docking-only options
-		self.docking    = with_docking
-		self.ligand     = ligand
-		self.lig_mol    = ligand[:-3]+"mol2"
-		self.lig_frcmod = ligand[:-3]+"frcmod"
-		self.lig_name   = "DOK"
+		self.docking    = docked_run
+		self.ligand     = docked_pdb
+		self.lig_sqm    = False
+		self.lig_mol2   = self.ligand[:-3]+"mol2"   # try with PDB first
+		self.lig_frcmod = self.ligand[:-3]+"frcmod" #
+		self.lig_name   = "LIG"
 
 		if self.docking:
 			f = open(self.ligand,'r+')
 			temp = f.readlines()
 		
+			# editing of the ligand PDB file
 			f.seek(0)
 			for i in range(len(temp)):
 				j = temp[i]
-				data = j.split()
+				if len(j)>0:
+					data = j.split()
 				if 'ATOM' in data[0] or 'ANISOU' in data[0] or 'HETATM' in data[0]:
 					if len(data[2]) == 1 and data[2] != data[len(data)-1]:
+						# Before:
 						#HETATM    1  C   UNL     1     -27.682  -2.375   1.924  1.00  0.00      .068 A\n
 						bit = j.find(data[len(data)-1],len(data[0])+1,len(j))
 						j = j[:bit]
 						temp[i] = j + data[2]
+						# Now:
+						#HETATM    1  C   UNL     1     -27.682  -2.375   1.924  1.00  0.00      .068 C\n
 					if len(data[3]) == 3:
-						bit2 = j.find(data[3],len(data[0])+1,len(j))
-						jj = j[:bit2]+self.lig_name+j[bit2 +len(self.lig_name):]
-						temp[i] = jj
+						# Getting the real ligand resname
+						# Eg.:
 						#HETATM    1  C   DOK     1     -27.682  -2.375   1.924  1.00  0.00      .068 A\n
+						'''bit2 = j.find(data[3],len(data[0])+1,len(j))
+						jj = j[:bit2]+self.lig_name+j[bit2 +len(self.lig_name):]
+						temp[i] = jj'''
+						self.lig_name = data[3] # 'DOK' in this eg. 
 					else:
+						# will there be a problem with the ligand name id has more than 3 letters? i don't know
+						# if there is, use this else to debug
 						self.lig_name = data[3]
 
-					if i == len(temp) -1:
-						f.write(temp[i])
-					else:
-						f.write(temp[i]+'\n')
+				if i != len(temp) -1 and '\n' not in j:
+					f.write(j+'\n')
+				elif 'END' not in j[0:5]:
+					f.write(j)
+					
 			f.close()
-			cmd('reduce %s > ligand-reduced.pdb'%self.ligand)
-			cmd('antechamber -fi pdb -fo mol2 -i ligand-reduced.pdb -o %s -c bcc -pf y -nc 0'%self.lig_mol)
-			#
-			# Docking related only:
-			#  There is a problem with "DUN" and "hn" atom types on the mol2 file
-			#  Needs to be fixed on later versions! 
-			#
-			cmd('parmchk2 -i %s -o %s -f mol2'%(self.lig_mol,self.lig_frcmod))
-
+			
 		# Mutation-only parameters
 		self.pdb_string          = ''
 		self.pdb_str_2Mut        = ''
@@ -352,8 +356,8 @@ prmtop_new: Name chosen for the new topoly file.'''
 		f.close()
 		self.prmtop = prmtop_new
 
-	def leap_in(self, checking=False, checking_cmd='charge', charge_fix=False, add_Na=0, add_Cl=0,
-	antechamber=False, mol2='system.mol2', frcmod='system.frcmod'):
+	def leap_in(self, inp='tleap.in', checking=False, checking_cmd='charge', charge_fix=False, add_Na=0, add_Cl=0,
+	antechamber=False, mol2='system.mol2', frcmod='system.frcmod', ligand_only=False):
 		'''Based on what kind of simulation, creates a leap.in file in order to use implicit (CpHMD) or explicit (MD) solvent and generates the topology.
 
 Parameters
@@ -373,12 +377,14 @@ antechamber: If True means leap library can't deal with your system and you chos
 
 mol2: File created with antechamber.
 
-frcmod: File created with parmck2.'''
+frcmod: File created with parmck2.
 
-		cmd('rm tleap.in')
+ligand_only: Used for the checking of the ligand PDB file.'''
+
+		cmd('rm %s'%inp)
 		# CpHMD or not...it doesn't make a difference in leap if you just use all libraries in both
 		# The flag 'w' on the open() function -> if there is a file 'tleap.in', it'll be overwritten
-		f = open('tleap.in','w')
+		f = open(inp,'w')
 		f.write('source leaprc.gaff2\n')
 		f.write('source leaprc.DNA.OL15\n')
 		f.write('source leaprc.lipid17\n')
@@ -386,17 +392,26 @@ frcmod: File created with parmck2.'''
 		f.write('source leaprc.protein.ff14SB\n')
 		f.write('source leaprc.constph\n')
 		f.write('source leaprc.conste\n')
-		if antechamber:
-			f.write('SYS = loadmol2 %s\n'%mol2)
-			f.write('loadamberparams %s\n'%frcmod)
-		else:
-			f.write('SYS = loadPDB %s\n'%(self.pdb))
+		
+		if not ligand_only:
+			if antechamber:
+				f.write('SYS = loadmol2 %s\n'%mol2)
+				f.write('loadamberparams %s\n'%frcmod)
+			else:
+				f.write('SYS = loadPDB %s\n'%(self.pdb))
 
 		if self.docking:
-			f.write('%s = loadmol2 %s\n'%(self.lig_name, self.lig_mol))
-			f.write('NEW = combine {SYS %s}\n'%self.lig_name)
-			f.write('loadamberparams %s\n'%self.lig_frcmod)
-			sys_temp = 'NEW'
+			if self.lig_sqm:
+				f.write('%s = loadmol2 %s\n'%(self.lig_name,self.lig_mol2))
+				f.write('loadamberparams %s\n'%self.lig_frcmod)
+			else:
+				f.write('%s = loadPDB %s\n'%(self.lig_name,self.ligand))
+			
+			if not ligand_only:
+				f.write('DOK = combine {SYS %s}\n'%self.lig_name)
+				sys_temp = 'DOK'
+			else:
+				sys_temp = self.lig_name
 		else:
 			sys_temp = 'SYS'
 		
@@ -446,11 +461,11 @@ min_name: Name for the minimization input.
 		# imin=1 -> Flag to run minimization.
 		f.write(' imin=1,\n')
 		# The maximum number of cycles of minimization.
+		change = 2000
 		if not self.mode_custom:
 			f.write(' maxcyc=10000,\n')
 		else:
 			f.write(' maxcyc=%d,\n'%self.mode_custom_min)
-			change = 2000
 			if self.mode_custom_min <= 2000:
 				change = int(0.8*self.mode_custom_min)
 		# If ntmin=1 then the method of minimization will be switched from steepest descent to conjugate gradient after ncyc cycles.
@@ -846,6 +861,50 @@ class Amber_run(Amber_par):
 	linebreak   = '#'*60
 	report_file = 'report_temp.py' 
 	
+	def verify_leap(self, log_file='leap.log',charge=False):
+		'''Verification of LEaP log file.
+		
+		Parameter
+		---------
+		
+		charge: (If False) checks for fatal errors and 
+					Returns a list with them.
+				(IF True) checks for the system charge and
+					Returns the string '-2' if its impossible to neutralize; or
+					Returns the integer charge.'''
+		
+		ret = ''
+		f = open(log_file,'r')
+		temp = f.readlines()
+		f.close()
+
+		if not charge:
+			# In the check system, we are looking for something troubling like this:
+			# FATAL:  Atom .R<ALA 100>.A<HG2 11> does not have a type.
+			# With this kind of error it's impossible to build the topology 		
+			error = []
+			for i in temp:
+				if 'FATAL:' in i:
+					error.append(i)
+			
+			# if needed we can show the errors like this
+			ret = error
+		else:
+			# verifying system charge
+			charge = 0.0
+			for i in range(len(temp)):
+				if 'unperturbed charge' in temp[-i]:
+					data = temp[-i][len('The unperturbed charge of unit'):].split()
+					charge = float(data[1][1:-1])
+					break
+			ret = int(charge)
+			if charge - ret > 0.05:
+				print("\nError with the charge\n")
+				ret = '-2'
+			
+		return ret
+
+
 	def leap_exec(self, mol2_check=False):
 		'''Run tleap to prepare the system for Amber simulations.
 
@@ -858,58 +917,60 @@ Parameter
 
 mol2_check: If False, load system pdb on leap; if True, it'll run antechamber to get mol2 and then try leap.'''
 
+		if self.docking:
+			# creating leap input for the ligand alone
+			self.leap_in(inp='tleap_lig_check.in',checking=True,checking_cmd='check',antechamber=False,ligand_only=True)
+			cmd('rm leap_lig.log')
+			cmd('tleap -f tleap_lig_check.in > leap_lig.log')
+			
+			error = self.verify_leap(log_file='leap_lig.log',charge=False)
+			if len(error) > 0:
+				self.lig_sqm = True
+				cmd('reduce %s > ligand-reduced.pdb'%self.ligand)
+				cmd('antechamber -fi pdb -fo mol2 -i ligand-reduced.pdb -o %s -c bcc -pf y -nc 0'%self.lig_mol2)
+				#  There is a problem with "DUN" and "hn" atom types on the mol2 file
+				#  Needs to be fixed on later versions! 
+				cmd('parmchk2 -i %s -o %s -f mol2'%(self.lig_mol2,self.lig_frcmod))
+
+		leap_input = 'tleap_macro.in'
 		if not mol2_check:
-			self.leap_in()
+			self.leap_in(inp=leap_input,antechamber=False,checking=True,checking_cmd='check')
 		else:
+			leap_input = 'tleap_macro_mol2.in'
 			# Leap library doesn't know your system so we'll try to create the mol2 file and load it on Leap
 			cmd('reduce %s > system-amber-reduced.pdb'%self.pdb)
 			cmd('antechamber -fi pdb -fo mol2 -i system-amber-reduced.pdb -o system-amber.mol2 -c bcc -pf y -nc 0')
 			cmd('parmchk2 -i system-amber.mol2 -o system-amber.frcmod -f mol2')
-			self.leap_in(antechamber=True, mol2='system-amber.mol2', frcmod='system-amber.frcmod')
+			self.leap_in(inp=leap_input, checking=True, checking_cmd='charge', antechamber=True, mol2='system-amber.mol2', frcmod='system-amber.frcmod')
 
-		cmd('rm leap.log')
-		cmd('tleap -f tleap.in')
-		if self.exp_solv:
-			tt = open('leap.log','r')
-			temp = tt.readlines()
-			tt.close()
-			charge = 0.0
-			for i in range(len(temp)):
-				if 'unperturbed charge' in temp[-i]:
-					data = temp[-i][len('The unperturbed charge of unit'):].split()
-					charge = float(data[1][1:-1])
-					break
-			cha = int(charge)
-			if charge - cha > 0.05:
-				print("\nError with the charge\n")
-				return -2
-			elif cha > 0:
-				self.leap_in(charge_fix=True, add_Na=3, add_Cl=cha+3)
-			elif cha < 0:
-				self.leap_in(charge_fix=True, add_Na=3-cha, add_Cl=3)
-
-			# This will check for any fatal errors, proximity warnings don't matter (minimization can fix it).
-			#  In order to check for true errors we need to delete all leap log before attempting the leapfix
-			cmd('rm leap.log')
-			cmd('tleap -f tleap.in')
-
-		# In the check system, we are looking for something troubling like this:
-		# FATAL:  Atom .R<ALA 100>.A<HG2 11> does not have a type.
-		# With this kind of error it's impossible to build the topology 		
-		f = open('leap.log','r')
-		temp = f.readlines()
-		error = []
-		for i in temp:
-			if 'FATAL:' in i:
-				error.append(i)
+		cmd('rm leap_fatal.log')
+		cmd('tleap -f %s > leap_fatal.log'%leap_input)
+		
+		error = self.verify_leap(log_file='leap_fatal.log',charge=False)
+		
 		if len(error) > 0 and not mol2_check:
 			self.leap_exec(mol2_check=True)
 		elif len(error) > 0:
 			for i in error:
 				print(i[:-1])
 			return -3
-		else:
-			return 0
+		
+		if self.exp_solv:
+			cha = self.verify_leap(log_file='leap_fatal.log',charge=True)
+			
+			if cha == '-2':
+				return -2
+
+			elif cha > 0:
+				self.leap_in(charge_fix=True, add_Na=3, add_Cl=cha+3)
+			elif cha < 0:
+				self.leap_in(charge_fix=True, add_Na=3-cha, add_Cl=3)
+
+			cmd('rm leap_final.log')
+			cmd('tleap -f tleap.in > leap_final.log')
+
+		
+		return 0
 
 	def simulation(self,arq='gpu', min_files='Minimization', heating_files='Annealing', equil_files='Equilibration',
 	ph_range=[7.0,7.0]):
@@ -2166,29 +2227,14 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 		temporary_files.append( self.pdb )
 		self.pdb = '%s_renum.pdb'%new_filename[:-4]
 
-		''' In the following lines of this code we'll treat the 'charge' and 'check' commands of Leap, since with 'charge' we can count the charges and neutralize the system correctly after and 'check' verify if leap can build the topology (unknwon things like atoms, residues, or even numerical bugs can give FATAL errors which stops Leap from building the topology.)
-		If in the "charge step" we save the system; and load and save again in the "check step" to finally load and "build" the topology, Leap won't work properly. Leap will give a FATAL error, even if there is none, it's interpretting whatever it reads like an unknown residue somewhere.
-
-		This is propably happening because it uses a numerical approximation everytime a system is loaded and needs a check or whatever, so when you save the system, you save this approximation. If you reopen to check other things you'll approximate an approximation...numerical problems like this gives birth to random abnormalities.
-
-		To overcome this we are not saving any leap-process untill everything is checked and saving only in the topology building step.''' 
 		self.leap_in(checking=True, checking_cmd='charge', charge_fix=False, add_Na=0, add_Cl=0)
 		cmd('rm leap.log')
 		cmd('tleap -f tleap.in')
 		
 		# Checking the total charge, if it's not zero, the code below will neutralize the system adding ions
-		tt = open('leap.log','r')
-		temp = tt.readlines()
-		tt.close()
-		charge = 0.0
-		for i in range(len(temp)):
-			if 'Total unperturbed' in temp[-i]:
-				data = temp[-i].split()
-				charge = float(data[len(data)-1])
-				break
-		cha = int(charge)
-		if charge - cha > 0.05:
-			print("\nError with the charge\n")
+		cha = self.verify_leap(log_file='leap.log',charge=True)
+		
+		if cha == '-2':
 			return -1
 		elif cha != 0:
 			if cha > 0:
@@ -2199,16 +2245,10 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 			# This will check for any fatal errors, proximity warnings don't matter (minimization can fix it). And in order to check for the true error we need to delete all leap log before attempting the leapfix
 			cmd('rm leap.log')
 			cmd('tleap -f tleap.in')
-			# In the check system, we are looking for something troubling like this:
-			# FATAL:  Atom .R<ALA 100>.A<HG2 11> does not have a type.
-			# With this kind of error it's impossible to build the topology 		
-			f = open('leap.log','r')
-			temp = f.readlines()
-			error = []
-			for i in temp:
-				if 'FATAL:' in i:
-					error.append(i)
-			if len(error) >0:
+			
+			error = self.verify_leap(log_file='leap.log',charge=False)
+			
+			if len(error) > 0:
 				for i in error:
 					print(i[:-1])
 				return -1
@@ -2334,8 +2374,8 @@ Manager Version 1.1:
 	*An easy restart .sh of current simulation stage created.
 
 Manager Version 1.2:
-	*Added a custom option for the duration of each stage of simulation 
-
+	*Added a custom option for the duration of each stage of simulation .
+	*Added an option to run with a docked system. The docked ligand configuration must be given.
 
 Copyright (C) 2021  Braga, B. C. 
 e-mail: bruno.braga@ufms.br 
@@ -2369,6 +2409,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	icyc          = 200
 	sim_goal      = 'MD'
 	sim_pdb       = 'WillThisWork.pdb'
+	with_docking  = False
+	dlig_pdb      = 'ligand.pdb'
 	mpi_flag      = False
 	cores_        = 2
 	explicit_flag = False
@@ -2391,7 +2433,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 	# If for some reason you don't want to use the HMR method, set the attribute "self.hmr" to False
 
-	flags = ["&","-v","--version","-h","--help",'-arq','gpu','-mode','-res','-mut','-rdmut','-atsite','-rdydone','-icyc','-solv','-g','ph','-i','-mpi','-explicit','-prepstp','-cut','-phdset','MIN','A','E','P']
+	flags = ["&","-v","--version","-h","--help",'-arq','gpu','-mode','-res','-mut','-rdmut','-atsite','-rdydone','-icyc','-solv','-g','ph','-i','-dlig','-mpi','-explicit','-prepstp','-cut','-phdset','MIN','A','E','P']
 	
 	# Flag verification
 	for i in arg:
@@ -2417,7 +2459,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("Copyright (C) 2021  Braga, B. C.\nThis program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.\n")
 				print("\nUsage:\n\t-v or --version\t\tPrints current version and its corrections relating previous versions.\n")
 				print("\t-h or --help\t\tPrints this message.\n")
-				print("\t-i\t\tInput PDB file.\n")
+				print("\t-i\t\tInput PDB file (macromolecule).\n")
+				print("\t-dlig\t\tInput PDB file of a chosen configuration of a docked ligand. This file can be obtained through Vina or similar docking tools.\n")
 				print("\t-g\t\tGoal as MD or CpHMD. Default: MD.\n\t\t\tOBS: If you choose CpHMD and don't use flag 'res' the code will choose by default to tritate %s.\n"%prt_res)
 				print("\t-ph\t\tProduction pH. Default: 7.0.\n")
 				print("\t-phdset\t\t(This option has priority over the -ph option) Defines the pH list (only if you'll do multiple pH CpHMD production). After this flag an initial pH, a final pH and an interval unit must be given in this order (Ex: -phdset 4.0 7.0 0.5). Which represents pH:[4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0].\n")
@@ -2440,6 +2483,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GM -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET HIS_237-ALA\n")
 				print("\n\t$ python3 ASM.py -i paracetamol.pdb -arq sander -mode M\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq sander -mpi 4 -mode L -g MD -explicit water\n")
+				print("\n\t$ python3 ASM.py -i Mut_D206E.pdb -dlig Docked_ligand.pdb -arq gpu 1 -mode GU -g CpHMD -explicit water\n")
 				break
 
 			# Key verifications
@@ -2567,6 +2611,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			elif arg[i].lower() == '-i':
 				sim_pdb = arg[i+1]
 				continue
+			elif arg[i].lower() == '-dlig':
+				with_docking = True
+				dlig_pdb     = arg[i+1]
+				continue
 			elif arg[i].lower() == '-mpi':
 				mpi_flag = True
 				cores_ = arg[i+1]
@@ -2607,7 +2655,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				pH_fin = fin_pH 
 
 			if not mut_rand and not mut_choice:
-				objeto = Amber_run(system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, custom_mode = custom_mode, custom_min = custom_min, custom_a = custom_a, custom_e = custom_e, custom_p = custom_p, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
+				objeto = Amber_run(system=sim_pdb, docked_run=with_docking, docked_pdb=dlig_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, custom_mode = custom_mode, custom_min = custom_min, custom_a = custom_a, custom_e = custom_e, custom_p = custom_p, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
 				objeto.simulation(arq=arqui, ph_range=[pH_ini,pH_fin])
 			elif mut_rand and not mut_choice:
 				objeto = Amber_mutation(system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, custom_mode = custom_mode, custom_min = custom_min, custom_a = custom_a, custom_e = custom_e, custom_p = custom_p, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only, active_site=atv_site)
