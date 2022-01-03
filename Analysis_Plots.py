@@ -50,6 +50,8 @@ class Analysis_plot:
 
 		if 'radgyr' in analysisType:
 			self.ana_type = 'Raio de giro (Angstrom)'
+		elif 'dist' in analysisType:
+			self.ana_type = 'Distância (Angstrom)'
 		else:
 			self.ana_type = analysisType.upper()+' (Angstrom)'
 		XTlabels = self.XY(files=names)
@@ -128,6 +130,7 @@ class Analysis_plot:
 		plt.title(name)
 		plt.ylabel(self.ana_type)
 		plt.xlabel(Xaxis)
+		plt.grid(True)
 		plt.show()
 
 	def plot_two(self, X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"]):
@@ -266,14 +269,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	
 '''
-	analysis_name = ['rmsd','rmsf','radgyr']
+	analysis_name = ['rmsd','rmsf','radgyr','dist']
 	dic_Type      = {1:'one', 2:'two', 22: '2ph_2merge', 4:'four', 42: 'four_2merge'}
 
 	#default keys
 	version_only = False
 	inst_only    = False
-	anatp        = analysis_name[1]
-	tpe          = dic_Type[22]
+	anatp        = analysis_name[3]
+	tpe          = dic_Type[1]
 	color        = 'black' #'red' #'darkblue' #label only
 	mut          = ['HIS 237 - GLU','ASP 206 - GLU'][1]
 	supertitle   = '' #['Produção - Mutação %s'%mut,'Petase nativa - Produção'][1]
@@ -313,8 +316,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			for value in ['7.00','9.00']:
 				File.append( ('%sph%s_%s.dat'%(path,value,anatp),'pH='+value) )
 	else:
-		path = 'HIS237_GLU/' #'ASP206_GLU-replicata/'
-		File = [('%sph%s_%s.dat'%(path,'5.00',anatp),'')]
+		path = 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/Replicata1/' #'ASP206_GLU-replicata/'
+		File = [('%sEhyd-PETcarb_%s.dat'%(path,'7.00'),'')]
 
 	labx, laby  = (100.5, 0.51) #rmsd
 	fram2time   = True  # False
@@ -348,7 +351,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\nUsage:\n\t-v or --version\t\tprints current version, the python libraries needed and the data format expected.\n")
 				print("\t-h or --help\t\tprints this message.\n")
 				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information (ex:RMSD for pH7 and pH8).\n\t\tfour: Plots four data files with the same axis information (ex:RMSD for pH5, pH6, pH7, pH8).\n")
-				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr.\n")
+				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist.\n")
+				# atomos para calcular a distancia durante as dinamica???
 				print("\t-i\t\tinput data file(s) with a name for the plot (separated by space).\n\t\t\tEx: -i ph7.00_rmsd.dat pH=7.00\n")
 				print("\t-stitle\t\t(Valid only for type four) Title for comparison plot.\n")
 				print("\t-lblcrd\t(Valid only for type four) Label coords.\n")
