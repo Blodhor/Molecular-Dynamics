@@ -839,6 +839,10 @@ phr: Ph range used to titrate.'''
 				# @ => atom  # : => residue
 				# @CA,C,O,N,H&!(:WAT) := means all these atoms of backbone and not in water
 				f.write('atomicfluct out MD_%.2f_%s @CA,C,O,N,H&!(:WAT)\n'%(pp,rmsf_file))
+				if self.docking:
+					# This is dependent on your analysis
+					f.write('distance :132@OG :266@C2 out Ehyd-PETcarb_%.2f.dat\n'%(pp))
+
 				f.close()
 		else:
 			for pp in pH:
@@ -847,11 +851,13 @@ phr: Ph range used to titrate.'''
 				f.write('parm %s\n'%self.prmtop)
 				f.write('trajin CpHMD_prod_%.2f.nc\n'%pp)
 				f.write('reference %s.rst7\n'%equil_name)
-				# For future reference:
-				#  distance dPET-sitio :PET :132,178,209 out dPET-sitio.dat #pg 649-650
 				f.write('rmsd reference @CA,C,O,N,H&!(:WAT) first out ph%.2f_rmsd.dat mass\n'%(pp))
 				f.write('atomicfluct out ph%.2f_rmsf.dat @CA,C,O,N,H&!(:WAT) byres\n'%(pp))
 				f.write('radgyr ph%.2f-radgyr out ph%.2f_radgyr.dat @CA,C,O,N,H&!(:WAT) mass nomax\n'%(pp, pp))
+				if self.docking:
+					# This is dependent on your analysis
+					f.write('distance :132@OG :266@C2 out Ehyd-PETcarb_%.2f.dat\n'%(pp))
+
 				f.close()
 
 class Amber_run(Amber_par):
