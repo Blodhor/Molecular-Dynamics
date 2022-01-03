@@ -352,7 +352,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-h or --help\t\tprints this message.\n")
 				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information (ex:RMSD for pH7 and pH8).\n\t\tfour: Plots four data files with the same axis information (ex:RMSD for pH5, pH6, pH7, pH8).\n")
 				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist.\n")
-				# atomos para calcular a distancia durante as dinamica???
 				print("\t-i\t\tinput data file(s) with a name for the plot (separated by space).\n\t\t\tEx: -i ph7.00_rmsd.dat pH=7.00\n")
 				print("\t-stitle\t\t(Valid only for type four) Title for comparison plot.\n")
 				print("\t-lblcrd\t(Valid only for type four) Label coords.\n")
@@ -415,8 +414,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				supertitle = sup_t
 				continue
 			elif arg[i].lower() == "-lblcrd":
-				#temp_ar = arg[i+1][1:-1].split(',')
-				#tempx, tempy = arg
 				labx = float(arg[i+1])
 				laby = float(arg[i+2])
 				continue
