@@ -195,34 +195,34 @@ chosen_mut: Specific mutation chosen.'''
 		if self.docking:
 			f = open(self.ligand,'r+')
 			temp = f.readlines()
-		
+
 			# editing of the ligand PDB file
 			f.seek(0)
 			for i in range(len(temp)):
 				j = temp[i]
-				if len(j)>0:
+				if len(j)>0 and j != '\n':
 					data = j.split()
-				if 'ATOM' in data[0] or 'ANISOU' in data[0] or 'HETATM' in data[0]:
-					if len(data[2]) == 1 and data[2] != data[len(data)-1]:
-						# Before:
-						#HETATM    1  C   UNL     1     -27.682  -2.375   1.924  1.00  0.00      .068 A\n
-						bit = j.find(data[len(data)-1],len(data[0])+1,len(j))
-						j = j[:bit]
-						temp[i] = j + data[2]
-						# Now:
-						#HETATM    1  C   UNL     1     -27.682  -2.375   1.924  1.00  0.00      .068 C\n
-					if len(data[3]) == 3:
-						# Getting the real ligand resname
-						# Eg.:
-						#HETATM    1  C   DOK     1     -27.682  -2.375   1.924  1.00  0.00      .068 A\n
-						'''bit2 = j.find(data[3],len(data[0])+1,len(j))
-						jj = j[:bit2]+self.lig_name+j[bit2 +len(self.lig_name):]
-						temp[i] = jj'''
-						self.lig_name = data[3] # 'DOK' in this eg. 
-					else:
-						# will there be a problem with the ligand name id has more than 3 letters? i don't know
-						# if there is, use this else to debug
-						self.lig_name = data[3]
+					if 'ATOM' in data[0] or 'ANISOU' in data[0] or 'HETATM' in data[0]:
+						if len(data[2]) == 1 and data[2] != data[len(data)-1]:
+							# Before:
+							#HETATM    1  C   UNL     1     -27.682  -2.375   1.924  1.00  0.00      .068 A\n
+							bit = j.find(data[len(data)-1],len(data[0])+1,len(j))
+							j = j[:bit]
+							temp[i] = j + data[2]
+							# Now:
+							#HETATM    1  C   UNL     1     -27.682  -2.375   1.924  1.00  0.00      .068 C\n
+						if len(data[3]) == 3:
+							# Getting the real ligand resname
+							# Eg.:
+							#HETATM    1  C   DOK     1     -27.682  -2.375   1.924  1.00  0.00      .068 A\n
+							'''bit2 = j.find(data[3],len(data[0])+1,len(j))
+							jj = j[:bit2]+self.lig_name+j[bit2 +len(self.lig_name):]
+							temp[i] = jj'''
+							self.lig_name = data[3] # 'DOK' in this eg. 
+						else:
+							# will there be a problem with the ligand name id has more than 3 letters? i don't know
+							# if there is, use this else to debug
+							self.lig_name = data[3]
 
 				if i != len(temp) -1 and '\n' not in j:
 					f.write(j+'\n')
@@ -900,8 +900,13 @@ class Amber_run(Amber_par):
 			charge = 0.0
 			for i in range(len(temp)):
 				if 'unperturbed charge' in temp[-i]:
-					data = temp[-i][len('The unperturbed charge of unit'):].split()
-					charge = float(data[1][1:-1])
+					if 'of the unit' not in temp[-i]:
+						data = temp[-i].split(':')
+						charge = float(data[1])
+					else:
+						#'The unperturbed charge of the unit (9.001000) is not zero.\n'
+						data = temp[-i][len('The unperturbed charge of unit'):].split()
+						charge = float(data[1][1:-1])
 					break
 			ret = int(charge)
 			if charge - ret > 0.05:
@@ -1392,7 +1397,8 @@ fi'''
 			stages.append('')
 			stages_sh = ['sh simMin.sh', 'sh simAnneal.sh', 'sh simEquil.sh']
 			stages_sh.extend( cphmd_SHnames )
-			stages_sh.append('sh simAnalysis.sh')
+			# when the execution reach this part, it will be looking at the 'Cph/' directory
+			stages_sh.append('sh ../simAnalysis.sh')
 			#stages_sh.append('') # '' := After production do nothing
 		else:
 			stages    = [min_name, heat_name, eq_name]
@@ -1400,7 +1406,8 @@ fi'''
 			stages.append('')
 			stages_sh = ['sh simMin.sh', 'sh simAnneal.sh', 'sh simEquil.sh']
 			stages_sh.extend( productionMD_SHnames )
-			stages_sh.append('sh simAnalysis.sh')
+			# when the execution reach this part, it will be looking at the 'Equilibration/' directory
+			stages_sh.append('sh ../simAnalysis.sh')
 			#stages_sh.append('') # '' := After production do nothing
 
 		for txt_temp in range(1,len(stages)):
