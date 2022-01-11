@@ -2446,7 +2446,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 	# If for some reason you don't want to use the HMR method, set the attribute "self.hmr" to False
 
-	flags = ["&","-v","--version","-h","--help",'-arq','gpu','-mode','-res','-mut','-rdmut','-atsite','-rdydone','-icyc','-solv','-g','ph','-i','-dlig','-mpi','-explicit','-prepstp','-cut','-phdset','MIN','A','E','P']
+	flags = ["&","-v","--version","-h","--help",'-arq','gpu','-mode','-res','-mut','-rdmut','-atsite','-rdydone','-icyc','-solv','-g','-ph','-i','-dlig','-mpi','-explicit','-prepstp','-cut','-phdset','MIN','A','E','P']
 	
 	# Flag verification
 	for i in arg:
@@ -2476,8 +2476,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-dlig\t\tInput PDB file of a chosen configuration of a docked ligand. This file can be obtained through Vina or similar docking tools.\n")
 				print("\t-g\t\tGoal as MD or CpHMD. Default: MD.\n\t\t\tOBS: If you choose CpHMD and don't use flag 'res' the code will choose by default to tritate %s.\n"%prt_res)
 				print("\t-ph\t\tProduction pH. Default: 7.0.\n")
-				print("\t-phdset\t\t(This option has priority over the -ph option) Defines the pH list (only if you'll do multiple pH CpHMD production). After this flag an initial pH, a final pH and an interval unit must be given in this order (Ex: -phdset 4.0 7.0 0.5). Which represents pH:[4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0].\n")
-				print("\t-res\t\tResidues to tritate, for CpHMD (which must be informed right after this flag).\n")
+				print("\t-phdset\t\t(This option has priority over the -ph option) Defines the pH list. After this flag an initial pH, a final pH and an interval unit must be given in this order (Ex: -phdset 4.0 7.0 0.5). Which represents pH:[4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0].\n")
+				print("\t-res\t\tResidues to tritate, for CpHMD (which must be informed right after this flag). Eg.: -res SER LYS\n")
 				print("\t-rdmut\t\tRandom active site mutation.\n\t\t\t1:random aminoacid mutates to a similar one (eg. SER_160-THR). \n\t\t\t2:random aminoacid mutates to one not so similar (eg. SER_160-MET).\n")
 				print("\t-atsite\t\t(Auxiliary option for -rdmut) Active site - for enzymes only. Must be informed right after this flag as eg: -atsite SER_160 HIS_237 ASP_206. Necessary only if a mutation will be done. Defaut: set as petase's active site.\n")
 				print("\t-rdydone\t(Auxiliary option for -rdmut) Informs which mutation you're restricting from the \"random\" choice. Eg. -rdydone SER_160-MET ASP_206-GLY ASP_206-ILE.\n")
@@ -2491,7 +2491,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-prepstp\t(Option for Devs.) Stops the run after all preparations are complete (right before minimization).\n\t\t\t\tObs: The shell script, to run the simulation, will still be created for you.\n")
 				print("\nExamples:\n\t$ python3 ASM.py -i 1UBQ.pdb -arq sander -mpi 4 -mode L -g CpHMD -phdset 6.0 7.0 0.5\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq pmemd -mpi 4 -mode L -g CpHMD -ph 6.5 -explicit water\n")
-				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GM -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -rdmut 1\n")
+				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GM -g MD -explicit water -res SER HIS ASP -rdmut 1\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GM -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GM -g MD -explicit water -atsite SER_160 HIS_237 ASP_206 -mut SER_160-MET HIS_237-ALA\n")
 				print("\n\t$ python3 ASM.py -i paracetamol.pdb -arq sander -mode M\n")
