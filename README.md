@@ -161,7 +161,7 @@ $ python3 ASM.py -h
 
         -ph             Production pH. Default: 7.0.
 
-        -phdset         (This option has priority over the -ph option) Defines the pH list (only if you'll do multiple pH CpHMD production). After this flag an initial pH, a final pH and an interval unit must be given in this order (Ex: -phdset 4.0 7.0 0.5). Which represents pH:[4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0].
+        -phdset         (This option has priority over the -ph option) Defines the pH list. After this flag an initial pH, a final pH and an interval unit must be given in this order (Ex: -phdset 4.0 7.0 0.5). Which represents pH:[4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0].
 
         -res            Residues to tritate, for CpHMD (which must be informed right after this flag).
 
