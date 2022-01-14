@@ -2533,7 +2533,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				cc = i+2
 				while cc < len(arg):
 					if arg[cc] not in flags:
-						res_i += arg[cc]
+						res_i += ' '+arg[cc]
 					else:
 						# This is a 'for-loop' so 'i' will increase at the end of iteration
 						i = cc-1 
