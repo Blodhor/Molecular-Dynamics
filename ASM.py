@@ -189,7 +189,7 @@ chosen_mut: Specific mutation chosen.'''
 		self.ligand     = docked_pdb
 		self.lig_sqm    = False
 		self.lig_mol2   = self.ligand[:-3]+"mol2"   # try with PDB first
-		self.lig_frcmod = self.ligand[:-3]+"frcmod" #
+		self.lig_frcmod = self.ligand[:-3]+"frcmod"
 		self.lig_name   = "LIG"
 
 		if self.docking:
@@ -296,7 +296,7 @@ chosen_mut: Specific mutation chosen.'''
 			if bool_class:
 				if chosen_mut_flag:
 					self.oldid_mut = cp(self.chosen_mutation)
-					new_ambermutid = {}
+					'''new_ambermutid = {}
 					for i in resmut_newid:
 						if i == 'ASP':
 							new_ambermutid['AS4'] = resmut_newid['ASP']
@@ -306,7 +306,7 @@ chosen_mut: Specific mutation chosen.'''
 							new_ambermutid['GL4'] = resmut_newid['GLU']
 						else:
 							new_ambermutid[i] = resmut_newid[i]
-					resmut_newid = new_ambermutid
+					resmut_newid = new_ambermutid'''
 					print("Old residue id:\n", mutid)
 					# self.chosen_mutation := {('SER', '160'): 'MET', ('SER', '125'): 'MET'}
 					self.chosen_residues = self.adjusting_finalstep(coords=resmut_newid)
@@ -647,7 +647,7 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 		# ntx=5 Coordinates and velocities will be read from either a NetCDF or a formatted (ASCII) coordinate file. The velocity information will only be used if irest=1
 		f.write(' ntx=5,\n')
 		f.write(' imin=0,\n')
-		f.write(' irest=1,\n') 
+		f.write(' irest=1,\n')
 		if not self.mode_custom:
 			f.write(' nstlim=%d,\n'%(mdsteps_factor*self.steps))
 		else:
@@ -865,7 +865,7 @@ class Amber_run(Amber_par):
 	autor       = 'Braga, B. C.'
 	email       = 'bruno.braga@ufms.br'
 	linebreak   = '#'*60
-	report_file = 'report_temp.py' 
+	report_file = 'report_temp.py'
 	
 	def verify_leap(self, log_file='leap.log',charge=False):
 		'''Verification of LEaP log file.
@@ -1016,7 +1016,7 @@ equil_files: Equilibration files name (without .extension).'''
 				return -3
 
 		# Cphmd variable. It doesn't matter its value if not self.cph
-		res_cnt = 1 
+		res_cnt = 1
 		if self.cph:
 			cmd('rm -r Cph')
 			cmd('mkdir Cph')
@@ -1040,7 +1040,7 @@ equil_files: Equilibration files name (without .extension).'''
 				elif self.protonation_res[i] in Titratable_Residue_Names:
 					if ss != '':
 						ss += ' '
-					ss += self.protonation_res[i]
+					ss += self.protonation_res[i] #adicionar uma verificacao para adicionar residuo por numero
 
 			if ss == '':
 				print('Chosen titratable residues not in cpinutil.py database!\n')
@@ -1144,7 +1144,7 @@ equil_files: Equilibration files name (without .extension).'''
 		f.write('\tif not all_done:\n')
 		# If there was some kind of problem
 		f.write('\t\tif not results:\n')
-		# Fatal error -> stop the simulation 
+		# Fatal error -> stop the simulation
 		f.write('\t\t\tnotes = \'%s stage didn\\\'t started due to unknown reasons, please recheck your system, the input and the mdout files!\\n\'%file[:-6]\n')
 		f.write('\t\t\tcontinue_sim = False\n')
 		f.write('\t\telse:\n')
@@ -1171,12 +1171,12 @@ equil_files: Equilibration files name (without .extension).'''
 		f.write('\t\t\t\t\tnotes += \'Generating restart files!\\n\'\n')
 		# Reading old input
 		f.write('\t\t\t\t\tg_old = open(inputFile,"r")\n')
-		f.write('\t\t\t\t\tg_read = g_old.readlines()\n') 
+		f.write('\t\t\t\t\tg_read = g_old.readlines()\n')
 		f.write('\t\t\t\t\tg_old.close()\n')
 		# Creating restart input
 		f.write('\t\t\t\t\tg = open(inputFile[:-3]+"_rst.in","w")\n')
 		f.write('\t\t\t\t\tfor j in range(len(g_read)):\n')
-		# If MD step flag was found, modify it to the new number 
+		# If MD step flag was found, modify it to the new number
 		f.write('\t\t\t\t\t\tif "nstlim=" in g_read[j]:\n')
 		# Between bit1 and bit2 was the old number for MD steps
 		f.write('\t\t\t\t\t\t\tbit1 = g_read[j].find("nstlim=",0,len(g_read[j]))+7\n')
@@ -1398,7 +1398,7 @@ fi'''
 			stages_sh = ['sh simMin.sh', 'sh simAnneal.sh', 'sh simEquil.sh']
 			stages_sh.extend( cphmd_SHnames )
 			# when the execution reach this part, it will be looking at the 'Cph/' directory
-			stages_sh.append('sh ../simAnalysis.sh')
+			stages_sh.append('cd ../../ && sh simAnalysis.sh')
 			#stages_sh.append('') # '' := After production do nothing
 		else:
 			stages    = [min_name, heat_name, eq_name]
@@ -1407,7 +1407,7 @@ fi'''
 			stages_sh = ['sh simMin.sh', 'sh simAnneal.sh', 'sh simEquil.sh']
 			stages_sh.extend( productionMD_SHnames )
 			# when the execution reach this part, it will be looking at the 'Equilibration/' directory
-			stages_sh.append('sh ../simAnalysis.sh')
+			stages_sh.append('cd ../../ && sh simAnalysis.sh')
 			#stages_sh.append('') # '' := After production do nothing
 
 		for txt_temp in range(1,len(stages)):
@@ -1759,6 +1759,41 @@ id_only: If True, self.chosen_mutation won't change.
 
 		return new_res_id
 
+	def resid_discover(self, temp_line = 'ATOM   2530  OD1 AS4 A 178  -24 969  -8 049  11 709  1 00  6 51  O'):
+		'''Finds the position of the residue id temp_line and returns this integer value.'''
+
+		resid_hyp     = '' # hypothesis
+		# list of numbers from temp_line 
+		numblist_last = re.findall(r'[0-9]+',temp_line)
+		# last line in list form
+		line_list     = temp_line.split()
+		if 'ATOM' in line_list[0] or 'HETATM' in line_list[0]:
+			if len(numblist_last) == 14:
+				# ATOM   2530  OD1 AS4 A 178  -24 969  -8 049  11 709  1 00  6 51  O
+				resid_hyp = numblist_last[3]
+			elif len(numblist_last) == 13:
+				# ATOM   2520  HB2 ASN A 177  -29 165  -2 583  15 098  1 00 11 26    H
+				resid_hyp = numblist_last[2]
+			elif len(numblist_last) == 12:
+				# ATOM   2518  H   ASN A 177   -26 911  -2 596  15 780  1 00  8 29   H 
+				resid_hyp = numblist_last[1]
+		else:
+			# ANISOU    1  N   THR A  29     2101   4075   3166  -1332     57  -1083 N
+			if len(numblist_last) == 8:
+				resid_hyp = numblist_last[1]
+			else:
+				resid_hyp = numblist_last[2]
+				
+		# The real resid is either line_list[4] or line_list[5]
+		if resid_hyp == line_list[5]:
+			ret = 5
+		else:
+			ret = 4
+		
+		return ret
+
+
+
 	def res_detail(self, res_ids = {'SER':[160]}):
 		'''Searches for all atoms in the res_ids and creates an attribute for "mutation possibility". Returns the tuple: (how many aminoacids are in the res_ids, how many atoms are in the residues from the list res_ids). '''
 
@@ -1773,37 +1808,18 @@ id_only: If True, self.chosen_mutation won't change.
 			bool1 = 'ATOM' in line[0] or 'ANISOU' in line[0] or 'HETATM' in line[0]
 			bool2 = len(line) > 3
 			if bool1 and bool2:
-				# Now we are looking only at the atoms coords info
-				numbs = re.findall(r'[0-9]+',i) # list of numbers in string format
-				debug = '' # res id
 
-				# Correcting the numbs problem that occurs when we have:
-				if 'ATOM' in line[0] or 'HETATM' in line[0]:
-					if len(numbs) == 14:
-						# ATOM   2530  OD1 AS4 A 178  -24 969  -8 049  11 709  1 00  6 51  O
-						debug = numbs[3]
-					elif len(numbs) == 13:
-						# ATOM   2520  HB2 ASN A 177  -29 165  -2 583  15 098  1 00 11 26    H
-						debug = numbs[2]
-					elif len(numbs) == 12:
-						# ATOM   2518  H   ASN A 177   -26 911  -2 596  15 780  1 00  8 29   H 
-						debug = numbs[1]
-				else:
-					# ANISOU    1  N   THR A  29     2101   4075   3166  -1332     57  -1083 N
-					if len(numbs) == 8:
-						debug = numbs[1]
-					else:
-						debug = numbs[2]
-
-				if debug == line[5]:
+				resid_pos  = self.resid_discover(temp_line=i)
+				real_resid = line[resid_pos]
+				if resid_pos == 5:
 					# ATOM   3389  H  BSER A 245
-					bool4 = len(line[3]) > 3 and line[3][-3:] in res_ids and int(debug) in res_ids[ line[3][-3:] ]
-					bool5 = len(line[3]) == 3 and line[3] in res_ids and int(debug) in res_ids[ line[3] ]  
+					bool4 = len(line[3]) > 3 and line[3][-3:] in res_ids and int(real_resid) in res_ids[ line[3][-3:] ]
+					bool5 = len(line[3]) == 3 and line[3] in res_ids and int(real_resid) in res_ids[ line[3] ]  
 					if bool4 or bool5:
 						mut_temp.append( i )
-				elif debug == line[4]:
+				elif resid_pos == 4:
 					# ATOM   3392  HB2ASER A 245
-					bool4 = line[2][-3:] in res_ids and int(debug) in res_ids[ line[2][-3:] ]
+					bool4 = line[2][-3:] in res_ids and int(real_resid) in res_ids[ line[2][-3:] ]
 					if bool4:
 						mut_temp.append( i )
 
@@ -1824,34 +1840,17 @@ id_only: If True, self.chosen_mutation won't change.
 			else:
 				bool2 = True
 			if bool1 and bool2:
-				numbs = re.findall(r'[0-9]+',self.pdb_str_2Mut[i])
-				debug = '' # debug is the res id counter
-				# Correcting the numbs problem that occurs when we have:
-				if 'ATOM' in line[0] or 'HETATM' in line[0]:
-					if len(numbs) == 14:
-						# ATOM   2530  OD1 AS4 A 178  -24 969  -8 049  11 709  1 00  6 51  O
-						debug = numbs[3]
-					elif len(numbs) == 13:
-						# ATOM   2520  HB2 ASN A 177  -29 165  -2 583  15 098  1 00 11 26    H
-						debug = numbs[2]
-					elif len(numbs) == 12:
-						# ATOM   2518  H   ASN A 177   -26 911  -2 596  15 780  1 00  8 29   H 
-						debug = numbs[1]
-				else:
-					# ANISOU    1  N   THR A  29     2101   4075   3166  -1332     57  -1083 N
-					if len(numbs) == 8:
-						debug = numbs[1]
-					else:
-						debug = numbs[2]
-				bool3 = debug == line[5]
-				#'debug' is the res counter
-				if bool3:
+
+				resid_pos  = self.resid_discover(temp_line=self.pdb_str_2Mut[i])
+				real_resid = line[resid_pos]
+
+				if resid_pos == 5:
 					# ATOM   3389  H  BSER A 245
-					if debug != res_number:
+					if real_resid != res_number:
 						# First residue of pdb or a different residue from the line above
-						res_number = debug
-						prev_res = res_Flag
-						res_Flag = line[3]
+						res_number = real_resid
+						prev_res   = res_Flag
+						res_Flag   = line[3]
 						if res_Flag not in self.mut_pos:
 							# Residuo first appearance
 							# Phase A (new residue)
@@ -1880,11 +1879,11 @@ id_only: If True, self.chosen_mutation won't change.
 						y=i
 						# self.mut_pos := {'residueA': [(x,y)]}
 						self.mut_pos[res_Flag][len(self.mut_pos[res_Flag])-1]=(x,y)
-				elif debug == line[4]:
+				elif resid_pos == 4:
 					# ATOM   3392  HB2ASER A 245
-					if debug != res_number:
-						res_number = debug
-						res_Flag = line[2][3:]
+					if real_resid != res_number:
+						res_number = real_resid
+						res_Flag   = line[2][3:]
 						if res_Flag not in self.mut_pos:
 							# Phase A
 							self.mut_pos[res_Flag]=[(i,i)]
@@ -2184,47 +2183,81 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 				#  self.pdb_string[i] is looking at the old non-mutated residuo
 				count_mut = i
 				break
-		
-		####################################################################################
-		####################################################################################
-		####################################################################################
-		####################################################################################
-		####################################################################################
-		####################################################################################
-
-		# FAZER DEPOIS DA QUALIFICACAO!
-		# numbs = re.findall(r'[0-9]+',self.pdb_str_2Mut[i])
-		# len(numbs) == 14: 
-		#  ATOM   2530  OD1 AS4 A 178  -24 969  -8 049  11 709  1 00  6 51  O
-		# self.chosen_residues := {'SER':[newid, ...], ...} eg: {'ASP':[178], 'HIP': [209]}
 
 		new_pdb_string = self.pdb_str_not2Mut[:count_mut] #self.pdb_string[:count_mut]
-		new_pdb_string.extend(temp)
-		new_pdb_string.extend(self.pdb_str_not2Mut[count_mut:])
+		rest_of_pdb    = self.pdb_str_not2Mut[count_mut:]
 
-		####################################################################################
-		####################################################################################
-		####################################################################################
-		####################################################################################
-		####################################################################################
-		####################################################################################
-		####################################################################################
-		####################################################################################
-		####################################################################################
+		last_line       = new_pdb_string[len(new_pdb_string)-1] #last line
+		#ATOM   2523 HD22 ASN A 177     -30.901  -1.267  16.010  1.00 16.84           H
+		last_line_list  = last_line.split()
+		last_resid_pos  = self.resid_discover(temp_line=last_line)
+		#last_resid_pos == 5
+		last_real_resid = last_line_list[last_resid_pos] # equals 177 if the mutation is on 178
+
+		#temp[0] == ATOM   2524  N   GLU A 178     -26.664  -5.424  14.644  1.00  6.93           N
+		mut_resid_pos      = self.resid_discover(temp_line=temp[0])
+		#mut_resid_pos == 5
+		mut_line_list      = temp[0].split()
+		mut_real_resid_old = mut_line_list[mut_resid_pos]
+		temp_counter       = 0
+		mutations_left     = True
+
+		while mutations_left:
+			for mut_i in range(temp_counter,len(temp)):
+				mut_resid_pos      = self.resid_discover(temp_line=temp[mut_i])
+				mut_line_list      = temp[mut_i].split()
+				mut_real_resid_new = mut_line_list[mut_resid_pos]
+				if mut_real_resid_new == mut_real_resid_old and int(mut_real_resid_new) == int(last_real_resid)+1:
+					# still looking at the same mutated residue
+					new_pdb_string.append( temp[mut_i] )
+					if mut_i == len(temp) -1:
+						mutations_left = False
+				elif mut_real_resid_new != mut_real_resid_old:
+					mut_real_resid_old = mut_real_resid_new
+					temp_counter       = mut_i
+					break
+
+			# look for the correct position on rest_of_pdb 
+			# mutations on 178, 206, ... ; now looking at 206 or ...
+			# resid on rest_of_pdb should be 179 or 207 or ...
+			for rest_i in range(len(rest_of_pdb)):
+				if mutations_left:
+					last_line_list  = rest_of_pdb[rest_i].split()
+					last_resid_pos  = self.resid_discover(temp_line=rest_of_pdb[rest_i])
+					last_real_resid = last_line_list[last_resid_pos]
+					if int(last_real_resid) <= int(mut_real_resid_new)-1:
+						new_pdb_string.append( rest_of_pdb[rest_i] )
+						if rest_i == len(rest_of_pdb) -1:
+							rest_of_pdb = []
+							break
+					elif rest_i != len(rest_of_pdb) -1:
+						# should be looking at 207 or ...
+						rest_temp   = rest_of_pdb[rest_i:]
+						rest_of_pdb = rest_temp
+						break
+				else:
+					new_pdb_string.append( rest_of_pdb[rest_i] )
+			
+			if mutations_left:
+				# going back 1 iteration of rest_i loop to correctly place the rest of mutations
+				last_line       = new_pdb_string[len(new_pdb_string)-1] # resid 205 or ...
+				last_line_list  = last_line.split()
+				last_resid_pos  = self.resid_discover(temp_line=last_line)
+				last_real_resid = last_line_list[last_resid_pos]
 
 		self.pdb_string = new_pdb_string 
 
 		# Generating a new pdb with the mutation
 		if not self.not_rand_mut:
-			new_filename = '%s_mut_%s-%s.pdb'%(self.pdb[:-4],old_res_id,mut_res)	
+			new_filename = '%s_mut_%s-%s.pdb'%(self.pdb[:-4],old_res_id,mut_res)
 		else:
 			naming = ''
 			name_count = 0
 			for n in self.oldid_mut:
 				name_count += 1
 				if name_count > 1:
-					naming += '__'
-				self.newid_info.append( '\nOld:\n%s:\t%s\n'%(n[0],n[1]) ) 
+					naming += '_'
+				self.newid_info.append( '\nOld:\n%s:\t%s\n'%(n[0],n[1]) )
 				naming += '%s_%s-%s'%(n[0],n[1],self.oldid_mut[n])
 			new_filename = '%s_mut_%s.pdb'%(self.pdb[:-4],naming)
 
@@ -2387,9 +2420,10 @@ Manager Version 1.1:
 	*An easy restart .sh of current simulation stage created.
 
 Manager Version 1.2:
-	*Added a custom option for the duration of each stage of simulation .
+	*Added a custom option for the duration of each stage of simulation.
 	*Added an option to run with a docked system. The docked ligand configuration must be given.
-
+	*Fixed the bug on the mutation method for multiple aminoacid alterations
+	
 Copyright (C) 2021  Braga, B. C. 
 e-mail: bruno.braga@ufms.br 
 
@@ -2488,7 +2522,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-arq\t\tChoice in architecture\n\t\t\tgpu (if chosen, the GPU id must be informed right after this flag)\n\t\t\tsander\n\t\t\tpmemd\n")
 				print("\t-mpi\t\tMulticore run (the number of cores must be informed right after this flag). Default compiler: mpiexec.\n\t\t\t\tObs: Not implemented for -arq gpu.\n")
 				print("\t-cut\t\tNonbonded cutoff in angstrom (Default: 12).\n")
-				print("\t-prepstp\t(Option for Devs.) Stops the run after all preparations are complete (right before minimization).\n\t\t\t\tObs: The shell script, to run the simulation, will still be created for you.\n")
+				#print("\t-prepstp\t(Option for Devs.) Stops the run after all preparations are complete (right before minimization).\n\t\t\t\tObs: The shell script, to run the simulation, will still be created for you.\n")
 				print("\nExamples:\n\t$ python3 ASM.py -i 1UBQ.pdb -arq sander -mpi 4 -mode L -g CpHMD -phdset 6.0 7.0 0.5\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq pmemd -mpi 4 -mode L -g CpHMD -ph 6.5 -explicit water\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GM -g MD -explicit water -res SER HIS ASP -rdmut 1\n")
@@ -2533,7 +2567,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				cc = i+2
 				while cc < len(arg):
 					if arg[cc] not in flags:
-						res_i += ' '+arg[cc]
+						res_i += ' ' + arg[cc]
 					else:
 						# This is a 'for-loop' so 'i' will increase at the end of iteration
 						i = cc-1 
