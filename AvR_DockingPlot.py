@@ -2,9 +2,9 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid.inset_locator import (inset_axes, InsetPosition, mark_inset)
 
 # Quick sort for the first coodinate of my tupples
-
 def swap(t=[(0,'1'),(-6,'2')], ith = 0, jth = 1):
 	if ith != jth:
 		temp   = t[ith]
@@ -98,15 +98,48 @@ def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb
 
 	return label_out
 
-def plot_AEvsR(dpi=100,Xg=[],Xw=[],Yg=[],Yw=[],titulo ="Amostras_Docking",eixoy="Afinidade (kcal/mol)",eixox="r_hc (angstrom)"):
-    plt.figure(dpi=dpi)
+def plot_AEvsR(dpi=100,Xg=[],Xw=[],Yg=[],Yw=[],Xw_ins=[],Xg_ins=[],Yw_ins=[],Yg_ins=[],titulo ="Configurations",eixoy="Vina score (kcal/mol)",eixox="$r_{hc}\,(Angstrom)$"):
+	'''#this works
+	plt.figure(dpi=dpi)
     plt.plot(Xg,Yg,'bo',Xw,Yw,'ro')
     plt.title(titulo)
     plt.ylabel(eixoy)
     plt.xlabel(eixox)
-    plt.show()
+	plt.show()'''
+	
+	'''# filter to make the picture smoother
+	xw = []
+	yw = []
+	for i in range(len(Xw)):
+		temp = [Xw[i],Yw[i]]
+		if temp[0] < 9 and temp[1] < -4.2:
+			xw.append(Xw[i])
+			yw.append(Yw[i])'''
 
-def Main(ref = (-20.465,-10.036,7.369), arg = ['AvR_DockingPlot.py', 'PDBFILE.pdb']):
+	fig, ax1 = plt.subplots()
+	ax1.plot(Xg,Yg,'bo')
+	ax1.plot(Xw,Yw,'ro')
+	ax1.set_xlabel(eixox)
+	ax1.set_ylabel(eixoy)
+	ax1.set_xlim(2.5,17)
+	ax1.set_ylim(-6,-1.8)
+
+	# Create a set of inset Axes: these should fill the bounding box allocated to
+	# them.
+	ax2 = plt.axes([0,0,1,1])
+	# Manually set the position and relative size of the inset axes within ax1
+	ip = InsetPosition(ax1, [0.5,0.5,0.5,0.5]) # parant axes; inset X edgde, Y edge, width% to parent, height% to parent
+	ax2.set_axes_locator(ip)
+	# Mark the region corresponding to the inset axes on ax1 and draw lines
+	# in grey linking the two axes.
+	mark_inset(ax1, ax2, loc1=2, loc2=4, fc="none", ec='black')
+
+	ax2.plot(Xg_ins,Yg_ins,'bo')
+	ax2.plot(Xw_ins,Yw_ins,'ro')
+
+	plt.show()
+
+def Main(ref = (-20.465,-10.036,7.369), arg = ['AvR_DockingPlot.py', 'PDBFILE.pdb'], inset_factor=10):
 
 	# ref := hydroxyl on serine 160 from 6eqe.pdb
 
@@ -119,6 +152,7 @@ def Main(ref = (-20.465,-10.036,7.369), arg = ['AvR_DockingPlot.py', 'PDBFILE.pd
 	# Worse models
 	r_w      = [] # X
 	ae_w     = [] # Y
+	bw_limit = -5.5
 		
 	# Lists for top 5 smallest dist. 'r' and smallest sum of 'r' and 'ae'
 	rVmodel    = []
@@ -126,8 +160,8 @@ def Main(ref = (-20.465,-10.036,7.369), arg = ['AvR_DockingPlot.py', 'PDBFILE.pd
 
 	for i in data:
 		rVmodel.append( (i[1][1], i[0], "Ae = %f"%i[1][0]) ) 
-		rPaeVmodel.append( (i[1][0]+i[1][1], i[0], "Ae = %f; r_hc = %f"%(i[1][0],i[1][1])) )
-		if i[1][0] <= -4.5:
+		rPaeVmodel.append( (i[1][0]+i[1][1], i[0], "Ae = %f; r_hc = %f"%(i[1][0],i[1][1]), i[1]) )
+		if i[1][0] <= bw_limit:
 			ae_g.append(i[1][0])
 			r_g.append(i[1][1])
 		else:
@@ -143,6 +177,18 @@ def Main(ref = (-20.465,-10.036,7.369), arg = ['AvR_DockingPlot.py', 'PDBFILE.pd
 	# Quick sorting
 	SortZerothTupple(t=rVmodel,begin=0,end=len(rVmodel)-1)
 	SortZerothTupple(t=rPaeVmodel,begin=0,end=len(rPaeVmodel)-1)
+
+	Xg_ins = []
+	Yg_ins = []
+	Xw_ins = []
+	Yw_ins = []
+	for i in range(int(len(rPaeVmodel)/inset_factor)):
+		if rPaeVmodel[i][3][0] <= bw_limit:
+			Yg_ins.append(rPaeVmodel[i][3][0])
+			Xg_ins.append(rPaeVmodel[i][3][1])
+		else:
+			Yw_ins.append(rPaeVmodel[i][3][0])
+			Xw_ins.append(rPaeVmodel[i][3][1])
 
 	if len(rVmodel) < 5:
 		top_r = rVmodel
@@ -171,7 +217,7 @@ def Main(ref = (-20.465,-10.036,7.369), arg = ['AvR_DockingPlot.py', 'PDBFILE.pd
 	f.write('\n')
 	f.close()
 
-	plot_AEvsR(Xg=r_g,Yg=ae_g,Xw=r_w,Yw=ae_w)
+	plot_AEvsR(Xg=r_g,Yg=ae_g,Xw=r_w,Yw=ae_w,Xw_ins=Xw_ins,Xg_ins=Xg_ins,Yw_ins=Yw_ins,Yg_ins=Yg_ins)
 	
 def Help(arg = ['AvR_DockingPlot.py', '-h']):
 	print("Please run this code as follows:\n(Option 1): $ pythonCompilerV3+ %s PDBFILE.pdb\n"%arg[0])
