@@ -167,23 +167,18 @@ chosen_mut: Specific mutation chosen.'''
 		self.cores           = int(mpicores)
 		self.prep_stop       = prep_stop
 		self.pH_step         = pHstep
-		
+
+		self.default_counter = {'HIP': 'HIS', 'AS4': 'ASP', 'Gl4': 'GLU', 'HIS': 'HIP', 'ASP': 'AS4', 'GLU': 'GL4'}
+
 		# Sorting protonation and active site information for later verification
 		prot_ = prot_res.split()
-		for i in range(len(prot_)):
-			if prot_[i] == 'AS4':
-				prot_[i] = 'ASP'
-			elif prot_[i] == 'HIP':
-				prot_[i] = 'HIS'
-			elif prot_[i] == 'GL4':
-				prot_[i] = 'GLU'
 		site_ = []
 		for i in active_site.keys():
 			site_.append(i)
 		prot_.sort()
 		site_.sort()
 		self.ok = True
-		
+
 		# Docking-only options
 		self.docking    = docked_run
 		self.ligand     = docked_pdb
@@ -228,9 +223,9 @@ chosen_mut: Specific mutation chosen.'''
 					f.write(j+'\n')
 				elif 'END' not in j[0:5]:
 					f.write(j)
-					
+
 			f.close()
-			
+
 		# Mutation-only parameters
 		self.pdb_string          = ''
 		self.pdb_str_2Mut        = ''
@@ -275,7 +270,7 @@ chosen_mut: Specific mutation chosen.'''
 			else:
 				self.beforeAmber_res2mut = cp(self.active_site)
 				for i in prot_:
-					if i not in site_ and input("Residue %s not in active site. Do you wanna procced? (Please answer only with [Yes/No])\n"%i).lower() == "no":
+					if (i not in site_ and self.default_counter[i] not in site_) and input("Residue %s not in active site. Do you wanna procced? (Please answer only with [Yes/No])\n"%i).lower() == "no":
 						self.ok = False
 
 			# The method adjusting_firstep is written on the Amber_mutation class
@@ -296,17 +291,6 @@ chosen_mut: Specific mutation chosen.'''
 			if bool_class:
 				if chosen_mut_flag:
 					self.oldid_mut = cp(self.chosen_mutation)
-					'''new_ambermutid = {}
-					for i in resmut_newid:
-						if i == 'ASP':
-							new_ambermutid['AS4'] = resmut_newid['ASP']
-						elif i == 'HIS':
-							new_ambermutid['HIP'] = resmut_newid['HIS']
-						elif i == 'GLU':
-							new_ambermutid['GL4'] = resmut_newid['GLU']
-						else:
-							new_ambermutid[i] = resmut_newid[i]
-					resmut_newid = new_ambermutid'''
 					print("Old residue id:\n", mutid)
 					# self.chosen_mutation := {('SER', '160'): 'MET', ('SER', '125'): 'MET'}
 					self.chosen_residues = self.adjusting_finalstep(coords=resmut_newid)
@@ -314,17 +298,6 @@ chosen_mut: Specific mutation chosen.'''
 					if self.chosen_residues != -1:
 						print("New residue id:\n", self.chosen_residues)
 				else:
-					new_amber_site = {}
-					for i in res_newid:
-						if i == 'ASP':
-							new_amber_site['AS4'] = res_newid['ASP']
-						elif i == 'HIS':
-							new_amber_site['HIP'] = res_newid['HIS']
-						elif i == 'GLU':
-							new_amber_site['GL4'] = res_newid['GLU']
-						else:
-							new_amber_site[i] = res_newid[i]
-					res_newid = new_amber_site
 					print("Old active site's id:\n",self.active_site)
 					self.active_site = self.adjusting_finalstep(coords=res_newid)
 					# self.active_site := {'SER':[newid, ...], ...}
@@ -531,20 +504,28 @@ mdsteps_factor: The factor by which the attibute self.steps will be multiplied (
 		# Number of MD-steps to be performed.
 		if not self.mode_custom:
 			f.write(' nstlim=%d,\n'%(mdsteps_factor*self.steps))
+			# Every ntpr steps, energy information will be printed in human-readable form to files "mdout"
+			f.write(' ntpr=%d,\n'%(int(mdsteps_factor*self.steps/self.info_factor)))
+			# Every ntwx steps, the coordinates will be written to the mdcrd file.
+			f.write(' ntwx=%d,\n'%(int(mdsteps_factor*self.steps/self.info_factor)))
+			# Every ntwr steps during dynamics, the “restrt” file will be written, ensuring that recovery from a crash will not be so painful.
+			f.write(' ntwr=%d,\n'%(int(mdsteps_factor*self.steps/self.info_factor)))
 		else:
 			f.write(' nstlim=%d,\n'%self.mode_custom_a)
+			frames_saved = int(self.mode_custom_a/self.info_factor)
+			mesg         = ''
+			if frames_saved == 0:
+				frames_saved = 1
+				mesg         = '!Too small brother'
+			f.write(' ntpr=%d,%s\n'%(frames_saved,mesg))
+			f.write(' ntwx=%d,%s\n'%(frames_saved,mesg))
+			f.write(' ntwr=%d,%s\n'%(frames_saved,mesg))
 		# The time step (psec). Recommended MAXIMUM is .002 if SHAKE is used, or .001 if it isn't. The use of Hydrogen Mass Repartitioning (HMR) together with SHAKE, allows the time step to be increased in a stable fashion by about a factor of two (up to .004) by slowing down the high frequency hydrogen motion in the system. To use HMR, the masses in the topology file need to be altered before starting the simulation. ParmEd can do this automatically with the HMassRepartition option.
 		if self.hmr:
 			f.write(' dt=0.004,\n')
 		else:
 			f.write(' dt=0.002,\n')
 
-		# Every ntpr steps, energy information will be printed in human-readable form to files "mdout"
-		f.write(' ntpr=%d,\n'%(int(mdsteps_factor*self.steps/self.info_factor)))
-		# Every ntwx steps, the coordinates will be written to the mdcrd file.
-		f.write(' ntwx=%d,\n'%(int(mdsteps_factor*self.steps/self.info_factor)))
-		# Every ntwr steps during dynamics, the “restrt” file will be written, ensuring that recovery from a crash will not be so painful.
-		f.write(' ntwr=%d,\n'%(int(mdsteps_factor*self.steps/self.info_factor)))
 		# Flag for constant pressure dynamics. = 0 No pressure scaling.
 		f.write(' ntp=0,\n')
 		# Flag used to control which barostat to use in order to control the pressure. = 1 Berendsen barostat; = 2 Monte Carlo barostat.
@@ -650,11 +631,32 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 		f.write(' irest=1,\n')
 		if not self.mode_custom:
 			f.write(' nstlim=%d,\n'%(mdsteps_factor*self.steps))
+			f.write(' ntpr=%d,\n'%(int(mdsteps_factor*self.steps/self.info_factor)))
+			f.write(' ntwx=%d,\n'%(int(mdsteps_factor*self.steps/self.info_factor)))
+			f.write(' ntwr=%d,\n'%(int(mdsteps_factor*self.steps/self.info_factor)))
 		else:
 			if 'CpHMD_prod' in step:
 				f.write(' nstlim=%d,\n'%self.mode_custom_p)
+				frames_saved = int(self.mode_custom_p/self.info_factor)
+				mesg         = ''
+				if frames_saved == 0:
+					frames_saved = 1
+					mesg         = '!Too small brother'
+				f.write(' ntpr=%d,%s\n'%(frames_saved,mesg))
+				f.write(' ntwx=%d,%s\n'%(frames_saved,mesg))
+				f.write(' ntwr=%d,%s\n'%(frames_saved,mesg))
+
 			else:
 				f.write(' nstlim=%d,\n'%self.mode_custom_e)
+				frames_saved = int(self.mode_custom_e/self.info_factor)
+				mesg         = ''
+				if frames_saved == 0:
+					frames_saved = 1
+					mesg         = '!Too small brother'
+				f.write(' ntpr=%d,%s\n'%(frames_saved,mesg))
+				f.write(' ntwx=%d,%s\n'%(frames_saved,mesg))
+				f.write(' ntwr=%d,%s\n'%(frames_saved,mesg))
+
 		if self.hmr:
 			f.write(' dt=0.004,\n')
 			# ntcnstph times the number of residues (TRESCNT in the cpin file) times our 'dt' (in ps) should be ~100 fs = 0.1 ps if possible.# ntcnstph = 100/ (dt*1000*TRESCNT)
@@ -662,9 +664,6 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 		else:
 			f.write(' dt=0.002,\n')
 			ntph = int(100/(2*trescnt))+1
-		f.write(' ntpr=%d,\n'%(int(mdsteps_factor*self.steps/self.info_factor)))
-		f.write(' ntwx=%d,\n'%(int(mdsteps_factor*self.steps/self.info_factor)))
-		f.write(' ntwr=%d,\n'%(int(mdsteps_factor*self.steps/self.info_factor)))
 		f.write(' ntc=2,\n')
 		f.write(' ntf=2,\n')
 		if not (self.exp_solv and self.cph):
@@ -756,16 +755,24 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 				f.write(' irest=1,\n')
 				if not self.mode_custom:
 					f.write(' nstlim=%d,\n'%(mdsteps_factor*self.steps))
+					f.write(' ntpr=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
+					f.write(' ntwx=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
+					f.write(' ntwr=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
 				else:
 					f.write(' nstlim=%d,\n'%self.mode_custom_p)
+					frames_saved = int(self.mode_custom_p/self.info_factor)
+					mesg         = ''
+					if frames_saved == 0:
+						frames_saved = 1
+						mesg         = '!Too small brother'
+					f.write(' ntpr=%d,%s\n'%(frames_saved,mesg))
+					f.write(' ntwx=%d,%s\n'%(frames_saved,mesg))
+					f.write(' ntwr=%d,%s\n'%(frames_saved,mesg))
 				if self.hmr:
 					f.write(' dt=0.004,\n')
 				else:
 					f.write(' dt=0.002,\n')
 
-				f.write(' ntpr=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
-				f.write(' ntwx=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
-				f.write(' ntwr=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
 				f.write(' ntp=0,\n')
 				f.write(' barostat=2,\n')
 				f.write(' pres0=1.0,\n')
@@ -1025,22 +1032,14 @@ equil_files: Equilibration files name (without .extension).'''
 			#  It's no walk in the park adding a residue in the database, feel free to try it yourself!
 			ss = ''
 			for i in range(len(self.protonation_res)):
-				if self.protonation_res[i] == 'ASP':
-					if ss != '':
-						ss += ' '
-					ss += 'AS4'
-				elif self.protonation_res[i] == 'GLU':
-					if ss != '':
-						ss += ' '
-					ss += 'GL4'
-				elif self.protonation_res[i] == 'HIS':
-					if ss != '':
-						ss += ' '
-					ss += 'HIP'
-				elif self.protonation_res[i] in Titratable_Residue_Names:
+				if self.protonation_res[i] in Titratable_Residue_Names:
 					if ss != '':
 						ss += ' '
 					ss += self.protonation_res[i] #adicionar uma verificacao para adicionar residuo por numero
+				elif self.protonation_res[i] in self.default_counter and self.default_counter[self.protonation_res[i]] in Titratable_Residue_Names:
+					if ss != '':
+						ss += ' '
+					ss += self.default_counter[self.protonation_res[i]]
 
 			if ss == '':
 				print('Chosen titratable residues not in cpinutil.py database!\n')
@@ -1717,7 +1716,7 @@ id_only: If True, self.chosen_mutation won't change.
 						if next_flag:
 							k = kpointer
 
-						if x in temp[k] and i in temp[k]:
+						if x in temp[k] and (i in temp[k] or i in self.default_counter and self.default_counter[i] in temp[k]):
 							coord_pos = temp[k].find(x,0,len(temp[k]))
 							data      = temp[k][:coord_pos].split()
 							sure_flag += 1
@@ -1734,14 +1733,10 @@ id_only: If True, self.chosen_mutation won't change.
 					if found:
 						if self.not_rand_mut:
 							# self.chosen_mutation := {('HIS', '237'): 'ALA'} # i := 'HIP'
-							i_temp = i
-							if i_temp == 'AS4':
-								i_temp = 'ASP'
-							elif i_temp == 'HIP':
-								i_temp = 'HIS'
-							elif i_temp == 'GL4':
-								i_temp = 'GLU'
-							mut_temp[(i,str(new_id))] = self.chosen_mutation[(i_temp, str(j[0]))]
+							if (i, str(j[0])) in self.chosen_mutation:
+								mut_temp[(i,str(new_id))] = self.chosen_mutation[(i, str(j[0]))]
+							elif i in self.default_counter and (self.default_counter[i], str(j[0])) in self.chosen_mutation:
+								mut_temp[(i,str(new_id))] = self.chosen_mutation[(self.default_counter[i], str(j[0]))]
 
 						if i not in new_res_id:
 							new_res_id[i] = [int(new_id)]
@@ -1783,19 +1778,26 @@ id_only: If True, self.chosen_mutation won't change.
 				resid_hyp = numblist_last[1]
 			else:
 				resid_hyp = numblist_last[2]
-				
+
 		# The real resid is either line_list[4] or line_list[5]
 		if resid_hyp == line_list[5]:
 			ret = 5
 		else:
 			ret = 4
-		
+
 		return ret
 
 
 
 	def res_detail(self, res_ids = {'SER':[160]}):
 		'''Searches for all atoms in the res_ids and creates an attribute for "mutation possibility". Returns the tuple: (how many aminoacids are in the res_ids, how many atoms are in the residues from the list res_ids). '''
+
+		# Default assumption
+		for i in ['HIP', 'AS4', 'Gl4', 'HIS', 'ASP', 'GLU']:
+			if i not in self.aminoacid_atmcount:
+				self.aminoacid_atmcount[i] = self.aminoacid_atmcount[self.default_counter[i]]
+			if i not in self.restypeatoms:
+				self.restypeatoms[i] = self.restypeatoms[self.default_counter[i]]
 
 		f = open(self.pdb,'r')
 		self.pdb_string = f.readlines()
@@ -1808,20 +1810,23 @@ id_only: If True, self.chosen_mutation won't change.
 			bool1 = 'ATOM' in line[0] or 'ANISOU' in line[0] or 'HETATM' in line[0]
 			bool2 = len(line) > 3
 			if bool1 and bool2:
-
 				resid_pos  = self.resid_discover(temp_line=i)
 				real_resid = line[resid_pos]
 				if resid_pos == 5:
 					# ATOM   3389  H  BSER A 245
-					bool4 = len(line[3]) > 3 and line[3][-3:] in res_ids and int(real_resid) in res_ids[ line[3][-3:] ]
-					bool5 = len(line[3]) == 3 and line[3] in res_ids and int(real_resid) in res_ids[ line[3] ]  
-					if bool4 or bool5:
-						mut_temp.append( i )
+					if len(line[3]) > 3:
+						line_res = line[3][-3:]
+					elif len(line[3]) == 3:
+						line_res = line[3]
+					bool4         = line_res in res_ids and int(real_resid) in res_ids[line_res]
+					bool4_counter = line_res in self.default_counter and self.default_counter[line_res] in res_ids and int(real_resid) in res_ids[self.default_counter[line_res]]
 				elif resid_pos == 4:
 					# ATOM   3392  HB2ASER A 245
-					bool4 = line[2][-3:] in res_ids and int(real_resid) in res_ids[ line[2][-3:] ]
-					if bool4:
-						mut_temp.append( i )
+					bool4         = line[2][-3:] in res_ids and int(real_resid) in res_ids[ line[2][-3:] ]
+					bool4_counter = line[2][-3:] in self.default_counter and self.default_counter[line[2][-3:]] in res_ids and int(real_resid) in res_ids[self.default_counter[line[2][-3:]]]
+
+				if bool4 or bool4_counter:
+					mut_temp.append( i )
 
 		# self.pdb_str_not2Mut is every line from self.pdb_string wich is not related to mutation possibilities 
 		self.pdb_str_not2Mut = []
@@ -1908,7 +1913,7 @@ id_only: If True, self.chosen_mutation won't change.
 		# Filling self.res_atm
 		self.atm_detail()
 		# self.res_atm := {'MET': [(0th appearance,{'C':[line 32 of self.pdb_str_2Mut, line 35 of self.pdb_str_2Mut,...]})]}
-		
+
 		return (len(self.mut_pos), len(self.pdb_str_2Mut))
 
 	def atm_detail(self):
@@ -1989,15 +1994,15 @@ mutation_type:
 					if self.chosen_residues[t[0]][t_r] == int(t[1]):
 						break
 				olddies = cp(t[0])
-				if olddies == 'AS4':
-					olddies = 'ASP'
-				elif olddies == 'HIP':
-					olddies = 'HIS'
-				elif olddies == 'GL4':
-					olddies = 'GLU'
+				if olddies not in self.beforeAmber_res2mut and olddies in self.default_counter and self.default_counter[olddies] in self.beforeAmber_res2mut:
+					olddies = self.default_counter[olddies]
 
-				verif = self.mutation(res=t[0], old_res_id="%s_%s"%(olddies, str(self.beforeAmber_res2mut[olddies][t_r])),
-				pos_id=t_r, pos=self.mut_pos[t[0]][t_r], mut_res=self.chosen_mutation[t], mult_flag=multiple)
+				if t[0] not in self.mut_pos and t[0] in self.default_counter and self.default_counter[t[0]] in self.mut_pos:
+					t_temp = (self.default_counter[t[0]],t[1])
+					t = t_temp
+				
+				verif = self.mutation(res=olddies, old_res_id="%s_%s"%(olddies, str(self.beforeAmber_res2mut[olddies][t_r])),
+				pos_id=t_r, pos=self.mut_pos[t[0]][t_r], mut_res=self.chosen_mutation[(olddies,t[1])], mult_flag=multiple)
 
 				if verif == -1:
 					print("Go check what went wrong with the mutation %s to %s"%(t[0], self.chosen_mutation[t]))
@@ -2007,12 +2012,8 @@ mutation_type:
 			# Choosing a random aminoacid from the active site to mutate
 			res_chosen = random.sample(self.mut_pos.keys(),1)[0]
 			res_not_amber = res_chosen
-			if res_chosen == 'AS4':
-				res_not_amber = 'ASP'
-			elif res_chosen == 'HIP':
-				res_not_amber = 'HIS'
-			elif res_chosen == 'GL4':
-				res_not_amber = 'GLU'
+			if res_chosen in ['AS4','HIP','GL4']:
+				res_not_amber = self.default_counter[res_chosen]
 
 			if mutation_type == 1:
 				# Making a "probable" mutation
@@ -2132,6 +2133,9 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 		# self.res_atm := {'MET': [(0th appearance,{'C':[line 32 of self.pdb_str_2Mut, line 35 of self.pdb_str_2Mut,...]})]}
 		# Can't modify directly the self.res_atm because it uses tuples..so you need to change a tuple for another
 		temp_flag = False
+		if res not in self.res_atm and res in self.default_counter and self.default_counter[res] in self.res_atm:
+			res = self.default_counter[res]
+
 		for i in self.res_atm[res]:
 			if i[0] == pos_id:
 				# To be sure it is the correct appearance
@@ -2144,9 +2148,9 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 			for j in range(len(atom_pos[i])):
 				atom_pos[i][j] -= pos[0]
 		# Now atom_pos holds the correct positioning of atoms in the atom_list
-		
+
 		modified_text = self.aminoacid_mutation(transform=mut_res, atm_list = atom_list, atm_pos= atom_pos)
-		
+
 		# modified_text probably hasn't the same size as the text before the mutation change!
 		# It's necessary to update self.mut_pos and self.res_atm for multiple mutations!
 		orig_size = pos[1] - pos[0] +1
@@ -2174,7 +2178,7 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 		if mult_flag:
 			self.pdb_str_2Mut = temp
 			return 1
-	
+
 		# self.pdb_str_not2Mut is every line from self.pdb_string wich is not related to mutation possibilities 
 		count_mut = 0
 		# This is done to maintain the residue order
@@ -2237,7 +2241,7 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 						break
 				else:
 					new_pdb_string.append( rest_of_pdb[rest_i] )
-			
+
 			if mutations_left:
 				# going back 1 iteration of rest_i loop to correctly place the rest of mutations
 				last_line       = new_pdb_string[len(new_pdb_string)-1] # resid 205 or ...
@@ -2276,10 +2280,10 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 		self.leap_in(checking=True, checking_cmd='charge', charge_fix=False, add_Na=0, add_Cl=0)
 		cmd('rm leap.log')
 		cmd('tleap -f tleap.in')
-		
+
 		# Checking the total charge, if it's not zero, the code below will neutralize the system adding ions
 		cha = self.verify_leap(log_file='leap.log',charge=True)
-		
+
 		if cha == '-2':
 			return -1
 		elif cha != 0:
@@ -2291,9 +2295,9 @@ mult_flag: (Boolean) If True it won't pass through Leap and just modify self.pdb
 			# This will check for any fatal errors, proximity warnings don't matter (minimization can fix it). And in order to check for the true error we need to delete all leap log before attempting the leapfix
 			cmd('rm leap.log')
 			cmd('tleap -f tleap.in')
-			
+
 			error = self.verify_leap(log_file='leap.log',charge=False)
-			
+
 			if len(error) > 0:
 				for i in error:
 					print(i[:-1])
@@ -2543,24 +2547,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				mode = arg[i+1]
 				if mode.upper() == 'CT':
 					custom_mode = True
-					cc = i+2
-					while cc < len(arg):
-						if arg[cc].upper() == 'MIN':
-							cc += 1
-							custom_min = IntTransNumb(arg[cc])
-						elif arg[cc].upper() == 'A':
-							cc += 1
-							custom_a = IntTransNumb(arg[cc])
-						elif arg[cc].upper() == 'E':
-							cc += 1
-							custom_e = IntTransNumb(arg[cc])
-						elif arg[cc].upper() == 'P':
-							cc += 1
-							custom_p = IntTransNumb(arg[cc])
-						else:
-							i = cc-1 
-							break
-						cc += 1
+				continue
+			elif custom_mode and arg[i].upper() == 'MIN':
+				custom_min = IntTransNumb(arg[i+1])
+				continue
+			elif custom_mode and arg[i].upper() == 'A':
+				custom_a = IntTransNumb(arg[i+1])
+				continue
+			elif custom_mode and arg[i].upper() == 'E':
+				custom_e = IntTransNumb(arg[i+1])
+				continue
+			elif custom_mode and arg[i].upper() == 'P':
+				custom_p = IntTransNumb(arg[i+1])
 				continue
 			elif arg[i].lower() == '-res':
 				res_i = arg[i+1]
