@@ -1278,7 +1278,7 @@ phs: Ph range used to titrate.'''
 				self.cpptraj_in(input_name=inp, rms_file=self.rms, rmsf_file=self.rmsf, min_name=mini_name, annealing_name=heat_name, equil_name=eq_name, phr=phs)
 				# We need to look for the rmsd input file in the father directory because 'f' is writting in the simulation.sh file which will run later
 				f.write('cpptraj -i ../MD_%.2f_%s &> cpptraj.log\n'%(pp,inp))
-				f.write('process_mdout.perl %s.mdout %s.mdout Production.mdout\n'%(heat_name, eq_name))
+				f.write('process_mdout.perl %s.mdout %s.mdout Production_%.2f.mdout\n'%(heat_name, eq_name, pp))
 		else:
 			f.write('echo \"Offset: is the difference between the predicted pka and the system pH\" > ph_calcpka_populations.info\n')
 			f.write('echo \"Pred: is the predicted pka\" >> ph_calcpka_populations.info\n')
