@@ -755,9 +755,9 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 				f.write(' irest=1,\n')
 				if not self.mode_custom:
 					f.write(' nstlim=%d,\n'%(mdsteps_factor*self.steps))
-					f.write(' ntpr=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
-					f.write(' ntwx=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
-					f.write(' ntwr=%d,\n'%(int(mdsteps_factor*self.steps/(2*self.info_factor))))
+					f.write(' ntpr=%d,\n'%(int(mdsteps_factor*self.steps/(self.info_factor))))
+					f.write(' ntwx=%d,\n'%(int(mdsteps_factor*self.steps/(self.info_factor))))
+					f.write(' ntwr=%d,\n'%(int(mdsteps_factor*self.steps/(self.info_factor))))
 				else:
 					f.write(' nstlim=%d,\n'%self.mode_custom_p)
 					frames_saved = int(self.mode_custom_p/self.info_factor)
