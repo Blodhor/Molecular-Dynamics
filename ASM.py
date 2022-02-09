@@ -1272,7 +1272,7 @@ phs: Ph range used to titrate.'''
 		description = 'Script - Minimization stage'
 		f.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
 		f.write('cd Analysis\n')
-		
+
 		if not self.cph:
 			for pp in pH:
 				self.cpptraj_in(input_name=inp, rms_file=self.rms, rmsf_file=self.rmsf, min_name=mini_name, annealing_name=heat_name, equil_name=eq_name, phr=phs)
@@ -1386,18 +1386,18 @@ fi'''
 			if pp == 0:
 				productionMD_SHnames.append( 'sh sim%s.sh'%productionMD_names[pp] )
 			else:
-				productionMD_SHnames.append( 'cd .. && sh sim%s.sh'%productionMD_names[pp] )
+				productionMD_SHnames.append( 'cd .. && sh sim%s.sh'%productionMD_names[pp] ) ####
 
-		comp_report = 'python3 ../%s %s_rst.mdout %s_rst.in Continue_rst2.in'
+		comp_report      = 'python3 ../%s %s.mdout ../%s_rst.in Continue_rst2.in'
+		comp_report_prod = 'python3 ../../%s %s.mdout ../../%s_rst.in Continue_rst2.in'
 		if self.cph:
-			comp_report = 'python3 ../../%s %s_rst.mdout %s_rst.in Continue_rst2.in'
 			stages    = [min_name, heat_name, eq_name]
 			stages.extend( cphmd_names )
 			stages.append('')
 			stages_sh = ['sh simMin.sh', 'sh simAnneal.sh', 'sh simEquil.sh']
 			stages_sh.extend( cphmd_SHnames )
 			# when the execution reach this part, it will be looking at the 'Cph/' directory
-			stages_sh.append('cd ../../ && sh simAnalysis.sh')
+			stages_sh.append('cd ../ && sh simAnalysis.sh')
 			#stages_sh.append('') # '' := After production do nothing
 		else:
 			stages    = [min_name, heat_name, eq_name]
@@ -1406,7 +1406,7 @@ fi'''
 			stages_sh = ['sh simMin.sh', 'sh simAnneal.sh', 'sh simEquil.sh']
 			stages_sh.extend( productionMD_SHnames )
 			# when the execution reach this part, it will be looking at the 'Equilibration/' directory
-			stages_sh.append('cd ../../ && sh simAnalysis.sh')
+			stages_sh.append('cd ../ && sh simAnalysis.sh')
 			#stages_sh.append('') # '' := After production do nothing
 
 		for txt_temp in range(1,len(stages)):
@@ -1448,7 +1448,10 @@ fi'''
 					copyingTo     = 'cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis'%(txt, txt)
 					copyingRstTo  = 'cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis && cp %s_rst.mdout ../../Analysis && cp %s_rst.nc ../../Analysis'%(txt, txt, txt, txt)
 			
-			keys.append( ( copyingTo, next_sh, redoing_stage, comp_report%(self.report_file, txt, txt), copyingRstTo, next_sh) )
+			if 'Production' in txt or 'CpHMD' in txt:
+				keys.append( ( copyingTo, next_sh, redoing_stage, comp_report_prod%(self.report_file, txt, txt), copyingRstTo, next_sh) )
+			else:
+				keys.append( ( copyingTo, next_sh, redoing_stage, comp_report%(self.report_file, txt, txt), copyingRstTo, next_sh) )
 
 		# Stage Minimization
 		m = open('simMin.sh','w')
