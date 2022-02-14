@@ -2,12 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class Analysis_plot:
+	_Types = ['one','two','2ph_2merge','four','four_2merge','allin_one']
 	def __init__(self, type = 'one', names=[('file.dat','analysis_title')], analysisType = 'rmsd', largerYaxis = False, 
 	Yenlarger = 2, frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
-	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = ''):
+	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5)):
 		'''Parameters:
 		
-		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other or 'four'/'four_2merge' datasets in a matrix fashion.
+		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other, 'four'/'four_2merge' datasets in a matrix fashion or multiple datasets in one XY frame ('allin_one').
 
 		names: Data Files, the format expected is .dat, if any other is used do not expect a pretty result.
 		
@@ -34,19 +35,22 @@ class Analysis_plot:
 		merge_legend: (type=four_2merge) Inset legend. 
 
 		dpi: Sets the picture quality.'''
-		
-		self.X            = []
-		self.Y            = []
-		self.frameToTime  = frameToTime
-		self.frameStep    = frameStep
-		self.timeStep     = timeStep
-		self.nanosec      = nanosec
-		self.dpi          = dpi
-		self.suptitle     = suptitle
-		self.label_color  = label_color
-		self.labelpx      = labelpx
-		self.labelpy      = labelpy
-		self.merge_legend = merge_legend
+
+		self.X                 = []
+		self.Y                 = []
+		self.frameToTime       = frameToTime
+		self.frameStep         = frameStep
+		self.timeStep          = timeStep
+		self.nanosec           = nanosec
+		self.dpi               = dpi
+		self.suptitle          = suptitle
+		self.label_color       = label_color
+		self.labelpx           = labelpx
+		self.labelpy           = labelpy
+		self.merge_legend      = merge_legend
+		self.restriction_break = False
+		if type == 'allin_one':
+			self.restriction_break = True
 
 		if 'radgyr' in analysisType:
 			self.ana_type = 'Raio de giro (Angstrom)'
@@ -70,13 +74,15 @@ class Analysis_plot:
 		elif XTlabels != -1 and type == 'four_2merge': 
 			self.plot_four_2merge(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
 			name= [XTlabels[i][1] for i in range(len(XTlabels))])
+		elif XTlabels != -1 and type == 'allin_one':
+			self.multi_in_one(labels=[XTlabels[i][1] for i in range(len(XTlabels))], label_loc=multi_merge_label_loc, titulo =suptitle, eixoy=self.ana_type, eixox=XTlabels[0][0])
 		else:
-			print("Type must be one, two, 2ph_2merge, four or four_2merge!\n")
+			print("Type must in the list:",self._Types, "!\n")
 
 	def XY(self, files = [('file1.dat','title1'), ('file2.dat','title2')]):
 		''' Gets X and Y datasets and returns its respectives x-label and title as a list of tuples.'''
 
-		if len(files) in [1,2,4,8]:
+		if len(files) in [1,2,4,8] or self.restriction_break:
 			xname = 'T'
 			XTlabel = []
 			for fs in files:
@@ -135,7 +141,7 @@ class Analysis_plot:
 
 	def plot_two(self, X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"]):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
-		
+
 		fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True, dpi=self.dpi)
 		ax1.plot(X[0],Y[0])
 		ax1.set_title(name[0])
@@ -152,7 +158,7 @@ class Analysis_plot:
 
 	def plot_two_2merge(self, X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"]):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
-		
+
 		fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True, sharey=True, dpi=self.dpi)
 		big_pp = 0
 		axs = [ax1, ax2]
@@ -176,7 +182,7 @@ class Analysis_plot:
 
 	def plot_four(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"]):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
-		
+
 		plt.figure(dpi=self.dpi)
 		ax1 = plt.subplot(221)
 		plt.plot(X[0],Y[0])
@@ -203,7 +209,7 @@ class Analysis_plot:
 
 	def plot_four_2merge(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"]):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
-		
+
 		fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2, sharex=True, sharey=True, dpi=self.dpi)
 		big_pp = 0
 		axs = [ax1, ax2, ax3, ax4]
@@ -215,7 +221,7 @@ class Analysis_plot:
 			#ap.text(x=self.labelpx, y=self.labelpy, s=name[big_pp], color=self.label_color)
 			ap.grid()
 			big_pp += 2
-		
+
 		for ts in axs:
 			ts.set(xlabel=Xaxis, ylabel=self.ana_type)
 		#pyplot.subplots can hide redundant axes
@@ -223,6 +229,24 @@ class Analysis_plot:
 			ts.label_outer()
 
 		plt.suptitle(self.suptitle)
+		plt.show()
+
+	def multi_in_one(self, labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), titulo ="Ajuste da curva T1", eixoy="Y(X)", eixox="X"):
+    	# X = [[],[],'...'], Y = [[],[],'...']
+		# X := self.X ;      Y := self.Y
+		if len(self.X) != len(self.Y):
+			print('For some reason the number of Y datasets is different from de number of X datasets.')
+			return -1
+
+		plt.figure(dpi=self.dpi)
+
+		for i in range(len(self.X)):
+			plt.plot(self.X[i], self.Y[i])
+
+		plt.legend(labels,loc=label_loc)
+		plt.title(titulo)
+		plt.ylabel(eixoy)
+		plt.xlabel(eixox)
 		plt.show()
 
 if __name__ == "__main__":
@@ -267,21 +291,27 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-	
+
 '''
 	analysis_name = ['rmsd','rmsf','radgyr','dist']
-	dic_Type      = {1:'one', 2:'two', 22: '2ph_2merge', 4:'four', 42: 'four_2merge'}
+	dic_Type      = {1:'one', 13:'allin_one', 2:'two', 22: '2ph_2merge', 4:'four', 42: 'four_2merge'}
 
 	#default keys
 	version_only = False
 	inst_only    = False
 	anatp        = analysis_name[3]
-	tpe          = dic_Type[1]
+	tpe          = dic_Type[13]
 	color        = 'black' #'red' #'darkblue' #label only
 	mut          = ['HIS 237 - GLU','ASP 206 - GLU'][1]
 	supertitle   = '' #['Produção - Mutação %s'%mut,'Petase nativa - Produção'][1]
 	bckbne_comp  = False 
 	merge_legend = ''
+	labx, laby  = (100.5, 0.51) #rmsd
+	fram2time   = True  # False
+	framstp     = 62500 # Ultra #gpu-high: 50 000
+	nano        = True  # False
+	dpi         = 100
+	
 	if tpe == 'four':
 		path = ['ASP206_GLU_Hotfix1.1/', 'nativaHotfix1.1/All_backbone/'][1]
 		File = []
@@ -315,15 +345,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			File = []
 			for value in ['7.00','9.00']:
 				File.append( ('%sph%s_%s.dat'%(path,value,anatp),'pH='+value) )
+	elif tpe == 'allin_one':
+		path            = 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
+		data_file       = 'Ehyd-PETcarb_7.00.dat'
+		supertitle      = 'CpHMD'
+		multi_label_loc = (0.5,0.5)
+		File            = []
+		dyn_value       = 1
+		for d in ['Run0_CpHMD/','Replicata1_CpHMD/']:#,'Replicata2_CpHMD/']:
+			File.append( (path+d+data_file,'D %d'%dyn_value) )
+			dyn_value += 1
+		
 	else:
-		path = 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/Replicata1/' #'ASP206_GLU-replicata/'
-		File = [('%sEhyd-PETcarb_%s.dat'%(path,'7.00'),'')]
+		path = 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
+		rep_type = ['MD','CpHMD'][1]
+		#framstp  = int(framstp/2)
+		rep  = ['Run0_%s/'%rep_type,'Replicata1_%s/'%rep_type,'Replicata2_%s/'%rep_type]
+		File = [('%sEhyd-PETcarb_%s.dat'%(path+rep[2],'7.00'),'')]
 
-	labx, laby  = (100.5, 0.51) #rmsd
-	fram2time   = True  # False
-	framstp     = 62500 # Ultra #gpu-high: 50 000
-	nano        = True  # False
-	dpi         = 100
 	if anatp == 'rmsf':
 		fram2time  = False
 		nano       = False
@@ -331,7 +370,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-h","--help",'-type', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd']
+	flags = ["&","-v","--version","-h","--help",'-type', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd','-mlbpos']
 
 	cut = 0 # counter for input flags
 
@@ -350,12 +389,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("Copyright (C) 2021  Braga, B. C.\nThis program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.\n")
 				print("\nUsage:\n\t-v or --version\t\tprints current version, the python libraries needed and the data format expected.\n")
 				print("\t-h or --help\t\tprints this message.\n")
-				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information (ex:RMSD for pH7 and pH8).\n\t\tfour: Plots four data files with the same axis information (ex:RMSD for pH5, pH6, pH7, pH8).\n")
+				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information (ex:RMSD for pH7 and pH8).\n\t\tfour: Plots four data files with the same axis information (Eg.:RMSD for pH5, pH6, pH7, pH8).\n\t\tallin_one: Plots every dataset given in one XY frame.\n")
 				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist.\n")
-				print("\t-i\t\tinput data file(s) with a name for the plot (separated by space).\n\t\t\tEx: -i ph7.00_rmsd.dat pH=7.00\n")
-				print("\t-stitle\t\t(Valid only for type four) Title for comparison plot.\n")
-				print("\t-lblcrd\t(Valid only for type four) Label coords.\n")
-				print("\t-fram2time\t(For anatp = rmsd or radgyr) Sets X-axis will change from frame to time (pico seconds). Must inform frame-step conversion.\n\t\t\tEx:-fram2time 10000\n")
+				print("\t-i\t\tinput data file(s) with a name for the plot (separated by space).\n\t\t\tEg.: -i ph7.00_rmsd.dat pH=7.00\n")
+				print("\t-stitle\t\t(Valid only for type 'four') Title for comparison plot.\n")
+				print("\t-lblcrd\t(Valid only for type 'four') Label coords.\n")
+				print("\t-mlbpos\t(Valid only for type 'allin_one') Label position based on axis percentage. Eg.: -mlbpos 0.5 0.8\n")
+				print("\t-fram2time\t(For anatp = rmsd or radgyr) Sets X-axis will change from frame to time (pico seconds). Must inform frame-step conversion.\n\t\t\tEg.: -fram2time 10000\n")
 				print("\t-nanosec\t\t(For anatp = rmsd or radgyr) Sets time intervals on X-axis to nanoseconds.\n")
 				print("\t-dpi\t\tSets the plot quality (recommended to use only with type=one). Default: 100\n")
 				print("\nExamples:\n\t$ python3 Analysis_Plots_4.0.py -type one -anatp rmsd -i ph7.00_rmsd.dat Production pH=7.00 -fram2time 10000 -dpi 120\n")
@@ -414,8 +454,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				supertitle = sup_t
 				continue
 			elif arg[i].lower() == "-lblcrd":
+				#temp_ar = arg[i+1][1:-1].split(',')
+				#tempx, tempy = arg
 				labx = float(arg[i+1])
 				laby = float(arg[i+2])
+				continue
+			elif arg[i].lower() == "-mlbpos":
+				multi_label_loc = (float(arg[i+1]),float(arg[i+2]))
 				continue
 			elif arg[i].lower() == "-fram2time":
 				fram2time = True
@@ -433,4 +478,4 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			cut = i+1
 
 	if not inst_only and not version_only:
-		ob4 = Analysis_plot(type=tpe,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend = merge_legend)
+		ob4 = Analysis_plot(type=tpe,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc )
