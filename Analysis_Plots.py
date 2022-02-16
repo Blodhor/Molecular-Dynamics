@@ -276,7 +276,7 @@ Data file structure expected:
 
 
 
-Copyright (C) 2021  Braga, B. C. 
+Copyright (C) 2021-2022  Braga, B. C. 
 e-mail: bruno.braga@ufms.br 
 
 This program is free software: you can redistribute it and/or modify
@@ -348,11 +348,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif tpe == 'allin_one':
 		path            = 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
 		data_file       = 'Ehyd-PETcarb_7.00.dat'
-		supertitle      = 'CpHMD'
+		supertitle      = ''
 		multi_label_loc = (0.5,0.5)
 		File            = []
 		dyn_value       = 1
-		for d in ['Run0_CpHMD/','Replicata1_CpHMD/']:#,'Replicata2_CpHMD/']:
+		
+		framstp  = int(framstp/2) # for nativa MD
+		
+		for d in ['Run0_MD/','Replicata1_MD/','Replicata2_MD/'][:-1]:
 			File.append( (path+d+data_file,'D %d'%dyn_value) )
 			dyn_value += 1
 		
@@ -398,9 +401,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-fram2time\t(For anatp = rmsd or radgyr) Sets X-axis will change from frame to time (pico seconds). Must inform frame-step conversion.\n\t\t\tEg.: -fram2time 10000\n")
 				print("\t-nanosec\t\t(For anatp = rmsd or radgyr) Sets time intervals on X-axis to nanoseconds.\n")
 				print("\t-dpi\t\tSets the plot quality (recommended to use only with type=one). Default: 100\n")
-				print("\nExamples:\n\t$ python3 Analysis_Plots_4.0.py -type one -anatp rmsd -i ph7.00_rmsd.dat Production pH=7.00 -fram2time 10000 -dpi 120\n")
-				print("\n\t$ python3 Analysis_Plots_4.0.py -type two -anatp rmsf -i ph7.00_rmsf.dat Production pH=7.00 ph8.00_rmsf.dat Production pH=8.00\n")
-				print("\n\t$ python3 Analysis_Plots_4.0.py -type four -stitle Production -anatp radgyr -lblcrd (16.61,200) -i ph7.00_radgyr.dat pH=7.00 ph8.00_radgyr.dat pH=8.00 ph9.00_radgyr.dat pH=9.00 ph10.00_radgyr.dat pH=10.00 -fram2time 10000 -nanosec\n")
+				print("\nExamples:\n\t$ python3 Analysis_Plots.py -type one -anatp rmsd -i ph7.00_rmsd.dat Production pH=7.00 -fram2time 10000 -dpi 120\n")
+				print("\n\t$ python3 Analysis_Plots.py -type two -anatp rmsf -i ph7.00_rmsf.dat Production pH=7.00 ph8.00_rmsf.dat Production pH=8.00\n")
+				print("\n\t$ python3 Analysis_Plots.py -type four -stitle Production -anatp radgyr -lblcrd (16.61,200) -i ph7.00_radgyr.dat pH=7.00 ph8.00_radgyr.dat pH=8.00 ph9.00_radgyr.dat pH=9.00 ph10.00_radgyr.dat pH=10.00 -fram2time 10000 -nanosec\n")
 				break
 
 			elif arg[i].lower() == "-type":
