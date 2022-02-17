@@ -365,7 +365,7 @@ ligand_only: Used for the checking of the ligand PDB file.'''
 		f.write('source leaprc.protein.ff14SB\n')
 		f.write('source leaprc.constph\n')
 		f.write('source leaprc.conste\n')
-		
+
 		if not ligand_only:
 			if antechamber:
 				f.write('SYS = loadmol2 %s\n'%mol2)
@@ -379,7 +379,7 @@ ligand_only: Used for the checking of the ligand PDB file.'''
 				f.write('loadamberparams %s\n'%self.lig_frcmod)
 			else:
 				f.write('%s = loadPDB %s\n'%(self.lig_name,self.ligand))
-			
+
 			if not ligand_only:
 				f.write('DOK = combine {SYS %s}\n'%self.lig_name)
 				sys_temp = 'DOK'
@@ -387,7 +387,7 @@ ligand_only: Used for the checking of the ligand PDB file.'''
 				sys_temp = self.lig_name
 		else:
 			sys_temp = 'SYS'
-		
+
 		# The two commands create periodic solvent boxes around the solute, which should be a UNIT. 
 		#  solvateBox creates a cuboid box, while solvateOct creates a truncated octahedron.
 		if self.exp_solv: 
@@ -460,7 +460,7 @@ min_name: Name for the minimization input.
 			f.write(' ntb=1,\n')
 			# This is used to specify the nonbonded cutoff, in Angstroms.
 			f.write(' cut=%.2f,\n'%self.cuttoff)
-			
+
 		if self.cph:
 			# Turn on constant pH 
 			if not self.exp_solv:
@@ -671,7 +671,7 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 			f.write(' barostat=2,\n')
 			# Pressure relaxation time (in ps), when NTP > 0. The recommended value is between 1.0 and 5.0 psec. Default value is 1.0
 			f.write(' taup=1.0,\n')
-			
+
 		if not self.exp_solv:
 			# This is used to specify the nonbonded cutoff, in Angstroms. For PME, the cutoff is used to limit direct space sum. When igb > 0, the default is 9999.0 (effectively infinite).
 			f.write(' cut=9999.0,\n')
@@ -706,7 +706,7 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 				f.write(' ntb=2,\n')
 				# ntp=1 MD with isotropic position scaling
 				f.write(' ntp=1,\n')
-			
+
 		if not self.cph:
 			# The collision frequency can be doubled in the equilibration and production stages
 			f.write(' gamma_ln=6,\n')
@@ -716,7 +716,7 @@ trescnt: The number of residues to titrate (the methods on this class defined, w
 			else:
 				# The collision frequency can be doubled in the equilibration and production stages
 				f.write(' gamma_ln=5,\n')
-				
+
 		# The format of coordinate and velocity trajectory files (mdcrd, mdvel and inptraj). ioutfm=1 -> Binary NetCDF trajectory
 		f.write(' ioutfm=1,\n')
 		f.write(' temp0=300.0,\n')
@@ -873,7 +873,7 @@ class Amber_run(Amber_par):
 	email       = 'bruno.braga@ufms.br'
 	linebreak   = '#'*60
 	report_file = 'report_temp.py'
-	
+
 	def verify_leap(self, log_file='leap.log',charge=False):
 		'''Verification of LEaP log file.
 		
@@ -885,7 +885,7 @@ class Amber_run(Amber_par):
 				(IF True) checks for the system charge and
 					Returns the string '-2' if its impossible to neutralize; or
 					Returns the integer charge.'''
-		
+
 		ret = ''
 		f = open(log_file,'r')
 		temp = f.readlines()
@@ -899,7 +899,7 @@ class Amber_run(Amber_par):
 			for i in temp:
 				if 'FATAL:' in i:
 					error.append(i)
-			
+
 			# if needed we can show the errors like this
 			ret = error
 		else:
@@ -919,7 +919,7 @@ class Amber_run(Amber_par):
 			if charge - ret > 0.05:
 				print("\nError with the charge\n")
 				ret = '-2'
-			
+
 		return ret
 
 
@@ -940,7 +940,7 @@ mol2_check: If False, load system pdb on leap; if True, it'll run antechamber to
 			self.leap_in(inp='tleap_lig_check.in',checking=True,checking_cmd='check',antechamber=False,ligand_only=True)
 			cmd('rm leap_lig.log')
 			cmd('tleap -f tleap_lig_check.in > leap_lig.log')
-			
+
 			error = self.verify_leap(log_file='leap_lig.log',charge=False)
 			if len(error) > 0:
 				self.lig_sqm = True
@@ -963,19 +963,19 @@ mol2_check: If False, load system pdb on leap; if True, it'll run antechamber to
 
 		cmd('rm leap_fatal.log')
 		cmd('tleap -f %s > leap_fatal.log'%leap_input)
-		
+
 		error = self.verify_leap(log_file='leap_fatal.log',charge=False)
-		
+
 		if len(error) > 0 and not mol2_check:
 			self.leap_exec(mol2_check=True)
 		elif len(error) > 0:
 			for i in error:
 				print(i[:-1])
 			return -3
-		
+
 		if self.exp_solv:
 			cha = self.verify_leap(log_file='leap_fatal.log',charge=True)
-			
+
 			if cha == '-2':
 				return -2
 
@@ -987,7 +987,7 @@ mol2_check: If False, load system pdb on leap; if True, it'll run antechamber to
 			cmd('rm leap_final.log')
 			cmd('tleap -f tleap.in > leap_final.log')
 
-		
+
 		return 0
 
 	def simulation(self,arq='gpu', min_files='Minimization', heating_files='Annealing', equil_files='Equilibration',
@@ -1074,7 +1074,7 @@ equil_files: Equilibration files name (without .extension).'''
 			self.input_heat(annealing_name=heating_files)
 			self.input_equil(step=equil_files, trescnt=int(res_cnt))
 			self.prod_cph(ph=ph_range, trescnt=int(res_cnt))
-			
+
 		# Minimization-annealing-equilibration-prodMD/CpHMD
 		cmd('rm simulation.sh')
 		f = open('simulation.sh','w')
@@ -1144,7 +1144,7 @@ equil_files: Equilibration files name (without .extension).'''
 		# If there was some kind of problem
 		f.write('\t\tif not results:\n')
 		# Fatal error -> stop the simulation
-		f.write('\t\t\tnotes = \'%s stage didn\\\'t started due to unknown reasons, please recheck your system, the input and the mdout files!\\n\'%file[:-6]\n')
+		f.write('\t\t\tnotes = \'%s stage didn\\\'t start due to unknown reasons, please recheck your system, the input and the mdout files!\\n\'%file[:-6]\n')
 		f.write('\t\t\tcontinue_sim = False\n')
 		f.write('\t\telse:\n')
 		# Non-fatal error -> create input for restart
@@ -1244,7 +1244,7 @@ equil_files: Equilibration files name (without .extension).'''
 			f.write('\telif \'Production\' in  arg[1] or \'CpHMD_prod\' in  arg[1]:\n\t\tmdstep = %d\n'%(self.mode_custom_p))	
 		f.write('\treport(file=arg[1], reportFile=report_name, inputFile = arg[2], rst_rename=rname_flag, mdStageStep = mdstep, flag_file= flag_name)\n')
 		f.close()
-		
+
 	def analysis(self, inp = 'rmsdf.cpptraj', mini_name='minimization', heat_name='annealing',
 	eq_name='equilibration', phs=[0.0,7.0]):
 		'''Trajectory analysis.
@@ -1447,7 +1447,7 @@ fi'''
 					redoing_stage = '%s -O -i ../../%s_rst.in -o %s.mdout -p ../../%s -c %s_rst.rst7 -r %s.rst7 -x %s.nc'%(process, txt, txt, self.prmtop, txt, txt, txt)
 					copyingTo     = 'cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis'%(txt, txt)
 					copyingRstTo  = 'cp %s.nc ../../Analysis && cp %s.mdout ../../Analysis && cp %s_rst.mdout ../../Analysis && cp %s_rst.nc ../../Analysis'%(txt, txt, txt, txt)
-			
+
 			if 'Production' in txt or 'CpHMD' in txt:
 				keys.append( ( copyingTo, next_sh, redoing_stage, comp_report_prod%(self.report_file, txt, txt), copyingRstTo, next_sh) )
 			else:
@@ -1474,7 +1474,7 @@ fi'''
 		m = open('verify_min.sh','w')
 		m.write(sh_verif%keys[0])
 		m.close()
-		
+
 		# Stage Annealing
 		a = open('simAnneal.sh','w')
 		description = 'Script - Annealing stage'
@@ -2431,7 +2431,7 @@ Manager Version 1.2:
 	*Added an option to run with a docked system. The docked ligand configuration must be given.
 	*Fixed the bug on the mutation method for multiple aminoacid alterations
 	
-Copyright (C) 2021  Braga, B. C. 
+Copyright (C) 2021-2022  Braga, B. C. 
 e-mail: bruno.braga@ufms.br 
 
 This program is free software: you can redistribute it and/or modify
@@ -2510,7 +2510,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			elif arg[i].lower() == "-h" or arg[i].lower() == "--help":
 				inst_only = True
 				print("Welcome to Amber Simulation Manager %s:\n"%version_n)
-				print("Copyright (C) 2021  Braga, B. C.\nThis program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.\n")
+				print("Copyright (C) 2021-2022  Braga, B. C.\nThis program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.\n")
 				print("\nUsage:\n\t-v or --version\t\tPrints current version and its corrections relating previous versions.\n")
 				print("\t-h or --help\t\tPrints this message.\n")
 				print("\t-i\t\tInput PDB file (macromolecule).\n")
