@@ -311,7 +311,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	framstp     = 62500 # Ultra #gpu-high: 50 000
 	nano        = True  # False
 	dpi         = 100
+
+	# special cases
+	rareplot        = False
+	multi_label_loc = (0.5,0.5)
 	
+
 	if tpe == 'four':
 		path = ['ASP206_GLU_Hotfix1.1/', 'nativaHotfix1.1/All_backbone/'][1]
 		File = []
@@ -346,18 +351,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			for value in ['7.00','9.00']:
 				File.append( ('%sph%s_%s.dat'%(path,value,anatp),'pH='+value) )
 	elif tpe == 'allin_one':
-		path            = 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
+		#path            = 'PETase_Dynamics/gpu-ultra/Dock_run/D206E_C8X/MD_only/'
+		path2			= 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
+		path_list		= ['Run0_MD/','Replicata1_MD/','Replicata2_MD/']
+		rareplot        = True
+		path2_list		= ['Run0_CpHMD/','Replicata1_CpHMD/','Replicata2_CpHMD/']
 		data_file       = 'Ehyd-PETcarb_7.00.dat'
 		supertitle      = ''
-		multi_label_loc = (0.5,0.5)
+		multi_label_loc = (0.75,0.75)
+		
 		File            = []
+		File2           = []
 		dyn_value       = 1
-		
-		framstp  = int(framstp/2) # for nativa MD
-		
-		for d in ['Run0_MD/','Replicata1_MD/','Replicata2_MD/'][:-1]:
-			File.append( (path+d+data_file,'D %d'%dyn_value) )
+		for d in path_list: #[:-2]:
+			File.append( (path2+d+data_file,'MD %d'%dyn_value) )
 			dyn_value += 1
+		
+		dyn_value       = 1
+		for d in path2_list: #[:-1]:
+			File2.append( (path2+d+data_file,'CpHMD %d'%dyn_value) )
+			dyn_value += 1
+		
+		'''framstp  = int(framstp/2) # for nativa MD
+		for d in ['Zeroth/','Replicata1/','Replicata2/']:
+			File.append( (path+d+data_file,'D %d'%dyn_value) )
+			dyn_value += 1'''
 		
 	else:
 		path = 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
@@ -481,4 +499,39 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			cut = i+1
 
 	if not inst_only and not version_only:
-		ob4 = Analysis_plot(type=tpe,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc )
+		if not rareplot:
+			ob4 = Analysis_plot(type=tpe,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc )
+		else:
+			# creating an empty object
+			ob4   = Analysis_plot(type='tpe',names=File2, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc )
+			ob4.X = []
+			ob4.Y = []
+			
+			
+			ob4.restriction_break = True
+			CpHMDXYlabels         = ob4.XY(files=File2)
+			#print(File2) #ok
+			print(CpHMDXYlabels)
+			labels_cphmd   = [CpHMDXYlabels[i][1] for i in range(len(CpHMDXYlabels))]
+			CpHMDeixox     = CpHMDXYlabels[0][0]
+			Xcphmd         = ob4.X
+			Ycphmd         = ob4.Y
+			
+			ob4.X          = []
+			ob4.Y          = []
+			ob4.frameStep = int(framstp/2)
+			MDXYlabels = ob4.XY(files=File)
+			labels_md  = [MDXYlabels[i][1] for i in range(len(MDXYlabels))]
+			MDeixox    = MDXYlabels[0][0]
+			
+			dual_labels = []
+			dual_eixox  = MDeixox # it's the same as CpHMDeixox 
+			dual_labels.extend( labels_md )
+			dual_labels.extend( labels_cphmd )
+			ob4.X.extend( Xcphmd )
+			ob4.Y.extend( Ycphmd )
+			
+			if MDXYlabels != -1 and CpHMDXYlabels != 1:
+				ob4.multi_in_one(labels=dual_labels, label_loc=multi_label_loc, titulo =supertitle, eixoy=ob4.ana_type, eixox=dual_eixox)
+			else:
+				print("Sheesh!")
