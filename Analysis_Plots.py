@@ -3,12 +3,14 @@ import matplotlib.pyplot as plt
 
 class Analysis_plot:
 	_Types = ['one','two','2ph_2merge','four','four_2merge','allin_one']
-	def __init__(self, type = 'one', names=[('file.dat','analysis_title')], analysisType = 'rmsd', largerYaxis = False, 
+	def __init__(self, type = 'one', print_mean=False, names=[('file.dat','analysis_title')], analysisType = 'rmsd', largerYaxis = False, 
 	Yenlarger = 2, frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
 	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5)):
 		'''Parameters:
 		
 		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other, 'four'/'four_2merge' datasets in a matrix fashion or multiple datasets in one XY frame ('allin_one').
+
+		print_mean: (For type 'allin_one') prints the mean line of all data
 
 		names: Data Files, the format expected is .dat, if any other is used do not expect a pretty result.
 		
@@ -75,7 +77,7 @@ class Analysis_plot:
 			self.plot_four_2merge(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
 			name= [XTlabels[i][1] for i in range(len(XTlabels))])
 		elif XTlabels != -1 and type == 'allin_one':
-			self.multi_in_one(labels=[XTlabels[i][1] for i in range(len(XTlabels))], label_loc=multi_merge_label_loc, titulo =suptitle, eixoy=self.ana_type, eixox=XTlabels[0][0])
+			self.multi_in_one(labels=[XTlabels[i][1] for i in range(len(XTlabels))], label_loc=multi_merge_label_loc, titulo =suptitle, eixoy=self.ana_type, eixox=XTlabels[0][0],mean=print_mean)
 		else:
 			print("Type must in the list:",self._Types, "!\n")
 
@@ -231,7 +233,7 @@ class Analysis_plot:
 		plt.suptitle(self.suptitle)
 		plt.show()
 
-	def multi_in_one(self, labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), titulo ="Ajuste da curva T1", eixoy="Y(X)", eixox="X"):
+	def multi_in_one(self, labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), titulo ="Ajuste da curva T1", eixoy="Y(X)", eixox="X",mean=False):
     	# X = [[],[],'...'], Y = [[],[],'...']
 		# X := self.X ;      Y := self.Y
 		if len(self.X) != len(self.Y):
@@ -239,10 +241,16 @@ class Analysis_plot:
 			return -1
 
 		plt.figure(dpi=self.dpi)
-
+		mean_value = []
 		for i in range(len(self.X)):
+			mean_value.append( sum(self.Y[i])/len(self.Y[i]) )
 			plt.plot(self.X[i], self.Y[i])
 
+		if mean:
+			mean_multi = sum(mean_value)/len(mean_value)
+			mean_line  = [mean_multi]*len(self.X[0])
+			plt.plot(self.X[0], mean_line)
+			labels.append('M='+str( round(mean_multi,2) ))
 		plt.legend(labels,loc=label_loc)
 		plt.title(titulo)
 		plt.ylabel(eixoy)
@@ -311,6 +319,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	framstp     = 62500 # Ultra #gpu-high: 50 000
 	nano        = True  # False
 	dpi         = 100
+	mean_flag   = False
 
 	# special cases
 	rareplot        = False
@@ -351,31 +360,34 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			for value in ['7.00','9.00']:
 				File.append( ('%sph%s_%s.dat'%(path,value,anatp),'pH='+value) )
 	elif tpe == 'allin_one':
-		#path            = 'PETase_Dynamics/gpu-ultra/Dock_run/D206E_C8X/MD_only/'
-		path2			= 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
-		path_list		= ['Run0_MD/','Replicata1_MD/','Replicata2_MD/']
-		rareplot        = True
+		path            = 'PETase_Dynamics/gpu-ultra/Dock_run/D206E_C8X/MD_only/'
+		#path2			= 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
+		#path_list		= ['Run0_MD/','Replicata1_MD/','Replicata2_MD/']
+		path_list		= ['Zeroth/']
+		path_list.extend( ['Replicata%d/'%i for i in range(1,6)] )
+		mean_flag       = True
+		rareplot        = False
 		path2_list		= ['Run0_CpHMD/','Replicata1_CpHMD/','Replicata2_CpHMD/']
-		data_file       = 'Ehyd-PETcarb_7.00.dat'
+		data_file       = 'Ehyd-PETcarb_9.00.dat'
 		supertitle      = ''
 		multi_label_loc = (0.75,0.75)
 		
-		File            = []
-		File2           = []
-		dyn_value       = 1
-		for d in path_list: #[:-2]:
-			File.append( (path2+d+data_file,'MD %d'%dyn_value) )
+		File             = []
+		File2            = []
+		dyn_value        = 1
+		ignore_dyn_MD    = [1,3,5]
+		ignore_dyn_CpHMD = [3]
+		for d in path_list:
+			if dyn_value not in ignore_dyn_MD:
+				File.append( (path+d+data_file,'MD %d'%dyn_value) )
 			dyn_value += 1
-		
-		dyn_value       = 1
-		for d in path2_list: #[:-1]:
-			File2.append( (path2+d+data_file,'CpHMD %d'%dyn_value) )
-			dyn_value += 1
-		
-		'''framstp  = int(framstp/2) # for nativa MD
-		for d in ['Zeroth/','Replicata1/','Replicata2/']:
-			File.append( (path+d+data_file,'D %d'%dyn_value) )
-			dyn_value += 1'''
+		#File=File2
+		if rareplot:
+			dyn_value       = 1
+			for d in path2_list:
+				if dyn_value not in ignore_dyn_CpHMD:
+					File2.append( (path2+d+data_file,'CpHMD %d'%dyn_value) )
+				dyn_value += 1
 		
 	else:
 		path = 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
@@ -391,7 +403,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-h","--help",'-type', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd','-mlbpos']
+	flags = ["&","-v","--version","-h","--help",'-type','-mean', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd','-mlbpos']
 
 	cut = 0 # counter for input flags
 
@@ -411,6 +423,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\nUsage:\n\t-v or --version\t\tprints current version, the python libraries needed and the data format expected.\n")
 				print("\t-h or --help\t\tprints this message.\n")
 				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information (ex:RMSD for pH7 and pH8).\n\t\tfour: Plots four data files with the same axis information (Eg.:RMSD for pH5, pH6, pH7, pH8).\n\t\tallin_one: Plots every dataset given in one XY frame.\n")
+				print("\t-mean\t\t(Valid only for type 'allin_one') Print a horizontal line with the mean value of all the data given.\n")
 				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist.\n")
 				print("\t-i\t\tinput data file(s) with a name for the plot (separated by space).\n\t\t\tEg.: -i ph7.00_rmsd.dat pH=7.00\n")
 				print("\t-stitle\t\t(Valid only for type 'four') Title for comparison plot.\n")
@@ -426,6 +439,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 			elif arg[i].lower() == "-type":
 				tpe = arg[i+1]
+				continue
+			elif arg[i].lower() == "-mean":
+				mean_flag = True
 				continue
 			elif arg[i].lower() == "-anatp":
 				anatp = arg[i+1]
@@ -500,7 +516,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 	if not inst_only and not version_only:
 		if not rareplot:
-			ob4 = Analysis_plot(type=tpe,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc )
+			ob4 = Analysis_plot(type=tpe, print_mean=mean_flag,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc )
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe',names=File2, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc )
