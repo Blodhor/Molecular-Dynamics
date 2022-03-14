@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 class Analysis_plot:
 	_Types = ['one','two','2ph_2merge','four','four_2merge','allin_one']
@@ -51,7 +52,7 @@ class Analysis_plot:
 		self.labelpy           = labelpy
 		self.merge_legend      = merge_legend
 		self.restriction_break = False
-		if type == 'allin_one':
+		if type == 'allin_one' or type == 'allin_one_f3d':
 			self.restriction_break = True
 
 		if 'radgyr' in analysisType:
@@ -78,6 +79,8 @@ class Analysis_plot:
 			name= [XTlabels[i][1] for i in range(len(XTlabels))])
 		elif XTlabels != -1 and type == 'allin_one':
 			self.multi_in_one(labels=[XTlabels[i][1] for i in range(len(XTlabels))], label_loc=multi_merge_label_loc, titulo =suptitle, eixoy=self.ana_type, eixox=XTlabels[0][0],mean=print_mean)
+		elif XTlabels != -1 and type == 'allin_one_f3d':
+			self.multi_in_one_forced_3d(labels=[XTlabels[i][1] for i in range(len(XTlabels))], label_loc=multi_merge_label_loc, titulo =suptitle, eixoy=self.ana_type, eixox=XTlabels[0][0],mean=print_mean)
 		else:
 			print("Type must in the list:",self._Types, "!\n")
 
@@ -251,10 +254,74 @@ class Analysis_plot:
 			mean_line  = [mean_multi]*len(self.X[0])
 			plt.plot(self.X[0], mean_line)
 			labels.append('M='+str( round(mean_multi,2) ))
+		
 		plt.legend(labels,loc=label_loc)
 		plt.title(titulo)
 		plt.ylabel(eixoy)
 		plt.xlabel(eixox)
+		plt.show()
+
+	def multi_in_one_forced_3d(self, labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), titulo ="Ajuste da curva T1", eixoy="Y(X)", eixox="X",mean=False):
+		'''Not recomended to use since i forced the z-axis without proper criteria.'''
+		if len(self.X) != len(self.Y):
+			print('For some reason the number of Y datasets is different from de number of X datasets.')
+			return -1
+
+		fig = plt.figure(dpi=self.dpi)
+		ax = fig.gca(projection='3d')
+		mean_value = []
+		change_cc  = -1
+		temp_ph    = -1
+		for i in range(len(self.X)):
+			mean_value.append( sum(self.Y[i])/len(self.Y[i]) )
+			#labels :: 'pH %c MD %d'
+			label_temp  = labels[i].split()
+			temp_ph_new = float(label_temp[1])
+			if temp_ph != temp_ph_new:
+				change_cc += 1
+				if mean and change_cc > 0:
+					new_ph_temp = mean_value.pop()
+					mean_multi = sum(mean_value)/len(mean_value)
+					mean_line  = [mean_multi]*len(self.X[0])
+					ax.plot(self.X[0], mean_line, [temp_ph]*len(self.X[i]), label='pH '+str(temp_ph)+' M='+str( round(mean_multi,2) ))
+					mean_value = [new_ph_temp]
+				temp_ph = temp_ph_new
+			else:
+				ph_change = False
+			new_label   = labels[i][len(label_temp[0]+label_temp[1])+2:]
+			ax.plot(self.X[i], self.Y[i], [temp_ph]*len(self.X[i]), label=new_label)
+			
+		if mean:
+			# for the last pH
+			mean_multi = sum(mean_value)/len(mean_value)
+			mean_line  = [mean_multi]*len(self.X[0])
+			ax.plot(self.X[0], mean_line, [temp_ph]*len(self.X[i]), label='pH '+str(temp_ph)+' M='+str( round(mean_multi,2) ))
+				
+		#plt.legend(labels,loc=label_loc)
+		'''legend loc :
+Best 0
+Upper right 1
+Upper left 2
+Lower left 3
+Lower right 4
+Right 5
+Center left 6
+Center right 7
+Lower center 8
+Upper center 9
+center 10'''
+		#frameon makes a box for the legend
+		#ax.legend(loc=0,frameon=False,mode="expand")
+		ax.legend(bbox_to_anchor=(0, 0.75), borderaxespad=0)
+
+		#plt.title(titulo)
+		fig.suptitle(titulo)
+		#plt.ylabel(eixoy)
+		#plt.xlabel(eixox)
+		ax.set_xlabel(eixox)
+		ax.set_ylabel(eixoy)
+		ax.set_zlabel('pH')
+
 		plt.show()
 
 if __name__ == "__main__":
@@ -302,13 +369,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 '''
 	analysis_name = ['rmsd','rmsf','radgyr','dist']
-	dic_Type      = {1:'one', 13:'allin_one', 2:'two', 22: '2ph_2merge', 4:'four', 42: 'four_2merge'}
+	dic_Type      = {1:'one', 13:'allin_one', 133:'allin_one_f3d', 2:'two', 22: '2ph_2merge', 4:'four', 42: 'four_2merge'}
 
 	#default keys
 	version_only = False
 	inst_only    = False
 	anatp        = analysis_name[3]
-	tpe          = dic_Type[13]
+	tpe          = dic_Type[133]
 	color        = 'black' #'red' #'darkblue' #label only
 	mut          = ['HIS 237 - GLU','ASP 206 - GLU'][1]
 	supertitle   = '' #['Produção - Mutação %s'%mut,'Petase nativa - Produção'][1]
@@ -340,14 +407,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			for p in path:
 				File.append( ('%sph%s_%s.dat'%(p,value,anatp),'pH='+value) )
 	elif tpe == '2ph_2merge':
-		oneTwo       = 1
-		path         = [['PETase_Dynamics/gpu-ultra/Jan_no_warp/','PETase_Dynamics/gpu-ultra/Julho_no_warpReplicata/'][oneTwo], 'PETase_Dynamics/gpu-ultra/Mutation_Hotfix_1.1/ASP206_GLU_Hotfix1.1/']
-		merge_legend = [['NativaS1','NativaS2'][oneTwo], 'D206E']
+		path = 'PETase_Dynamics/gpu-ultra/' 
+		s1   = 'Jan_no_warp/'
+		s2   = 'Julho_no_warpReplicata/'
+		smut = 'Mutation_Hotfix_1.1/ASP206_GLU_Hotfix1.1/'
+		merge_legend = ['NativaS1','NativaS2'] # 'D206E'
 		File         = []
 		supertitle   = '' #'Produção'
 		for value in ['7.00','9.00']:
-			for p in path:
-				File.append( ('%sph%s_%s.dat'%(p,value,anatp),'pH='+value) )
+			File.append( ('%sph%s_%s.dat'%(path+s1,value,anatp),'pH='+value) )
+			File.append( ('%sph%s_%s.dat'%(path+s2,value,anatp),'pH='+value) )
 	elif tpe == 'two':
 		if bckbne_comp:
 			path    = 'nativaHotfix1.1/'
@@ -355,40 +424,45 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			File    = [('%sAll_backbone/ph%s_%s.dat'%(path,ph_comp,anatp),'Todo Backbone a pH=%s'%ph_comp),
 			('%sCA_C_N/ph%s_%s.dat'%(path,ph_comp,anatp),'CA,C,N do Backbone a pH=%s'%ph_comp)]
 		else:
-			path = 'PETase_Dynamics/gpu-ultra/Julho_no_warpReplicata/' #'HIS237_GLU/' #'ASP206_GLU-replicata/'
+			path = 'PETase_Dynamics/gpu-ultra/' 
+			s1   = 'Jan_no_warp/'
+			s2   = 'Julho_no_warpReplicata/' #'HIS237_GLU/' #'ASP206_GLU-replicata/'
 			File = []
 			for value in ['7.00','9.00']:
-				File.append( ('%sph%s_%s.dat'%(path,value,anatp),'pH='+value) )
-	elif tpe == 'allin_one':
-		path            = 'PETase_Dynamics/gpu-ultra/Dock_run/D206E_C8X/MD_only/'
-		#path2			= 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
-		#path_list		= ['Run0_MD/','Replicata1_MD/','Replicata2_MD/']
-		path_list		= ['Zeroth/']
+				File.append( ('%sph%s_%s.dat'%(path+s2,value,anatp),'pH='+value) )
+	elif tpe == 'allin_one' or tpe == 'allin_one_f3d':
+		path0			= 'PETase_Dynamics/gpu-ultra/Dock_run/'
+		path            = [path0+'Nat_C8X/',path0+'D206E_C8X/MD_only/']
+		path_list		= ['Zeroth/'] #['Run0_MD/']
 		path_list.extend( ['Replicata%d/'%i for i in range(1,6)] )
-		mean_flag       = True
-		rareplot        = False
-		path2_list		= ['Run0_CpHMD/','Replicata1_CpHMD/','Replicata2_CpHMD/']
-		data_file       = 'Ehyd-PETcarb_9.00.dat'
+		mean_flag       = [True,False][0]
+		rareplot        = [True,False][1]
+		path2_list		= ['Run0_CpHMD/']
+		path2_list.extend(['Replicata%d_CpHMD/'%i for i in range(1,3)] )
+		data_file       = ['Ehyd-PETcarb_7.00.dat','Ehyd-PETcarb_9.00.dat']
+		ingore_ph       = '' #['Ehyd-PETcarb_7.00.dat','Ehyd-PETcarb_9.00.dat'][1]
 		supertitle      = ''
-		multi_label_loc = (0.75,0.75)
+		multi_label_loc = (.74,0.72)
 		
 		File             = []
 		File2            = []
-		dyn_value        = 1
-		ignore_dyn_MD    = [1,3,5]
-		ignore_dyn_CpHMD = [3]
-		for d in path_list:
-			if dyn_value not in ignore_dyn_MD:
-				File.append( (path+d+data_file,'MD %d'%dyn_value) )
-			dyn_value += 1
+		ignore_dyn_MD    = {'Ehyd-PETcarb_7.00.dat': [1,3,5],'Ehyd-PETcarb_9.00.dat':[1,3,5]}
+		ignore_dyn_CpHMD = {'Ehyd-PETcarb_7.00.dat': [],'Ehyd-PETcarb_9.00.dat':[1,2,3]}
+		for ph_f in data_file:
+			dyn_value    = 1
+			for d in path_list:
+				if dyn_value not in ignore_dyn_MD[ph_f] and ph_f != ingore_ph:
+					# label needed for 'allin_one_f3d' :: 'pH %c MD %d'%(ph_f[-8],dyn_value) 
+					File.append( (path[1]+d+ph_f,'pH %c MD %d'%(ph_f[-8],dyn_value)) )
+				dyn_value += 1
 		#File=File2
 		if rareplot:
-			dyn_value       = 1
-			for d in path2_list:
-				if dyn_value not in ignore_dyn_CpHMD:
-					File2.append( (path2+d+data_file,'CpHMD %d'%dyn_value) )
-				dyn_value += 1
-		
+			for ph_f in data_file:
+				dyn_value = 1
+				for d in path2_list:
+					if dyn_value not in ignore_dyn_CpHMD[ph_f]:
+						File2.append( (path[0]+d+ph_f,'pH %c CpHMD %d'%(ph_f[-8],dyn_value)) )
+					dyn_value += 1
 	else:
 		path = 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
 		rep_type = ['MD','CpHMD'][1]
@@ -526,8 +600,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			
 			ob4.restriction_break = True
 			CpHMDXYlabels         = ob4.XY(files=File2)
-			#print(File2) #ok
-			print(CpHMDXYlabels)
 			labels_cphmd   = [CpHMDXYlabels[i][1] for i in range(len(CpHMDXYlabels))]
 			CpHMDeixox     = CpHMDXYlabels[0][0]
 			Xcphmd         = ob4.X
@@ -536,9 +608,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			ob4.X          = []
 			ob4.Y          = []
 			ob4.frameStep = int(framstp/2)
-			MDXYlabels = ob4.XY(files=File)
-			labels_md  = [MDXYlabels[i][1] for i in range(len(MDXYlabels))]
-			MDeixox    = MDXYlabels[0][0]
+			if len(File) == 0:
+				MDXYlabels = 0
+				MDeixox    = CpHMDeixox
+				labels_md  = []
+			else:
+				MDXYlabels = ob4.XY(files=File)
+				labels_md  = [MDXYlabels[i][1] for i in range(len(MDXYlabels))]
+				MDeixox    = MDXYlabels[0][0]
 			
 			dual_labels = []
 			dual_eixox  = MDeixox # it's the same as CpHMDeixox 
@@ -548,6 +625,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			ob4.Y.extend( Ycphmd )
 			
 			if MDXYlabels != -1 and CpHMDXYlabels != 1:
-				ob4.multi_in_one(labels=dual_labels, label_loc=multi_label_loc, titulo =supertitle, eixoy=ob4.ana_type, eixox=dual_eixox)
+				ob4.multi_in_one(labels=dual_labels, label_loc=multi_label_loc, titulo =supertitle, eixoy=ob4.ana_type, eixox=dual_eixox, mean=mean_flag)
 			else:
 				print("Sheesh!")
