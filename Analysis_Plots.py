@@ -6,7 +6,7 @@ class Analysis_plot:
 	_Types = ['one','two','2ph_2merge','four','four_2merge','allin_one']
 	def __init__(self, type = 'one', print_mean=False, names=[('file.dat','analysis_title')], analysisType = 'rmsd', largerYaxis = False, 
 	Yenlarger = 2, frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
-	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5)):
+	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5), forced_3Dzaxis=['ph','index'][1]):
 		'''Parameters:
 		
 		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other, 'four'/'four_2merge' datasets in a matrix fashion or multiple datasets in one XY frame ('allin_one').
@@ -80,7 +80,7 @@ class Analysis_plot:
 		elif XTlabels != -1 and type == 'allin_one':
 			self.multi_in_one(labels=[XTlabels[i][1] for i in range(len(XTlabels))], label_loc=multi_merge_label_loc, titulo =suptitle, eixoy=self.ana_type, eixox=XTlabels[0][0],mean=print_mean)
 		elif XTlabels != -1 and type == 'allin_one_f3d':
-			self.multi_in_one_forced_3d(labels=[XTlabels[i][1] for i in range(len(XTlabels))], label_loc=multi_merge_label_loc, titulo =suptitle, eixoy=self.ana_type, eixox=XTlabels[0][0],mean=print_mean)
+			self.multi_in_one_forced_3d(Zaxis=forced_3Dzaxis,labels=[XTlabels[i][1] for i in range(len(XTlabels))], label_loc=multi_merge_label_loc, titulo =suptitle, eixoy=self.ana_type, eixox=XTlabels[0][0],mean=print_mean)
 		else:
 			print("Type must in the list:",self._Types, "!\n")
 
@@ -261,43 +261,58 @@ class Analysis_plot:
 		plt.xlabel(eixox)
 		plt.show()
 
-	def multi_in_one_forced_3d(self, labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), titulo ="Ajuste da curva T1", eixoy="Y(X)", eixox="X",mean=False):
+	def multi_in_one_forced_3d(self, Zaxis=['ph','index'][1], labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), titulo ="Ajuste da curva T1", eixoy="Y(X)", eixox="X",mean=False):
 		'''Not recomended to use since i forced the z-axis without proper criteria.'''
 		if len(self.X) != len(self.Y):
 			print('For some reason the number of Y datasets is different from de number of X datasets.')
 			return -1
 
-		fig = plt.figure(dpi=self.dpi)
-		ax = fig.gca(projection='3d')
+		fig        = plt.figure(dpi=self.dpi)
+		ax         = fig.gca(projection='3d')
 		mean_value = []
-		change_cc  = -1
-		temp_ph    = -1
-		for i in range(len(self.X)):
-			mean_value.append( sum(self.Y[i])/len(self.Y[i]) )
-			#labels :: 'pH %c MD %d'
-			label_temp  = labels[i].split()
-			temp_ph_new = float(label_temp[1])
-			if temp_ph != temp_ph_new:
-				change_cc += 1
-				if mean and change_cc > 0:
-					new_ph_temp = mean_value.pop()
-					mean_multi = sum(mean_value)/len(mean_value)
-					mean_line  = [mean_multi]*len(self.X[0])
-					ax.plot(self.X[0], mean_line, [temp_ph]*len(self.X[i]), label='pH '+str(temp_ph)+' M='+str( round(mean_multi,2) ))
-					mean_value = [new_ph_temp]
-				temp_ph = temp_ph_new
-			else:
-				ph_change = False
-			new_label   = labels[i][len(label_temp[0]+label_temp[1])+2:]
-			ax.plot(self.X[i], self.Y[i], [temp_ph]*len(self.X[i]), label=new_label)
-			
-		if mean:
-			# for the last pH
-			mean_multi = sum(mean_value)/len(mean_value)
-			mean_line  = [mean_multi]*len(self.X[0])
-			ax.plot(self.X[0], mean_line, [temp_ph]*len(self.X[i]), label='pH '+str(temp_ph)+' M='+str( round(mean_multi,2) ))
-				
-		#plt.legend(labels,loc=label_loc)
+		eixoz      = 'pH'
+		if Zaxis.lower() == 'ph':
+			change_cc = -1
+			temp_ph   = -1
+			for i in range(len(self.X)):
+				mean_value.append( sum(self.Y[i])/len(self.Y[i]) )
+				#labels :: 'pH %c MD %d %c'%(ph,dynNumb,subdivision)
+				label_temp  = labels[i].split()
+				temp_ph_new = float(label_temp[1])
+				if temp_ph != temp_ph_new:
+					change_cc += 1
+					if mean and change_cc > 0:
+						new_ph_temp = mean_value.pop()
+						mean_multi  = sum(mean_value)/len(mean_value)
+						mean_line   = [mean_multi]*len(self.X[0])
+						ax.plot(self.X[0], mean_line, [temp_ph]*len(self.X[i]), label='pH '+str(temp_ph)+' M='+str( round(mean_multi,2) ))
+						mean_value  = [new_ph_temp]
+					temp_ph = temp_ph_new
+				else:
+					ph_change = False
+				new_label = labels[i][len(label_temp[0]+label_temp[1])+2:]
+				ax.plot(self.X[i], self.Y[i], [temp_ph]*len(self.X[i]), label=new_label)
+			if mean:
+				# for the last pH
+				mean_multi = sum(mean_value)/len(mean_value)
+				mean_line  = [mean_multi]*len(self.X[0])
+				ax.plot(self.X[0], mean_line, [temp_ph]*len(self.X[i]), label='pH '+str(temp_ph)+' M='+str( round(mean_multi,2) ))
+		elif Zaxis.lower() == 'index':
+			index = 0
+			eixoz = eixoy
+			eixoy = 'Ind'
+			for i in range(len(self.X)):
+				index += 1
+				mean_value.append( sum(self.Y[i])/len(self.Y[i]) )
+				#labels :: 'pH %c MD %d %c'%(ph,dynNumb,subdivision)
+				ax.plot(self.X[i], [index]*len(self.X[i]), self.Y[i], label=labels[i][:-2])
+			if mean:
+				mean_multi = sum(mean_value)/len(mean_value)
+				mean_line  = [mean_multi]*len(self.X[0])
+				#index 0
+				ax.plot(self.X[0], [1]*len(self.X[i]), mean_line, label='M='+str( round(mean_multi,2) ))
+				#ax.plot_surface(self.X[0], [0]*len(self.X[i]), mean_line, label='M='+str(round(mean_multi,2)) )
+
 		'''legend loc :
 Best 0
 Upper right 1
@@ -314,13 +329,10 @@ center 10'''
 		#ax.legend(loc=0,frameon=False,mode="expand")
 		ax.legend(bbox_to_anchor=(0, 0.75), borderaxespad=0)
 
-		#plt.title(titulo)
 		fig.suptitle(titulo)
-		#plt.ylabel(eixoy)
-		#plt.xlabel(eixox)
 		ax.set_xlabel(eixox)
 		ax.set_ylabel(eixoy)
-		ax.set_zlabel('pH')
+		ax.set_zlabel(eixoz)
 
 		plt.show()
 
@@ -376,6 +388,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	inst_only    = False
 	anatp        = analysis_name[3]
 	tpe          = dic_Type[133]
+	forced_3Dz   = 'index'
 	color        = 'black' #'red' #'darkblue' #label only
 	mut          = ['HIS 237 - GLU','ASP 206 - GLU'][1]
 	supertitle   = '' #['Produção - Mutação %s'%mut,'Petase nativa - Produção'][1]
@@ -446,14 +459,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 		
 		File             = []
 		File2            = []
+		forced_3Dz       = ['ph','index'][1]
 		ignore_dyn_MD    = {'Ehyd-PETcarb_7.00.dat': [1,3,5],'Ehyd-PETcarb_9.00.dat':[1,3,5]}
 		ignore_dyn_CpHMD = {'Ehyd-PETcarb_7.00.dat': [],'Ehyd-PETcarb_9.00.dat':[1,2,3]}
+		subdivision_leg  = {'Ehyd-PETcarb_7.00.dat': 'A','Ehyd-PETcarb_9.00.dat':'B'}
 		for ph_f in data_file:
 			dyn_value    = 1
 			for d in path_list:
 				if dyn_value not in ignore_dyn_MD[ph_f] and ph_f != ingore_ph:
 					# label needed for 'allin_one_f3d' :: 'pH %c MD %d'%(ph_f[-8],dyn_value) 
-					File.append( (path[1]+d+ph_f,'pH %c MD %d'%(ph_f[-8],dyn_value)) )
+					File.append( (path[1]+d+ph_f,'pH %c MD %d %c'%(ph_f[-8],dyn_value,subdivision_leg[ph_f])) )
 				dyn_value += 1
 		#File=File2
 		if rareplot:
@@ -497,6 +512,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\nUsage:\n\t-v or --version\t\tprints current version, the python libraries needed and the data format expected.\n")
 				print("\t-h or --help\t\tprints this message.\n")
 				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information (ex:RMSD for pH7 and pH8).\n\t\tfour: Plots four data files with the same axis information (Eg.:RMSD for pH5, pH6, pH7, pH8).\n\t\tallin_one: Plots every dataset given in one XY frame.\n")
+				print("\t-index3d\t(Valid only for type 'allin_one') Creates a 3D plot with a index axis separating your datasets.\n")
 				print("\t-mean\t\t(Valid only for type 'allin_one') Print a horizontal line with the mean value of all the data given.\n")
 				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist.\n")
 				print("\t-i\t\tinput data file(s) with a name for the plot (separated by space).\n\t\t\tEg.: -i ph7.00_rmsd.dat pH=7.00\n")
@@ -516,6 +532,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				continue
 			elif arg[i].lower() == "-mean":
 				mean_flag = True
+				continue
+			elif arg[i].lower() == "-index3d":
+				tpe = 'allin_one_f3d'
 				continue
 			elif arg[i].lower() == "-anatp":
 				anatp = arg[i+1]
@@ -590,7 +609,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 	if not inst_only and not version_only:
 		if not rareplot:
-			ob4 = Analysis_plot(type=tpe, print_mean=mean_flag,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc )
+			ob4 = Analysis_plot(type=tpe, print_mean=mean_flag,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz )
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe',names=File2, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc )
@@ -625,6 +644,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			ob4.Y.extend( Ycphmd )
 			
 			if MDXYlabels != -1 and CpHMDXYlabels != 1:
-				ob4.multi_in_one(labels=dual_labels, label_loc=multi_label_loc, titulo =supertitle, eixoy=ob4.ana_type, eixox=dual_eixox, mean=mean_flag)
+				ob4.multi_in_one(labels=dual_labels, label_loc=multi_label_loc, titulo =supertitle, eixoy=ob4.ana_type, eixox=dual_eixox, mean=mean_flag, forced_3Dzaxis=forced_3Dz)
 			else:
 				print("Sheesh!")
