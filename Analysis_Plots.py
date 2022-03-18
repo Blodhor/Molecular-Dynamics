@@ -1,12 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.font_manager import FontProperties
 
 class Analysis_plot:
 	_Types = ['one','two','2ph_2merge','four','four_2merge','allin_one']
 	def __init__(self, type = 'one', print_mean=False, names=[('file.dat','analysis_title')], analysisType = 'rmsd', largerYaxis = False, 
 	Yenlarger = 2, frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
-	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5), forced_3Dzaxis=['ph','index'][1]):
+	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5),
+	forced_3Dzaxis=['ph','index'][1], eng=False, fontsize=10):
 		'''Parameters:
 		
 		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other, 'four'/'four_2merge' datasets in a matrix fashion or multiple datasets in one XY frame ('allin_one').
@@ -37,8 +39,26 @@ class Analysis_plot:
 		
 		merge_legend: (type=four_2merge) Inset legend. 
 
-		dpi: Sets the picture quality.'''
-
+		dpi: Sets the picture quality.
+		
+		eng: Boolean argument.
+				If 'True' sets default texts on english.
+		 		If 'False' sets default texts on portuguese.
+		
+		'''
+		self.lang_set          = 0
+		if eng:
+			self.lang_set      = 1
+		# Set the font size. Either an relative value of
+		# 'xx-small', 'x-small', 'small', 'medium', 'large', 
+		# 'x-large', 'xx-large' or an absolute 
+		# font size, e.g., 12.
+		self.fontsize          = fontsize
+		# weight: A numeric value in the range 0-1000 or one of
+		# 'ultralight', 'light', 'normal' (default), 'regular', 
+		# 'book', 'medium', 'roman', 'semibold', 'demibold', 'demi',
+		# 'bold', 'heavy', 'extra bold', 'black'
+		# style: Either 'normal' (default), 'italic' or 'oblique'.
 		self.X                 = []
 		self.Y                 = []
 		self.frameToTime       = frameToTime
@@ -56,12 +76,13 @@ class Analysis_plot:
 			self.restriction_break = True
 
 		if 'radgyr' in analysisType:
-			self.ana_type = 'Raio de giro (Angstrom)'
+			self.ana_type = ['Raio de giro (Angstrom)','Radgyr (Angstrom)'][self.lang_set]
 		elif 'dist' in analysisType:
-			self.ana_type = 'Distância (Angstrom)'
+			self.ana_type = ['Distância (Angstrom)','Distance (Angstrom)'][self.lang_set]
 		else:
 			self.ana_type = analysisType.upper()+' (Angstrom)'
 		XTlabels = self.XY(files=names)
+		#print(XTlabels, '\nnames:',names)
 		if XTlabels != -1 and type == 'one':
 			self.plot_one(X=self.X[0], Y=self.Y[0], Xaxis=XTlabels[0][0], 
 			name= XTlabels[0][1], EnlargeYaxis=largerYaxis, Ymax=Yenlarger)
@@ -101,16 +122,16 @@ class Analysis_plot:
 					data = i.split()
 					if i != '' and i[0] == '#':
 						if 'RMSF' in self.ana_type:
-							xname = 'Resíduo'
+							xname = ['Resíduo','Residue'][self.lang_set]
 						elif not self.frameToTime:
 							xname = data[0][1:]
 							if 'frame' in xname.lower():
-								xname = 'Instância'
+								xname = ['Instância','Frame'][self.lang_set]
 						else:
 							if self.nanosec:
-								xname = 'Tempo (ns)'
+								xname = ['Tempo (ns)','Time (ns)'][self.lang_set]
 							else:
-								xname = 'Tempo (ps)'
+								xname = ['Tempo (ps)','Time (ps)'][self.lang_set]
 					elif len(data) == 2:
 						if 'RMSF' in self.ana_type:
 							x.append( int(float(data[0])) )
@@ -138,9 +159,9 @@ class Analysis_plot:
 			axes.set_xlim([0,X[len(X)-1]])
 			axes.set_ylim([0,Ymax*Y[len(Y)-1]])
 		plt.plot(X,Y)
-		plt.title(name)
-		plt.ylabel(self.ana_type)
-		plt.xlabel(Xaxis)
+		plt.title(name, fontsize=self.fontsize)
+		plt.ylabel(self.ana_type, fontsize=self.fontsize)
+		plt.xlabel(Xaxis, fontsize=self.fontsize)
 		plt.grid(True)
 		plt.show()
 
@@ -149,10 +170,10 @@ class Analysis_plot:
 
 		fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True, dpi=self.dpi)
 		ax1.plot(X[0],Y[0])
-		ax1.set_title(name[0])
+		ax1.set_title(name[0], fontsize=self.fontsize)
 		ax1.grid()
 		ax2.plot(X[1],Y[1])
-		ax2.set_title(name[1])
+		ax2.set_title(name[1], fontsize=self.fontsize)
 		ax2.grid()
 		for ts in [ax1,ax2]:
 			ts.set(xlabel=Xaxis, ylabel=self.ana_type)
@@ -170,19 +191,21 @@ class Analysis_plot:
 		for ap in axs:
 			ap.plot(X[big_pp],Y[big_pp], label= self.merge_legend[0])
 			ap.plot(X[big_pp+1],Y[big_pp+1], label= self.merge_legend[1])
-			ap.legend()
-			ap.set_title(name[big_pp])
+			ap.set_xlabel(Xaxis,fontsize=self.fontsize)
+			ap.set_ylabel(self.ana_type,fontsize=self.fontsize)
+			ap.legend(fontsize=self.fontsize)
+			ap.set_title(name[big_pp], fontsize=self.fontsize)
 			#ap.text(x=self.labelpx, y=self.labelpy, s=name[big_pp], color=self.label_color)
 			ap.grid()
 			big_pp += 2
 		
-		for ts in axs:
-			ts.set(xlabel=Xaxis, ylabel=self.ana_type)
+		#for ts in axs:
+		#	ts.set(xlabel=Xaxis, ylabel=self.ana_type)
 		#pyplot.subplots can hide redundant axes
 		for ts in axs:
 			ts.label_outer()
 
-		plt.suptitle(self.suptitle)
+		plt.suptitle(self.suptitle,fontsize=self.fontsize)
 		plt.show()
 
 	def plot_four(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"]):
@@ -191,25 +214,25 @@ class Analysis_plot:
 		plt.figure(dpi=self.dpi)
 		ax1 = plt.subplot(221)
 		plt.plot(X[0],Y[0])
-		plt.text(x=self.labelpx, y=self.labelpy, s=name[0], color=self.label_color)
-		plt.ylabel(self.ana_type)
+		plt.text(x=self.labelpx, y=self.labelpy, s=name[0], color=self.label_color, fontsize=self.fontsize)
+		plt.ylabel(self.ana_type, fontsize=self.fontsize)
 		plt.grid(True)
 		ax2 = plt.subplot(222, sharey=ax1)		
 		plt.plot(X[1],Y[1])
-		plt.text(x=self.labelpx, y=self.labelpy, s=name[1], color=self.label_color)
+		plt.text(x=self.labelpx, y=self.labelpy, s=name[1], color=self.label_color, fontsize=self.fontsize)
 		plt.grid(True)
 		ax3 = plt.subplot(223, sharex=ax1)
 		plt.plot(X[2],Y[2])
-		plt.text(x=self.labelpx, y=self.labelpy, s=name[2], color=self.label_color)
-		plt.ylabel(self.ana_type)
-		plt.xlabel(Xaxis)
+		plt.text(x=self.labelpx, y=self.labelpy, s=name[2], color=self.label_color, fontsize=self.fontsize)
+		plt.ylabel(self.ana_type, fontsize=self.fontsize)
+		plt.xlabel(Xaxis, fontsize=self.fontsize)
 		plt.grid(True)
 		ax4 = plt.subplot(224, sharex=ax2, sharey=ax3)
 		plt.plot(X[3],Y[3])
-		plt.text(x=self.labelpx, y=self.labelpy, s=name[3], color=self.label_color)
-		plt.xlabel(Xaxis)
+		plt.text(x=self.labelpx, y=self.labelpy, s=name[3], color=self.label_color, fontsize=self.fontsize)
+		plt.xlabel(Xaxis, fontsize=self.fontsize)
 		plt.grid(True)
-		plt.suptitle(self.suptitle)
+		plt.suptitle(self.suptitle,fontsize=self.fontsize)
 		plt.show()
 
 	def plot_four_2merge(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"]):
@@ -221,8 +244,8 @@ class Analysis_plot:
 		for ap in axs:
 			ap.plot(X[big_pp],Y[big_pp], label= self.merge_legend[0])
 			ap.plot(X[big_pp+1],Y[big_pp+1], label= self.merge_legend[1])
-			ap.legend()
-			ap.set_title(name[big_pp])
+			ap.legend(fontsize=self.fontsize)
+			ap.set_title(name[big_pp], fontsize=self.fontsize)
 			#ap.text(x=self.labelpx, y=self.labelpy, s=name[big_pp], color=self.label_color)
 			ap.grid()
 			big_pp += 2
@@ -233,7 +256,7 @@ class Analysis_plot:
 		for ts in axs:
 			ts.label_outer()
 
-		plt.suptitle(self.suptitle)
+		plt.suptitle(self.suptitle,fontsize=self.fontsize)
 		plt.show()
 
 	def multi_in_one(self, labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), titulo ="Ajuste da curva T1", eixoy="Y(X)", eixox="X",mean=False):
@@ -255,14 +278,13 @@ class Analysis_plot:
 			plt.plot(self.X[0], mean_line)
 			labels.append('M='+str( round(mean_multi,2) ))
 		
-		plt.legend(labels,loc=label_loc)
-		plt.title(titulo)
-		plt.ylabel(eixoy)
-		plt.xlabel(eixox)
+		plt.legend(labels,loc=label_loc, fontsize=self.fontsize)
+		plt.title(titulo, fontsize=self.fontsize)
+		plt.ylabel(eixoy, fontsize=self.fontsize)
+		plt.xlabel(eixox, fontsize=self.fontsize)
 		plt.show()
 
 	def multi_in_one_forced_3d(self, Zaxis=['ph','index'][1], labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), titulo ="Ajuste da curva T1", eixoy="Y(X)", eixox="X",mean=False):
-		'''Not recomended to use since i forced the z-axis without proper criteria.'''
 		if len(self.X) != len(self.Y):
 			print('For some reason the number of Y datasets is different from de number of X datasets.')
 			return -1
@@ -300,7 +322,7 @@ class Analysis_plot:
 		elif Zaxis.lower() == 'index':
 			index = 0
 			eixoz = eixoy
-			eixoy = 'Ind'
+			eixoy = ['Índice','Index'][self.lang_set]
 			for i in range(len(self.X)):
 				index += 1
 				mean_value.append( sum(self.Y[i])/len(self.Y[i]) )
@@ -329,17 +351,94 @@ center 10'''
 		#ax.legend(loc=0,frameon=False,mode="expand")
 		ax.legend(bbox_to_anchor=(0, 0.75), borderaxespad=0)
 
-		fig.suptitle(titulo)
-		ax.set_xlabel(eixox)
-		ax.set_ylabel(eixoy)
-		ax.set_zlabel(eixoz)
+		fig.suptitle(titulo, fontsize=self.fontsize)
+		ax.set_xlabel(eixox, fontsize=self.fontsize)
+		ax.set_ylabel(eixoy, fontsize=self.fontsize)
+		ax.set_zlabel(eixoz, fontsize=self.fontsize)
 
 		plt.show()
+
+def Default_modifier(on=False,tpe='allin_one',
+anatp='dist',File=[],File2=[],
+merge_legend=['NativaS1','NativaS2'],supertitle='Produção',
+mean_flag=False,rareplot=False,multi_label_loc=(.74,0.72),
+forced_3Dz=['ph','index'][1],eng=False,fontsize=14):
+
+	if not on:
+		return -1
+	File      = []
+	File2     = []
+			
+	if tpe == 'four':
+		path = ['ASP206_GLU_Hotfix1.1/', 'nativaHotfix1.1/All_backbone/'][1]
+		for value in ['7.00','8.00','9.00','10.00']:
+			File.append( ('%sph%s_%s.dat'%(path,value,anatp),'pH='+value) )
+	elif tpe == 'four_2merge':
+		path         = ['nativaHotfix1.1/All_backbone/', 'ASP206_GLU_Hotfix1.1/']
+		merge_legend = ['Nativa', 'ASP206GLU']
+		for value in ['7.00','8.00','9.00','10.00']:
+			for p in path:
+				File.append( ('%sph%s_%s.dat'%(p,value,anatp),'pH='+value) )
+	elif tpe == '2ph_2merge':
+		path = 'PETase_Dynamics/gpu-ultra/' 
+		s1   = 'Jan_no_warp/'
+		s2   = 'Julho_no_warpReplicata/'
+		smut = 'Mutation_Hotfix_1.1/ASP206_GLU_Hotfix1.1/'
+		for value in ['7.00','9.00']:
+			File.append( ('%sph%s_%s.dat'%(path+s1,value,anatp),'pH='+value) )
+			File.append( ('%sph%s_%s.dat'%(path+s2,value,anatp),'pH='+value) )
+	elif tpe == 'two':
+		if bckbne_comp:
+			path    = 'nativaHotfix1.1/'
+			ph_comp = '9.00'
+			File    = [('%sAll_backbone/ph%s_%s.dat'%(path,ph_comp,anatp),'Todo Backbone a pH=%s'%ph_comp),
+			('%sCA_C_N/ph%s_%s.dat'%(path,ph_comp,anatp),'CA,C,N do Backbone a pH=%s'%ph_comp)]
+		else:
+			path = 'PETase_Dynamics/gpu-ultra/' 
+			s1   = 'Jan_no_warp/'
+			s2   = 'Julho_no_warpReplicata/' #'HIS237_GLU/' #'ASP206_GLU-replicata/'
+			for value in ['7.00','9.00']:
+				File.append( ('%sph%s_%s.dat'%(path+s2,value,anatp),'pH='+value) )
+	elif tpe == 'allin_one' or tpe == 'allin_one_f3d':
+		path0			= 'PETase_Dynamics/gpu-ultra/Dock_run/'
+		path            = [path0+'Nat_C8X/',path0+'D206E_C8X/MD_only/']
+		path_list		= ['Zeroth/'] #['Run0_MD/']
+		path_list.extend( ['Replicata%d/'%i for i in range(1,6)] )
+		path2_list		= ['Run0_CpHMD/']
+		path2_list.extend(['Replicata%d_CpHMD/'%i for i in range(1,3)] )
+		data_file       = ['Ehyd-PETcarb_7.00.dat','Ehyd-PETcarb_9.00.dat']
+		ingore_ph       = '' #['Ehyd-PETcarb_7.00.dat','Ehyd-PETcarb_9.00.dat'][1]
+		ignore_dyn_MD    = {'Ehyd-PETcarb_7.00.dat': [1,3,5],'Ehyd-PETcarb_9.00.dat':[1,3,5]}
+		ignore_dyn_CpHMD = {'Ehyd-PETcarb_7.00.dat': [],'Ehyd-PETcarb_9.00.dat':[1,2,3]}
+		subdivision_leg  = {'Ehyd-PETcarb_7.00.dat': 'A','Ehyd-PETcarb_9.00.dat':'B'}
+		for ph_f in data_file:
+			dyn_value    = 1
+			for d in path_list:
+				if dyn_value not in ignore_dyn_MD[ph_f] and ph_f != ingore_ph:
+					# label needed for 'allin_one_f3d' :: 'pH %c MD %d'%(ph_f[-8],dyn_value) 
+					File.append( (path[1]+d+ph_f,'pH %c MD %d %c'%(ph_f[-8],dyn_value,subdivision_leg[ph_f])) )
+				dyn_value += 1
+		#File=File2
+		if rareplot:
+			for ph_f in data_file:
+				dyn_value = 1
+				for d in path2_list:
+					if dyn_value not in ignore_dyn_CpHMD[ph_f]:
+						File2.append( (path[0]+d+ph_f,'pH %c CpHMD %d'%(ph_f[-8],dyn_value)) )
+					dyn_value += 1
+	else:
+		path = 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
+		rep_type = ['MD','CpHMD'][1]
+		#framstp  = int(framstp/2)
+		rep  = ['Run0_%s/'%rep_type,'Replicata1_%s/'%rep_type,'Replicata2_%s/'%rep_type]
+		File = [('%sEhyd-PETcarb_%s.dat'%(path+rep[2],'7.00'),'')]
+	return ( tpe,anatp,File,File2, merge_legend,supertitle, 
+	mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize )
 
 if __name__ == "__main__":
 	import sys
 	arg = sys.argv
-	version_n = 1.1
+	version_n = 1.2
 	version = ''' Analysis plot - Pyplot extension for RMSD, RMSF and Radgyr data analysis.
 
 Python3 modules needed: 
@@ -388,6 +487,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	inst_only    = False
 	anatp        = analysis_name[3]
 	tpe          = dic_Type[133]
+	fontsize     = 10
+	eng          = False
 	forced_3Dz   = 'index'
 	color        = 'black' #'red' #'darkblue' #label only
 	mut          = ['HIS 237 - GLU','ASP 206 - GLU'][1]
@@ -401,90 +502,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	dpi         = 100
 	mean_flag   = False
 
-	# special cases
+	# special cases #IGNORE THIS
 	rareplot        = False
 	multi_label_loc = (0.5,0.5)
-	
+	File=[]
+	File2=[]
+	merge_legend=['NativaS1','NativaS2']
 
-	if tpe == 'four':
-		path = ['ASP206_GLU_Hotfix1.1/', 'nativaHotfix1.1/All_backbone/'][1]
-		File = []
-		for value in ['7.00','8.00','9.00','10.00']:
-			File.append( ('%sph%s_%s.dat'%(path,value,anatp),'pH='+value) )
-	elif tpe == 'four_2merge':
-		path         = ['nativaHotfix1.1/All_backbone/', 'ASP206_GLU_Hotfix1.1/']
-		merge_legend = ['Nativa', 'ASP206GLU']
-		File         = []
-		supertitle   = 'Produção'
-		for value in ['7.00','8.00','9.00','10.00']:
-			for p in path:
-				File.append( ('%sph%s_%s.dat'%(p,value,anatp),'pH='+value) )
-	elif tpe == '2ph_2merge':
-		path = 'PETase_Dynamics/gpu-ultra/' 
-		s1   = 'Jan_no_warp/'
-		s2   = 'Julho_no_warpReplicata/'
-		smut = 'Mutation_Hotfix_1.1/ASP206_GLU_Hotfix1.1/'
-		merge_legend = ['NativaS1','NativaS2'] # 'D206E'
-		File         = []
-		supertitle   = '' #'Produção'
-		for value in ['7.00','9.00']:
-			File.append( ('%sph%s_%s.dat'%(path+s1,value,anatp),'pH='+value) )
-			File.append( ('%sph%s_%s.dat'%(path+s2,value,anatp),'pH='+value) )
-	elif tpe == 'two':
-		if bckbne_comp:
-			path    = 'nativaHotfix1.1/'
-			ph_comp = '9.00'
-			File    = [('%sAll_backbone/ph%s_%s.dat'%(path,ph_comp,anatp),'Todo Backbone a pH=%s'%ph_comp),
-			('%sCA_C_N/ph%s_%s.dat'%(path,ph_comp,anatp),'CA,C,N do Backbone a pH=%s'%ph_comp)]
-		else:
-			path = 'PETase_Dynamics/gpu-ultra/' 
-			s1   = 'Jan_no_warp/'
-			s2   = 'Julho_no_warpReplicata/' #'HIS237_GLU/' #'ASP206_GLU-replicata/'
-			File = []
-			for value in ['7.00','9.00']:
-				File.append( ('%sph%s_%s.dat'%(path+s2,value,anatp),'pH='+value) )
-	elif tpe == 'allin_one' or tpe == 'allin_one_f3d':
-		path0			= 'PETase_Dynamics/gpu-ultra/Dock_run/'
-		path            = [path0+'Nat_C8X/',path0+'D206E_C8X/MD_only/']
-		path_list		= ['Zeroth/'] #['Run0_MD/']
-		path_list.extend( ['Replicata%d/'%i for i in range(1,6)] )
-		mean_flag       = [True,False][0]
-		rareplot        = [True,False][1]
-		path2_list		= ['Run0_CpHMD/']
-		path2_list.extend(['Replicata%d_CpHMD/'%i for i in range(1,3)] )
-		data_file       = ['Ehyd-PETcarb_7.00.dat','Ehyd-PETcarb_9.00.dat']
-		ingore_ph       = '' #['Ehyd-PETcarb_7.00.dat','Ehyd-PETcarb_9.00.dat'][1]
-		supertitle      = ''
-		multi_label_loc = (.74,0.72)
-		
-		File             = []
-		File2            = []
-		forced_3Dz       = ['ph','index'][1]
-		ignore_dyn_MD    = {'Ehyd-PETcarb_7.00.dat': [1,3,5],'Ehyd-PETcarb_9.00.dat':[1,3,5]}
-		ignore_dyn_CpHMD = {'Ehyd-PETcarb_7.00.dat': [],'Ehyd-PETcarb_9.00.dat':[1,2,3]}
-		subdivision_leg  = {'Ehyd-PETcarb_7.00.dat': 'A','Ehyd-PETcarb_9.00.dat':'B'}
-		for ph_f in data_file:
-			dyn_value    = 1
-			for d in path_list:
-				if dyn_value not in ignore_dyn_MD[ph_f] and ph_f != ingore_ph:
-					# label needed for 'allin_one_f3d' :: 'pH %c MD %d'%(ph_f[-8],dyn_value) 
-					File.append( (path[1]+d+ph_f,'pH %c MD %d %c'%(ph_f[-8],dyn_value,subdivision_leg[ph_f])) )
-				dyn_value += 1
-		#File=File2
-		if rareplot:
-			for ph_f in data_file:
-				dyn_value = 1
-				for d in path2_list:
-					if dyn_value not in ignore_dyn_CpHMD[ph_f]:
-						File2.append( (path[0]+d+ph_f,'pH %c CpHMD %d'%(ph_f[-8],dyn_value)) )
-					dyn_value += 1
-	else:
-		path = 'PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/'
-		rep_type = ['MD','CpHMD'][1]
-		#framstp  = int(framstp/2)
-		rep  = ['Run0_%s/'%rep_type,'Replicata1_%s/'%rep_type,'Replicata2_%s/'%rep_type]
-		File = [('%sEhyd-PETcarb_%s.dat'%(path+rep[2],'7.00'),'')]
+	# This switch must ALWAYS BE 'on=False' !!
+	temp_mod = Default_modifier(on=[True,False][1],tpe=dic_Type[22],
+	anatp=analysis_name[2],File=[],File2=File2,
+	merge_legend=merge_legend,supertitle='',
+	mean_flag=[True,False][0],rareplot=[True,False][1],
+	multi_label_loc=(.74,0.72),forced_3Dz=['ph','index'][1],
+	eng=[True,False][1],fontsize=14)
 
+	#print("\nmodifiers:",temp_mod)
+
+	if temp_mod != -1:
+		tpe,anatp,File,File2,merge_legend,supertitle,mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize = temp_mod
 	if anatp == 'rmsf':
 		fram2time  = False
 		nano       = False
@@ -492,7 +528,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-h","--help",'-type','-index3d','-mean', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd','-mlbpos']
+	flags = ["&","-v","--version","-fontsize","-eng","-h","--help",'-type','-index3d','-mean', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd','-mlbpos']
 
 	cut = 0 # counter for input flags
 
@@ -512,6 +548,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\nUsage:\n\t-v or --version\t\tprints current version, the python libraries needed and the data format expected.\n")
 				print("\t-h or --help\t\tprints this message.\n")
 				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information (ex:RMSD for pH7 and pH8).\n\t\tfour: Plots four data files with the same axis information (Eg.:RMSD for pH5, pH6, pH7, pH8).\n\t\tallin_one: Plots every dataset given in one XY frame.\n")
+				print("\t-eng\tSets default texts language to english. If this flag is not called the texts will be set on portuguese.\n")
+				print("\t-fontsize\tInteger value for the fontsize of labels and inplot texts (Default=%d).\n"%fontsize)
 				print("\t-index3d\t(Valid only for type 'allin_one') Creates a 3D plot with a index axis separating your datasets.\n")
 				print("\t-mean\t\t(Valid only for type 'allin_one') Print a horizontal line with the mean value of all the data given.\n")
 				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist.\n")
@@ -530,8 +568,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			elif arg[i].lower() == "-type":
 				tpe = arg[i+1]
 				continue
+			elif arg[i].lower() == "-fontsize":
+				fontsize = int(arg[i+1])
+				continue
 			elif arg[i].lower() == "-mean":
 				mean_flag = True
+				continue
+			elif arg[i].lower() == "-eng":
+				eng = True
 				continue
 			elif arg[i].lower() == "-index3d":
 				tpe = 'allin_one_f3d'
@@ -608,11 +652,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			cut = i+1
 
 	if not inst_only and not version_only:
-		if not rareplot:
-			ob4 = Analysis_plot(type=tpe, print_mean=mean_flag,names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz )
+		if File == []:
+			print("No argument given on the flag '-i'\n")
+		elif not rareplot:
+			#print('files:',File)
+			ob4 = Analysis_plot(type=tpe, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz )
 		else:
 			# creating an empty object
-			ob4   = Analysis_plot(type='tpe',names=File2, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc )
+			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc )
 			ob4.X = []
 			ob4.Y = []
 			
@@ -644,6 +691,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			ob4.Y.extend( Ycphmd )
 			
 			if MDXYlabels != -1 and CpHMDXYlabels != 1:
-				ob4.multi_in_one(labels=dual_labels, label_loc=multi_label_loc, titulo =supertitle, eixoy=ob4.ana_type, eixox=dual_eixox, mean=mean_flag, forced_3Dzaxis=forced_3Dz)
+				ob4.multi_in_one(labels=dual_labels, fontsize=fontsize, eng=eng, label_loc=multi_label_loc, titulo =supertitle, eixoy=ob4.ana_type, eixox=dual_eixox, mean=mean_flag, forced_3Dzaxis=forced_3Dz)
 			else:
 				print("Sheesh!")
