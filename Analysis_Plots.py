@@ -386,7 +386,7 @@ forced_3Dz=['ph','index'][1],eng=False,fontsize=14):
 		smut = 'Mutation_Hotfix_1.1/ASP206_GLU_Hotfix1.1/'
 		for value in ['7.00','9.00']:
 			File.append( ('%sph%s_%s.dat'%(path+s1,value,anatp),'pH='+value) )
-			File.append( ('%sph%s_%s.dat'%(path+s2,value,anatp),'pH='+value) )
+			File.append( ('%sph%s_%s.dat'%(path+smut,value,anatp),'pH='+value) )
 	elif tpe == 'two':
 		if bckbne_comp:
 			path    = 'nativaHotfix1.1/'
@@ -402,7 +402,7 @@ forced_3Dz=['ph','index'][1],eng=False,fontsize=14):
 	elif tpe == 'allin_one' or tpe == 'allin_one_f3d':
 		path0			= 'PETase_Dynamics/gpu-ultra/Dock_run/'
 		path            = [path0+'Nat_C8X/',path0+'D206E_C8X/MD_only/']
-		path_list		= ['Zeroth/'] #['Run0_MD/']
+		path_list		= [['Run0_MD/','Zeroth/'][1]]
 		path_list.extend( ['Replicata%d/'%i for i in range(1,6)] )
 		path2_list		= ['Run0_CpHMD/']
 		path2_list.extend(['Replicata%d_CpHMD/'%i for i in range(1,3)] )
@@ -507,14 +507,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	multi_label_loc = (0.5,0.5)
 	File=[]
 	File2=[]
-	merge_legend=['NativaS1','NativaS2']
+	merge_legend=['NativaS1',['NativaS2','D206E'][1]]
 
 	# This switch must ALWAYS BE 'on=False' !!
-	temp_mod = Default_modifier(on=[True,False][1],tpe=dic_Type[22],
-	anatp=analysis_name[2],File=[],File2=File2,
+	temp_mod = Default_modifier(on=[True,False][1],tpe=dic_Type[133],
+	anatp=analysis_name[3],File=[],File2=File2,
 	merge_legend=merge_legend,supertitle='',
 	mean_flag=[True,False][0],rareplot=[True,False][1],
-	multi_label_loc=(.74,0.72),forced_3Dz=['ph','index'][1],
+	multi_label_loc=(.64,0.63),forced_3Dz=['ph','index'][1],
 	eng=[True,False][1],fontsize=14)
 
 	#print("\nmodifiers:",temp_mod)
@@ -691,6 +691,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			ob4.Y.extend( Ycphmd )
 			
 			if MDXYlabels != -1 and CpHMDXYlabels != 1:
-				ob4.multi_in_one(labels=dual_labels, fontsize=fontsize, eng=eng, label_loc=multi_label_loc, titulo =supertitle, eixoy=ob4.ana_type, eixox=dual_eixox, mean=mean_flag, forced_3Dzaxis=forced_3Dz)
+				ob4.multi_in_one(labels=dual_labels, label_loc=multi_label_loc, titulo =supertitle, eixoy=ob4.ana_type, eixox=dual_eixox, mean=mean_flag)
 			else:
 				print("Sheesh!")
