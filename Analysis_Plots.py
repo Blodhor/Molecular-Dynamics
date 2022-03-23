@@ -359,10 +359,11 @@ center 10'''
 		plt.show()
 
 def Default_modifier(on=False,tpe='allin_one',
-anatp='dist',File=[],File2=[],
+anatp='dist',File=[],File2=[],enzyme=['Nat','D206E','D206EH237K'][2],
 merge_legend=['NativaS1','NativaS2'],supertitle='Produção',
 mean_flag=False,rareplot=False,multi_label_loc=(.74,0.72),
-forced_3Dz=['ph','index'][1],eng=False,fontsize=14):
+forced_3Dz=['ph','index'][1],eng=False,fontsize=14,mdlistrange=range(1,3),
+igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 
 	if not on:
 		return -1
@@ -400,23 +401,24 @@ forced_3Dz=['ph','index'][1],eng=False,fontsize=14):
 			for value in ['7.00','9.00']:
 				File.append( ('%sph%s_%s.dat'%(path+s2,value,anatp),'pH='+value) )
 	elif tpe == 'allin_one' or tpe == 'allin_one_f3d':
+		variant         = {'Nat':0,'D206E':1,'D206EH237K':2}
 		path0			= 'PETase_Dynamics/gpu-ultra/Dock_run/'
-		path            = [path0+'Nat_C8X/',path0+'D206E_C8X/MD_only/']
-		path_list		= [['Run0_MD/','Zeroth/'][1]]
-		path_list.extend( ['Replicata%d/'%i for i in range(1,6)] )
+		path            = [path0+ss for ss in ['Nat_C8X/','D206E_C8X/MD_only/','D206EH237K_C8X/MD_only/'] ]
+		path_list		= [['Run0_MD/','Zeroth/','Run0/'][variant[enzyme]]]
+		path_list.extend( [['Replicata%d_MD/','Replicata%d/','Rep%d/'][variant[enzyme]]%i for i in mdlistrange] )
 		path2_list		= ['Run0_CpHMD/']
 		path2_list.extend(['Replicata%d_CpHMD/'%i for i in range(1,3)] )
 		data_file       = ['Ehyd-PETcarb_7.00.dat','Ehyd-PETcarb_9.00.dat']
 		ingore_ph       = '' #['Ehyd-PETcarb_7.00.dat','Ehyd-PETcarb_9.00.dat'][1]
-		ignore_dyn_MD    = {'Ehyd-PETcarb_7.00.dat': [1,3,5],'Ehyd-PETcarb_9.00.dat':[1,3,5]}
-		ignore_dyn_CpHMD = {'Ehyd-PETcarb_7.00.dat': [],'Ehyd-PETcarb_9.00.dat':[1,2,3]}
+		ignore_dyn_MD    = {'Ehyd-PETcarb_7.00.dat': igph7md,'Ehyd-PETcarb_9.00.dat':igph9md}
+		ignore_dyn_CpHMD = {'Ehyd-PETcarb_7.00.dat': igph7cphmd,'Ehyd-PETcarb_9.00.dat':igph9cphmd}
 		subdivision_leg  = {'Ehyd-PETcarb_7.00.dat': 'A','Ehyd-PETcarb_9.00.dat':'B'}
 		for ph_f in data_file:
 			dyn_value    = 1
 			for d in path_list:
 				if dyn_value not in ignore_dyn_MD[ph_f] and ph_f != ingore_ph:
 					# label needed for 'allin_one_f3d' :: 'pH %c MD %d'%(ph_f[-8],dyn_value) 
-					File.append( (path[1]+d+ph_f,'pH %c MD %d %c'%(ph_f[-8],dyn_value,subdivision_leg[ph_f])) )
+					File.append( (path[variant[enzyme]]+d+ph_f,'pH %c MD %d %c'%(ph_f[-8],dyn_value,subdivision_leg[ph_f])) )
 				dyn_value += 1
 		#File=File2
 		if rareplot:
@@ -503,19 +505,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	mean_flag   = False
 
 	# special cases #IGNORE THIS
-	rareplot        = False
-	multi_label_loc = (0.5,0.5)
 	File=[]
 	File2=[]
 	merge_legend=['NativaS1',['NativaS2','D206E'][1]]
+	#ignore format := [1,3,6]
+	#mdlistrange   := replicates
 
 	# This switch must ALWAYS BE 'on=False' !!
 	temp_mod = Default_modifier(on=[True,False][1],tpe=dic_Type[133],
-	anatp=analysis_name[3],File=[],File2=File2,
+	anatp=analysis_name[3],File=File,File2=File2,
+	enzyme=['Nat','D206E','D206EH237K'][2],
 	merge_legend=merge_legend,supertitle='',
 	mean_flag=[True,False][0],rareplot=[True,False][1],
 	multi_label_loc=(.64,0.63),forced_3Dz=['ph','index'][1],
-	eng=[True,False][1],fontsize=14)
+	eng=[True,False][1],fontsize=14,mdlistrange=range(1,3),
+	igph7md=[3],igph9md=[],igph7cphmd=[],igph9cphmd=[])
 
 	#print("\nmodifiers:",temp_mod)
 
