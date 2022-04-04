@@ -8,7 +8,7 @@ class Analysis_plot:
 	def __init__(self, type = 'one', print_mean=False, names=[('file.dat','analysis_title')], analysisType = 'rmsd', largerYaxis = False, 
 	Yenlarger = 2, frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
 	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5),
-	forced_3Dzaxis=['ph','index'][1], eng=False, fontsize=10):
+	forced_3Dzaxis=['ph','index'][1], forced_mean=False, fmv=4.75, eng=False, fontsize=10):
 		'''Parameters:
 		
 		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other, 'four'/'four_2merge' datasets in a matrix fashion or multiple datasets in one XY frame ('allin_one').
@@ -59,6 +59,8 @@ class Analysis_plot:
 		# 'book', 'medium', 'roman', 'semibold', 'demibold', 'demi',
 		# 'bold', 'heavy', 'extra bold', 'black'
 		# style: Either 'normal' (default), 'italic' or 'oblique'.
+		self.forced_mean       = forced_mean
+		self.forced_mean_value = fmv
 		self.X                 = []
 		self.Y                 = []
 		self.frameToTime       = frameToTime
@@ -277,7 +279,10 @@ class Analysis_plot:
 			mean_line  = [mean_multi]*len(self.X[0])
 			plt.plot(self.X[0], mean_line)
 			labels.append('M='+str( round(mean_multi,2) ))
-		
+		if self.forced_mean:
+			plt.plot(self.X[i], [self.forced_mean_value]*len(self.X[i]))
+			labels.append('M='+str( round(self.forced_mean_value,2) ))
+
 		plt.legend(labels,loc=label_loc, fontsize=self.fontsize)
 		plt.title(titulo, fontsize=self.fontsize)
 		plt.ylabel(eixoy, fontsize=self.fontsize)
@@ -334,6 +339,8 @@ class Analysis_plot:
 				#index 0
 				ax.plot(self.X[0], [1]*len(self.X[i]), mean_line, label='M='+str( round(mean_multi,2) ))
 				#ax.plot_surface(self.X[0], [0]*len(self.X[i]), mean_line, label='M='+str(round(mean_multi,2)) )
+			if self.forced_mean:
+				ax.plot(self.X[0], [1]*len(self.X[i]), [self.forced_mean_value]*len(self.X[0]), label='M='+str( round(self.forced_mean_value,2) ))
 
 		'''legend loc :
 Best 0
@@ -362,7 +369,8 @@ def Default_modifier(on=False,tpe='allin_one',
 anatp='dist',File=[],File2=[],enzyme=['Nat','D206E','D206EH237K'][2],
 merge_legend=['NativaS1','NativaS2'],supertitle='Produção',
 mean_flag=False,rareplot=False,multi_label_loc=(.74,0.72),
-forced_3Dz=['ph','index'][1],eng=False,fontsize=14,mdlistrange=range(1,3),
+forced_3Dz=['ph','index'][1],forced_mean=False, fmv=4.75,
+eng=False,fontsize=14,mdlistrange=range(1,3),
 igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 
 	if not on:
@@ -418,7 +426,11 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 			for d in path_list:
 				if dyn_value not in ignore_dyn_MD[ph_f] and ph_f != ingore_ph:
 					# label needed for 'allin_one_f3d' :: 'pH %c MD %d'%(ph_f[-8],dyn_value) 
-					File.append( (path[variant[enzyme]]+d+ph_f,'pH %c MD %d %c'%(ph_f[-8],dyn_value,subdivision_leg[ph_f])) )
+					if variant[enzyme] == 0:
+						legend = 'pH %c MD %d'%(ph_f[-8],dyn_value)
+					else:
+						legend = 'pH %c MD %d %c'%(ph_f[-8],dyn_value,subdivision_leg[ph_f])
+					File.append( (path[variant[enzyme]]+d+ph_f, legend ) )
 				dyn_value += 1
 		#File=File2
 		if rareplot:
@@ -435,7 +447,7 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 		rep  = ['Run0_%s/'%rep_type,'Replicata1_%s/'%rep_type,'Replicata2_%s/'%rep_type]
 		File = [('%sEhyd-PETcarb_%s.dat'%(path+rep[2],'7.00'),'')]
 	return ( tpe,anatp,File,File2, merge_legend,supertitle, 
-	mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize )
+	mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize, forced_mean, fmv )
 
 if __name__ == "__main__":
 	import sys
@@ -505,26 +517,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	mean_flag   = False
 
 	# special cases #IGNORE THIS
-	File=[]
-	File2=[]
-	merge_legend=['NativaS1',['NativaS2','D206E'][1]]
+	File         = []
+	File2        = []
+	merge_legend = ['NativaS1',['NativaS2','D206E'][1]]
+	forced_mean  = False
+	fmv          = 4.75
 	#ignore format := [1,3,6]
 	#mdlistrange   := replicates
 
 	# This switch must ALWAYS BE 'on=False' !!
 	temp_mod = Default_modifier(on=[True,False][1],tpe=dic_Type[133],
 	anatp=analysis_name[3],File=File,File2=File2,
-	enzyme=['Nat','D206E','D206EH237K'][2],
+	enzyme=['Nat','D206E','D206EH237K'][0],
 	merge_legend=merge_legend,supertitle='',
-	mean_flag=[True,False][0],rareplot=[True,False][1],
+	mean_flag=[True,False][1],rareplot=[True,False][0],
 	multi_label_loc=(.64,0.63),forced_3Dz=['ph','index'][1],
-	eng=[True,False][1],fontsize=14,mdlistrange=range(1,3),
-	igph7md=[3],igph9md=[],igph7cphmd=[],igph9cphmd=[])
+	forced_mean=[True,False][1], fmv=4.97,
+	eng=[True,False][1],fontsize=14,mdlistrange=range(1,6),
+	igph7md=[3,5],igph9md=[5],igph7cphmd=[],igph9cphmd=[1,2,3])
 
 	#print("\nmodifiers:",temp_mod)
 
 	if temp_mod != -1:
-		tpe,anatp,File,File2,merge_legend,supertitle,mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize = temp_mod
+		tpe,anatp,File,File2,merge_legend,supertitle,mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize,forced_mean,fmv = temp_mod
 	if anatp == 'rmsf':
 		fram2time  = False
 		nano       = False
@@ -660,10 +675,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(type=tpe, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz )
+			ob4 = Analysis_plot(type=tpe, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
-			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc )
+			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
 			ob4.X = []
 			ob4.Y = []
 			
