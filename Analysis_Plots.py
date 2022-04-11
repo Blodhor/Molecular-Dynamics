@@ -78,11 +78,11 @@ class Analysis_plot:
 			self.restriction_break = True
 
 		if 'radgyr' in analysisType:
-			self.ana_type = ['Raio de giro (Angstrom)','Radgyr (Angstrom)'][self.lang_set]
+			self.ana_type = ['Raio de giro ($\AA$)','Radgyr ($\AA$)'][self.lang_set]
 		elif 'dist' in analysisType:
-			self.ana_type = ['Distância (Angstrom)','Distance (Angstrom)'][self.lang_set]
+			self.ana_type = ['Distância ($\AA$)','Distance ($\AA$)'][self.lang_set]
 		else:
-			self.ana_type = analysisType.upper()+' (Angstrom)'
+			self.ana_type = analysisType.upper()+' ($\AA$)'
 		XTlabels = self.XY(files=names)
 		#print(XTlabels, '\nnames:',names)
 		if XTlabels != -1 and type == 'one':
@@ -370,7 +370,7 @@ anatp='dist',File=[],File2=[],enzyme=['Nat','D206E','D206EH237K'][2],
 merge_legend=['NativaS1','NativaS2'],supertitle='Produção',
 mean_flag=False,rareplot=False,multi_label_loc=(.74,0.72),
 forced_3Dz=['ph','index'][1],forced_mean=False, fmv=4.75,
-eng=False,fontsize=14,mdlistrange=range(1,3),
+eng=False,fontsize=14,mdlistrange=range(1,3), ph_reverse=False,
 igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 
 	if not on:
@@ -417,6 +417,8 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 		path2_list		= ['Run0_CpHMD/']
 		path2_list.extend(['Replicata%d_CpHMD/'%i for i in range(1,3)] )
 		data_file       = ['Ehyd-PETcarb_7.00.dat','Ehyd-PETcarb_9.00.dat']
+		if ph_reverse:
+			data_file.reverse()
 		ingore_ph       = '' #['Ehyd-PETcarb_7.00.dat','Ehyd-PETcarb_9.00.dat'][1]
 		ignore_dyn_MD    = {'Ehyd-PETcarb_7.00.dat': igph7md,'Ehyd-PETcarb_9.00.dat':igph9md}
 		ignore_dyn_CpHMD = {'Ehyd-PETcarb_7.00.dat': igph7cphmd,'Ehyd-PETcarb_9.00.dat':igph9cphmd}
@@ -528,13 +530,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	# This switch must ALWAYS BE 'on=False' !!
 	temp_mod = Default_modifier(on=[True,False][1],tpe=dic_Type[133],
 	anatp=analysis_name[3],File=File,File2=File2,
-	enzyme=['Nat','D206E','D206EH237K'][0],
+	enzyme=['Nat','D206E','D206EH237K'][2],
 	merge_legend=merge_legend,supertitle='',
-	mean_flag=[True,False][1],rareplot=[True,False][0],
-	multi_label_loc=(.64,0.63),forced_3Dz=['ph','index'][1],
-	forced_mean=[True,False][1], fmv=4.97,
-	eng=[True,False][1],fontsize=14,mdlistrange=range(1,6),
-	igph7md=[3,5],igph9md=[5],igph7cphmd=[],igph9cphmd=[1,2,3])
+	mean_flag=[True,False][1],rareplot=[True,False][1],
+	multi_label_loc=(.64,0.63),forced_3Dz=['ph','index'][0],
+	forced_mean=[True,False][1], fmv=4.97, ph_reverse=[True,False][0],
+	eng=[True,False][0],fontsize=14,mdlistrange=range(1,6),
+	igph7md=[],igph9md=[],igph7cphmd=[3],igph9cphmd=[1,2,3])
 
 	#print("\nmodifiers:",temp_mod)
 
