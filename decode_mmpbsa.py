@@ -1,4 +1,4 @@
-#extraindo dados do mmpbsa_decomp.dat
+#decoding the ugly format of mmpbsa_decomp.dat
 def transfo(old_data = "m.txt",
 new_data = "pH7-MD1_PB-BindEnerg.dat",
 linhas=range(7,273)):
@@ -7,7 +7,7 @@ linhas=range(7,273)):
 	f.close()
 
 	data =[]
-	lines = [i for i in linhas] #total energy decomp para IsPETase+BHET
+	lines = [i for i in linhas]
 
 	for i in lines:
 		ll = m[i].split(',')
@@ -27,6 +27,11 @@ if __name__ == "__main__":
 	import sys
 	arg = sys.argv
 
+	#default lines
+	lini      = 7
+	lfinal    = 273
+	inst_only = False
+
 	flags = ["&","-h","--help",'-i','-out']
 
 	# Flag verification
@@ -34,17 +39,13 @@ if __name__ == "__main__":
 		if i[0] == '-':
 			try:
 				if type(float(i)) == type(2.3):
-					#pra aceitar numero sozinho
+					#ignore this
 					continue
 			except ValueError:
 				if i.lower() not in flags:
 					print("Unkown Flag used: ", i)
 					inst_only = True
 					break
-	#default lines
-	lini = 7
-	lfinal = 273
-
 
 	i = 0
 	while i < len(arg):
