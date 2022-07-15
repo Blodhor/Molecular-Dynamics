@@ -32,7 +32,7 @@ if __name__ == "__main__":
 	lfinal    = 273
 	inst_only = False
 
-	flags = ["&","-h","--help",'-i','-out']
+	flags = ["&","-h","--help",'-i','-out','-lines']
 
 	# Flag verification
 	for i in arg:
