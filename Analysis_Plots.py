@@ -8,7 +8,7 @@ class Analysis_plot:
 	def __init__(self, type = 'one', print_mean=False, names=[('file.dat','analysis_title')], analysisType = 'rmsd', largerYaxis = False, 
 	Yenlarger = 2, frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
 	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5),
-	forced_3Dzaxis=['ph','index'][1], forced_mean=False, fmv=4.75, eng=False, fontsize=10, mmpbsa=False):
+	forced_3Dzaxis=['ph','index'][1], forced_mean=False, fmv=4.75, eng=False, fontsize=10, mmpbsa=False, mmpbsa_cut=-0.5):
 		'''Parameters:
 		
 		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other, 'four'/'four_2merge' datasets in a matrix fashion or multiple datasets in one XY frame ('allin_one').
@@ -45,6 +45,7 @@ class Analysis_plot:
 				If 'True' sets default texts on english.
 		 		If 'False' sets default texts on portuguese.
 		mmpbsa: Boolean argument. If True the data will be considered the 'decode_mmpbsa.py' format.
+		mmpbsa_cut: Energy limit for which residue is highlighted on the plot. 
 		'''
 		self.lang_set          = 0
 		if eng:
@@ -75,6 +76,7 @@ class Analysis_plot:
 		self.merge_legend      = merge_legend
 		self.restriction_break = False
 		self.mmpbsa            = mmpbsa
+		self.mmpbsa_cut        = mmpbsa_cut
 		self.mmpbsa_res        = []
 
 		if type == 'allin_one' or type == 'allin_one_f3d':
@@ -176,11 +178,15 @@ class Analysis_plot:
 				plot_title = fs[1]
 				x = []
 				y = []
+				default_counter = {'HIP': 'HIS', 'AS4': 'ASP', 'Gl4': 'GLU'}
 				for i in t:
 					data = i.split()
 					if "Total" not in i and i != '' and i != '\n':
 						if 'R' in data[2]:
-							self.mmpbsa_res.append( data[0] )
+							if data[0] in default_counter:
+								self.mmpbsa_res.append( default_counter[data[0]] )
+							else:
+								self.mmpbsa_res.append( data[0] )
 							x.append( int(data[1]) )
 							y.append( float(data[3]) )
 				self.X.append(x)
@@ -191,11 +197,17 @@ class Analysis_plot:
 		else:
 			return -1
 
-	def peaks(self, X=[], Y=[], cut=-2):
-		notes = []
+	def peaks(self, X=[], Y=[]):
+		notes      = []
+		false_peak = []
 		for i in range(len(Y)):
-			if Y[i] <= cut:
-				notes.append( (X[i],Y[i]) )
+			if Y[i] <= self.mmpbsa_cut:
+				false_peak.append( (X[i],Y[i]) )
+				if len(false_peak)==1:
+					notes.append( (X[i],Y[i]) )
+				elif false_peak[-1][0]-false_peak[-2][0] > 1:
+					#i don't want to see a bunch of neighbouring residues 
+					notes.append( (X[i],Y[i]) )
 		return notes	
 
 	def plot_one(self, X = [], Y = [], Xaxis = "Frames", name = "Título", EnlargeYaxis = False, Ymax = 2):
@@ -208,9 +220,14 @@ class Analysis_plot:
 			axes.set_ylim([0,Ymax*max(Y)])
 		if self.mmpbsa:
 			ax   = fig.add_subplot()
-			note = self.peaks(X=X,Y=Y,cut=-0.5)
+			note = self.peaks(X=X,Y=Y)
 			for i in note:
-				ax.text(i[0], i[1], self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), fontsize=self.fontsize)
+				cor  = 0
+				'''if i[0] == 178:
+					cor = 0.2
+				elif i[0] == 180:
+					cor = 0.05'''
+				ax.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), fontsize=self.fontsize)
 		plt.plot(X,Y)
 		plt.title(name, fontsize=self.fontsize)
 		plt.ylabel(self.ana_type, fontsize=self.fontsize)
@@ -416,7 +433,7 @@ center 10'''
 
 		plt.show()
 
-def Default_modifier(on=False,tpe='allin_one', mmpbsa=[True,False][1],
+def Default_modifier(on=False,tpe='allin_one', mmpbsa=[True,False][1], mmpbsa_cut=-0.5,
 anatp='dist',File=[],File2=[],enzyme=['Nat','D206E','D206EH237K'][2],
 merge_legend=['NativaS1','NativaS2'],supertitle='Produção',
 mean_flag=False,rareplot=False,multi_label_loc=(.74,0.72),
@@ -500,11 +517,17 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 		rep  = ['Run0_%s/'%rep_type,'Replicata1_%s/'%rep_type,'Replicata2_%s/'%rep_type]
 		File = [('%sEhyd-PETcarb_%s.dat'%(path+rep[2],'7.00'),'')]
 	if mmpbsa:
-		path = 'PETase_Dynamics/gpu-ultra/Dock_run/D206EH237K_C8X/MD_only/'
-		File = [('%sRun0/ph9-MD1_PB-binding.dat'%path,'pH9 MD1')]
+		path       = 'IsPETase-BHET_binding/'
+		ph         = [7,9][0]
+		enzyme     = ['Nat','D206EH237K'][0]
+		md_id      = [1,5,6][1]
+		mmpbsa_cut = -1
+		File = [('%spH%d-%s-C8X-MD%d_bind.dat'%(path,ph,enzyme,md_id),
+		'%s-BHET pH%d MD%d'%(enzyme,ph,md_id))]
 
 	return ( tpe,anatp,File,File2, merge_legend,supertitle, 
-	mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize, forced_mean, fmv, mmpbsa)
+	mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize,
+	forced_mean, fmv, mmpbsa, mmpbsa_cut)
 
 if __name__ == "__main__":
 	import sys
@@ -555,6 +578,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 	#default keys
 	mmpbsa       = False
+	mmpbsa_cut   = -0.5
 	version_only = False
 	inst_only    = False
 	anatp        = analysis_name[3]
@@ -584,9 +608,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	#mdlistrange   := replicates
 
 	# This switch must ALWAYS BE 'on=False' !!
-	temp_mod = Default_modifier(on=[True,False][1],tpe=dic_Type[1],
+	temp_mod = Default_modifier(on=[True,False][0],tpe=dic_Type[1],
 	anatp=analysis_name[3],File=File,File2=File2, mmpbsa=[True,False][0],
-	enzyme=['Nat','D206E','D206EH237K'][2],
+	enzyme=['Nat','D206E','D206EH237K'][2], mmpbsa_cut=-0.5,
 	merge_legend=merge_legend,supertitle='',
 	mean_flag=[True,False][1],rareplot=[True,False][1],
 	multi_label_loc=(.64,0.63),forced_3Dz=['ph','index'][0],
@@ -597,7 +621,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	#print("\nmodifiers:",temp_mod)
 
 	if temp_mod != -1:
-		tpe,anatp,File,File2,merge_legend,supertitle,mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize,forced_mean,fmv,mmpbsa = temp_mod
+		tpe,anatp,File,File2,merge_legend,supertitle,mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize,forced_mean,fmv,mmpbsa,mmpbsa_cut = temp_mod
 	if anatp == 'rmsf':
 		fram2time  = False
 		nano       = False
@@ -605,10 +629,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-fontsize","-edcomp","-eng","-h","--help",'-type','-index3d','-mean', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd','-mlbpos']
+	flags = ["&","-v","--version","-fontsize","-edcomp","-edcut","-eng","-h","--help",'-type','-index3d','-mean', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd','-mlbpos']
+
+	# Flag verification
+	for i in arg:
+		if i[0] == '-':
+			try:
+				if type(float(i)) == type(2.3):
+					#Some flags may require a number as the next arg
+					continue
+			except ValueError:
+				if i.lower() not in flags:
+					print("Unkown Flag used: ", i)
+					inst_only = True
+					break
 
 	cut = 0 # counter for input flags
-
 	for i in range(len(arg)):
 		if cut == i:
 			if arg[i].lower() == "&":
@@ -630,6 +666,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-index3d\t(Valid only for type 'allin_one') Creates a 3D plot with a index axis separating your datasets.\n")
 				print("\t-mean\t\t(Valid only for type 'allin_one') Print a horizontal line with the mean value of all the data given.\n")
 				print("\t-edcomp\t\tSets analysis for energy decomposition on the format of 'decode_mmpbsa.py'.\n")
+				print("\t-edcut\t\tSets the higher energy limit for highlighting residues on the energy decomposition plot.\n")
 				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist.\n")
 				print("\t-i\t\tinput data file(s) with a name for the plot (separated by space).\n\t\t\tEg.: -i ph7.00_rmsd.dat pH=7.00\n")
 				print("\t-stitle\t\t(Valid only for type 'four') Title for comparison plot.\n")
@@ -654,6 +691,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				continue
 			elif arg[i].lower() == "-edcomp":
 				mmpbsa = True
+				continue
+			elif arg[i].lower() == "-edcut":
+				mmpbsa_cut = int(arg[i+1])
 				continue
 			elif arg[i].lower() == "-eng":
 				eng = True
@@ -737,7 +777,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(type=tpe, mmpbsa=mmpbsa, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(type=tpe, mmpbsa=mmpbsa, mmpbsa_cut=mmpbsa_cut,  fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
