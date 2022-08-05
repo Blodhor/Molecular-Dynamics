@@ -33,7 +33,7 @@ def filtro_log(pdb=False):
 	if pdb:
 		newpy.write('\t\tcmd("obabel -i pdbqt %s -o pdb -O %s"%(out_file, pdb_format))\n')
 		newpy.write('\t\tfinal_out = pdb_format\n')
-		newpy.write('\t\t\tcmd("rm %s"%(out_file))\n')
+		newpy.write('\t\tcmd("rm %s"%(out_file))\n')
 	newpy.write('\t\tif float(data[1]) >=0:\n') # affinity >= 0 kcal/mol :: bad docking
 	newpy.write('\t\t\tcmd("mv %s Useless_dock"%(final_out))\n')
 	newpy.write('\t\t\tcmd("mv %s Useless_dock"%(arg[1]))\n')
