@@ -11,14 +11,14 @@ def filtro_log(pdb=False):
 	newpy.write('\tif len(arg) == 2 and "log" in arg[1].lower():\n')
 	newpy.write('\t\ta1 = arg[1].find("_R")+2\n')
 	newpy.write('\t\ta2 = arg[1].find(".out")\n')
-	newpy.write('\t\tinp_file = "config4vina_%s.inp"%(arg[1][a1:a2])\n')###
+	newpy.write('\t\tinp_file = "config4vina_%s.inp"%(arg[1][a1:a2])\n')
 	newpy.write('\t\tg = open(inp_file,"r")\n')
 	newpy.write('\t\tinp_lines = g.readlines()\n')
 	newpy.write('\t\tg.close()\n')
 	newpy.write('\t\tfor temp in inp_lines:\n')
 	newpy.write('\t\t\tif "out" in temp:\n')
 	newpy.write('\t\t\t\tdeez = temp.split()\n')
-	newpy.write('\t\t\t\tout_file = deez[len(deez)-1]\n')###
+	newpy.write('\t\t\t\tout_file = deez[len(deez)-1]\n')
 	if pdb:
 		newpy.write('\t\t\t\tpdb_format = "%s.pdb"%(out_file[:-6])\n')
 	newpy.write('\t\t\t\tbreak\n')
@@ -33,7 +33,7 @@ def filtro_log(pdb=False):
 	if pdb:
 		newpy.write('\t\tcmd("obabel -i pdbqt %s -o pdb -O %s"%(out_file, pdb_format))\n')
 		newpy.write('\t\tfinal_out = pdb_format\n')
-		newpy.write('\t\tcmd("rm %s"%(out_file))\n')
+		newpy.write('\t\t\tcmd("rm %s"%(out_file))\n')
 	newpy.write('\t\tif float(data[1]) >=0:\n') # affinity >= 0 kcal/mol :: bad docking
 	newpy.write('\t\t\tcmd("mv %s Useless_dock"%(final_out))\n')
 	newpy.write('\t\t\tcmd("mv %s Useless_dock"%(arg[1]))\n')
