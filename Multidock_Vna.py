@@ -82,7 +82,7 @@ def multi_inp(cent_x = -18.287, cent_y = -9.034, cent_z = 7.361, max_dv = 5,
 				sh.write('vina --config config4vina_%d.inp --log Log_R%d.out\n'%(i,i))
 			else:
 				sh.write('%s/vina --config config4vina_%d.inp --log Log_R%d.out\n'%(vina_home,i,i))
-			sh.write('python3 verify_log.py Log_R%d.out\n'%i)
+			#sh.write('python3 verify_log.py Log_R%d.out\n'%i)
 		else:
 			continue
 		i +=1
