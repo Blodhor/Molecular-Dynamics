@@ -106,7 +106,7 @@ if __name__ == "__main__":
 	out_na    = ''
 	max_dv    = 5
 	multi     = 10
-	vina_home = '~/autodock_vina_1_1_2_linux_x86/bin'
+	vina_home = '' # '~/autodock_vina_1_1_2_linux_x86/bin'
 	inst_only = False
 
 	flags = ["&","-h","--help",'-vnh','-pdbqt2pdb','-e','-dbox','-dcenter','-maxdev','-mult','-recpt','-lig','-out']
