@@ -2,7 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid.inset_locator import (inset_axes, InsetPosition, mark_inset)
+from mpl_toolkits.axes_grid1.inset_locator import (inset_axes, InsetPosition, mark_inset)
 
 # Quick sort for the first coodinate of my tupples
 def swap(t=[(0,'1'),(-6,'2')], ith = 0, jth = 1):
