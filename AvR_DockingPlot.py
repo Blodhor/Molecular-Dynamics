@@ -71,11 +71,11 @@ def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb
 					c_count = 0
 					o_count = 0
 					for t in [alt1_info[2],alt2_info[2],alt3_info[2]]:
-						if t == 'C':
+						if t == 'C' or 'C' in t[0]:
 							c_count += 1
-						elif t == 'O':
+						elif t == 'O' or 'O' in t[0]:
 							o_count += 1
-					if main_info[2] == 'C' and c_count == 1 and o_count == 2:
+					if (main_info[2] == 'C' or 'C' in main_info[2][0]) and c_count == 1 and o_count == 2:
 						# main == C carbonyl
 						main_xyz = (float(main_info[5]),float(main_info[6]),float(main_info[7]))
 						rcarbs.append(dist(atm1=ser_hydroxyl,atm2=main_xyz))
