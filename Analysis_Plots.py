@@ -608,7 +608,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	#mdlistrange   := replicates
 
 	# This switch must ALWAYS BE 'on=False' !!
-	temp_mod = Default_modifier(on=[True,False][0],tpe=dic_Type[1],
+	temp_mod = Default_modifier(on=[True,False][1],tpe=dic_Type[1],
 	anatp=analysis_name[3],File=File,File2=File2, mmpbsa=[True,False][0],
 	enzyme=['Nat','D206E','D206EH237K'][2], mmpbsa_cut=-0.5,
 	merge_legend=merge_legend,supertitle='',
