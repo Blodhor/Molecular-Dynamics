@@ -9,7 +9,8 @@ class Analysis_plot:
 	def __init__(self, type = 'one', print_mean=False, names=[('file.dat','analysis_title')], analysisType = 'rmsd', largerYaxis = False, 
 	Yenlarger = 2, frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
 	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5),
-	forced_3Dzaxis=['ph','index'][1], forced_mean=False, fmv=4.75, eng=False, fontsize=10, mmpbsa=False, mmpbsa_inset=[False,True][0], mmpbsa_cut=-0.5):
+	forced_3Dzaxis=['ph','index'][1], forced_mean=False, fmv=4.75, eng=False, fontsize=10, mmpbsa=False, mmpbsa_inset=[False,True][0],
+	plot_interface=False, mmpbsa_cut=-0.5):
 		'''Parameters:
 		
 		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other, 'four'/'four_2merge' datasets in a matrix fashion or multiple datasets in one XY frame ('allin_one').
@@ -83,6 +84,7 @@ class Analysis_plot:
 		self.mmpbsa_inset      = mmpbsa_inset
 		self.mmpbsa_cut        = mmpbsa_cut
 		self.mmpbsa_res        = []
+		self.plot_interface    = plot_interface
 
 		if type == 'allin_one' or type == 'allin_one_f3d':
 			self.restriction_break = True
@@ -228,7 +230,7 @@ class Analysis_plot:
 					notes.append( (X[i],Y[i]) )
 		return notes	
 
-	def plot_one(self, X = [], Y = [], Xaxis = "Frames", name = "Título", EnlargeYaxis = False, Ymax = 2):
+	def plot_one(self, X = [], Y = [], Xaxis = "Frames", name = "Título", EnlargeYaxis = False, Ymax = 2, file_name=''):
 		'''Plots one X-Y dataset.'''
 
 		fig = plt.figure(dpi=self.dpi)
@@ -251,9 +253,15 @@ class Analysis_plot:
 		plt.ylabel(self.ana_type, fontsize=self.fontsize)
 		plt.xlabel(Xaxis, fontsize=self.fontsize)
 		plt.grid(True)
-		plt.show()
+		
+		if not self.plot_interface:
+			if file_name == '':
+				file_name = 'Figure.jpeg'  
+			plt.savefig(file_name,bbox_inches='tight')
+		else:
+			plt.show()
 
-	def plot_two(self, file_name=["Figure_7.jpeg","Figure_8.jpeg",''][0], X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"]):
+	def plot_two(self, file_name=["Figure_7.jpeg","Figure_8.jpeg",''][-1], X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"]):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 		
 		mark_color="lightsteelblue"
@@ -358,12 +366,14 @@ class Analysis_plot:
 		if self.supertitle:
 			plt.suptitle(self.suptitle,fontsize=self.fontsize)
 		
-		if file_name != '':
+		if not self.plot_interface:
+			if file_name == '':
+				file_name = 'Figure.jpeg'  
 			plt.savefig(file_name,bbox_inches='tight')
 		else:
 			plt.show()
 
-	def plot_two_2merge(self, X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"]):
+	def plot_two_2merge(self, X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"], file_name=''):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 
 		fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True, sharey=True, dpi=self.dpi)
@@ -388,9 +398,15 @@ class Analysis_plot:
 
 		if self.supertitle:
 			plt.suptitle(self.suptitle,fontsize=self.fontsize)
-		plt.show()
+		
+		if not self.plot_interface:
+			if file_name == '':
+				file_name = 'Figure.jpeg'  
+			plt.savefig(file_name,bbox_inches='tight')
+		else:
+			plt.show()
 
-	def plot_four(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"]):
+	def plot_four(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"], file_name=''):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 
 		plt.figure(dpi=self.dpi)
@@ -416,9 +432,15 @@ class Analysis_plot:
 		plt.grid(True)
 		if self.supertitle:
 			plt.suptitle(self.suptitle,fontsize=self.fontsize)
-		plt.show()
+		
+		if not self.plot_interface:
+			if file_name == '':
+				file_name = 'Figure.jpeg'  
+			plt.savefig(file_name,bbox_inches='tight')
+		else:
+			plt.show()
 
-	def plot_four_2merge(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"]):
+	def plot_four_2merge(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"], file_name=''):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 
 		fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2, sharex=True, sharey=True, dpi=self.dpi)
@@ -441,7 +463,13 @@ class Analysis_plot:
 
 		if self.supertitle:
 			plt.suptitle(self.suptitle,fontsize=self.fontsize)
-		plt.show()
+		
+		if not self.plot_interface:
+			if file_name == '':
+				file_name = 'Figure.jpeg'  
+			plt.savefig(file_name,bbox_inches='tight')
+		else:
+			plt.show()
 
 	def multi_in_one(self, file_name=["Figure_6.jpeg",''][1], labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), eixoy="Y(X)", eixox="X",mean=False):
     	# X = [[],[],'...'], Y = [[],[],'...']
@@ -470,7 +498,10 @@ class Analysis_plot:
 			plt.title(self.suptitle, fontsize=self.fontsize)
 		plt.ylabel(eixoy, fontsize=self.fontsize)
 		plt.xlabel(eixox, fontsize=self.fontsize)
-		if file_name != '':
+		
+		if not self.plot_interface:
+			if file_name == '':
+				file_name = 'Figure.jpeg'  
 			plt.savefig(file_name,bbox_inches='tight')
 		else:
 			plt.show()
@@ -553,13 +584,16 @@ center 10'''
 		if text != '':
 			fig.text(0.07, 0.72, text, fontsize=self.fontsize)
 		#ax1.plot(Xw,Yw,'o',color=w_color,ms=pointsize)
-		if file_name != '':
+		
+		if not self.plot_interface:
+			if file_name == '':
+				file_name = 'Figure.jpeg'  
 			plt.savefig(file_name,bbox_inches='tight')
 		else:
 			plt.show()
 
 def Default_modifier(on=False,tpe='allin_one', mmpbsa=[True,False][1],
-mmpbsa_inset=False, mmpbsa_cut=-0.5,
+mmpbsa_inset=False, mmpbsa_cut=-0.5, interface=True,
 anatp='dist',File=[],File2=[],enzyme=['Nat','D206E','D206EH237K'][2],
 merge_legend=['NativaS1','NativaS2'],supertitle='Produção',
 mean_flag=False,rareplot=False,multi_label_loc=(.74,0.72),
@@ -664,7 +698,7 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 
 	return ( tpe,anatp,File,File2, merge_legend,supertitle, 
 	mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize,
-	forced_mean, fmv, mmpbsa, mmpbsa_inset, mmpbsa_cut)
+	forced_mean, fmv, mmpbsa, mmpbsa_inset, mmpbsa_cut, interface)
 
 if __name__ == "__main__":
 	import sys
@@ -714,6 +748,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	dic_Type      = {1:'one', 13:'allin_one', 133:'allin_one_f3d', 2:'two', 22: '2ph_2merge', 4:'four', 42: 'four_2merge'}
 
 	#default keys
+	interface    = True
 	mmpbsa       = False
 	mmpbsa_inset = False
 	mmpbsa_cut   = -0.5
@@ -742,6 +777,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	merge_legend = ['NativaS1',['NativaS2','D206E'][0]]
 	forced_mean  = False
 	fmv          = 4.75
+	rareplot     = False
+	multi_label_loc=(.685,0.5)
 	#ignore format := [1,3,6]
 	#mdlistrange   := replicates
 	#mmpbsa_cut must be negative!!
@@ -753,7 +790,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	anatp=analysis_name[3],File=File,File2=File2, mmpbsa=[True,False][1],
 	enzyme=['Nat','D206E','D206EH237K'][0], mmpbsa_cut=-0.5, mmpbsa_inset=[False,True][0],
 	merge_legend=merge_legend,supertitle=['%s-BHET pH7'%['IsPETase','D206EH237K'][1],''][1],
-	mean_flag=[True,False][1],rareplot=[True,False][1],
+	mean_flag=[True,False][1],rareplot=[True,False][1],interface=[True,False][1],
 	multi_label_loc=(.685,0.5),forced_3Dz=['ph','index'][0],
 	forced_mean=[True,False][1], fmv=[4.65,4.75,4.97][0], ph_reverse=[True,False][1],
 	eng=[True,False][0],fontsize=[8,12,14][1],mdlistrange=range(1,6),
@@ -768,7 +805,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-fontsize","-edcomp","-edcut","-eng","-h","--help",'-type','-index3d','-mean', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd','-mlbpos']
+	flags = ["&","-v","--version","-fontsize","-jpeg","-edcomp","-edcut","-eng","-h","--help",'-type','-index3d','-mean', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd','-mlbpos']
 
 	# Flag verification
 	for i in arg:
@@ -783,6 +820,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 					inst_only = True
 					break
 
+	if "-jpeg" in arg:
+		interface = False
+			
 	cut = 0 # counter for input flags
 	for i in range(len(arg)):
 		if cut == i:
@@ -803,6 +843,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-eng\tSets default texts language to english. If this flag is not called the texts will be set on portuguese.\n")
 				print("\t-fontsize\tInteger value for the fontsize of labels and inplot texts (Default=%d).\n"%fontsize)
 				print("\t-index3d\t(Valid only for type 'allin_one') Creates a 3D plot with a index axis separating your datasets.\n")
+				print("\t-jpeg\t\t(Recommended when dpi is too big) Saves picture directly to 'Figure.jpeg' instead of generating the interface.\n")
 				print("\t-mean\t\t(Valid only for type 'allin_one') Print a horizontal line with the mean value of all the data given.\n")
 				print("\t-edcomp\t\tSets analysis for energy decomposition on the format of 'decode_mmpbsa.py'.\n")
 				print("\t-edcut\t\tSets the higher energy limit for highlighting residues on the energy decomposition plot.\n")
@@ -913,14 +954,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			cut = i+1
 
 	if default_mod and temp_mod != -1:
-		tpe,anatp,File,File2,merge_legend,supertitle,mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize,forced_mean,fmv,mmpbsa,mmpbsa_inset,mmpbsa_cut = temp_mod
+		tpe,anatp,File,File2,merge_legend,supertitle,mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize,forced_mean,fmv,mmpbsa,mmpbsa_inset,mmpbsa_cut,interface = temp_mod
 	
 	if not inst_only and not version_only:
 		if File == []:
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(type=tpe, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_cut=mmpbsa_cut,  fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(type=tpe, plot_interface=interface, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_cut=mmpbsa_cut,  fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
