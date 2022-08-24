@@ -59,7 +59,7 @@ if __name__ == "__main__":
 			print("\t-i\t\tFinal Decomp data for PB in MMPBSA.py.\n")
 			print("\t-out\t\tName of the output file with only the residue and total energy.\n")
 			print("\t-lines\t\tInput file lines for residues total decomp. Please indicate the numbers of the initial res. line and the empty line after all data separated by comma.\n")
-			print("\t-Ex:\n\t\tpython.exe -i YourInput -out NameYourOutput -lines 8,274\n")
+			print("\t-Ex:\n(Windows)\t\tpython.exe .\\decode_mmpbsa.py -i YourInput -out NameYourOutput -lines 8,274\n(Linux)\t\tpython3 decode_mmpbsa.py -i YourInput -out NameYourOutput -lines 8,274\n")
 			print("\t\tPS: Please do not use spaces in your file's names!")
 			break
 
