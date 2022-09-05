@@ -549,7 +549,7 @@ class Analysis_plot:
 				index += 1
 				mean_value.append( sum(self.Y[i])/len(self.Y[i]) )
 				#labels :: 'pH %c MD %d %c'%(ph,dynNumb,subdivision)
-				ax.plot(self.X[i], [index]*len(self.X[i]), self.Y[i], label=labels[i][:-2])
+				ax.plot(self.X[i], [index]*len(self.X[i]), self.Y[i], label=labels[i])
 			if mean:
 				mean_multi = sum(mean_value)/len(mean_value)
 				mean_line  = [mean_multi]*len(self.X[0])
