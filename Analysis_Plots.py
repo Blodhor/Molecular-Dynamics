@@ -854,7 +854,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-mlbpos\t(Valid only for type 'allin_one') Label position based on axis percentage. Eg.: -mlbpos 0.5 0.8\n")
 				print("\t-fram2time\t(For anatp = rmsd or radgyr) Sets X-axis will change from frame to time (pico seconds). Must inform frame-step conversion.\n\t\t\tEg.: -fram2time 10000\n")
 				print("\t-nanosec\t\t(For anatp = rmsd or radgyr) Sets time intervals on X-axis to nanoseconds.\n")
-				print("\t-dpi\t\tSets the plot quality (recommended to use only with type=one). Default: 100\n")
+				print("\t-dpi\t\tSets the plot quality (recommended to use only with type=one). Default: 300\n")
 				print("\nExamples:\n\t$ python3 Analysis_Plots.py -type one -anatp rmsd -i ph7.00_rmsd.dat Production pH=7.00 -fram2time 10000 -dpi 120\n")
 				print("\n\t$ python3 Analysis_Plots.py -type two -anatp rmsf -i ph7.00_rmsf.dat Production pH=7.00 ph8.00_rmsf.dat Production pH=8.00\n")
 				print("\n\t$ python3 Analysis_Plots.py -type four -stitle Production -anatp radgyr -lblcrd (16.61,200) -i ph7.00_radgyr.dat pH=7.00 ph8.00_radgyr.dat pH=8.00 ph9.00_radgyr.dat pH=9.00 ph10.00_radgyr.dat pH=10.00 -fram2time 10000 -nanosec\n")
@@ -904,10 +904,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 								b_t += ' '
 							b_t += arg[cc_t]
 						else:
-							cc = cc_t -1
 							break
 						cc_t += 1
-
+					cc = cc_t -1
+					#print((a_t,b_t))
 					if len(b_t) > 0:
 						File.append( (a_t, b_t) )
 					else:
@@ -946,7 +946,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				nano = True
 				#continue
 			elif arg[i].lower() == "-dpi":
-				dpi = arg[i+1]
+				dpi = int(arg[i+1])
 				continue
 			cut +=1
 
