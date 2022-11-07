@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.font_manager import FontProperties
 from mpl_toolkits.axes_grid1.inset_locator import (inset_axes, InsetPosition, mark_inset)
+import re
 
 class Analysis_plot:
 	_Types = ['one','two','2ph_2merge','four','four_2merge','allin_one']
@@ -11,7 +12,7 @@ class Analysis_plot:
 	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5),
 	forced_3Dzaxis=['ph','index'][1], forced_mean=False, fmv=4.75, eng=False, fontsize=10, mmpbsa=False,
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
-	plot_interface=False, mmpbsa_cut=-0.5):
+	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[]):
 		'''Parameters:
 		
 		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other, 'four'/'four_2merge' datasets in a matrix fashion or multiple datasets in one XY frame ('allin_one').
@@ -67,6 +68,7 @@ class Analysis_plot:
 		self.forced_mean_value = fmv
 		self.X                 = []
 		self.Y                 = []
+		self.halving_ids       = halving_ids
 		self.frameToTime       = frameToTime
 		self.frameStep         = frameStep
 		self.timeStep          = timeStep
@@ -130,23 +132,22 @@ class Analysis_plot:
 		else:
 			print("Type must in the list:",self._Types, "!\n")
 
-	def XY(self, halving_ids=[[],[1,2,3]][0], files = [('file1.dat','title1'), ('file2.dat','title2')]):
+	def XY(self, files = [('file1.dat','title1'), ('file2.dat','title2')]):
 		''' Gets X and Y datasets and returns its respectives x-label and title as a list of tuples.'''
 
 		if len(files) in [1,2,4,8] or self.restriction_break:
 			xname = 'T'
 			XTlabel = []
-			cut_id = 0
 			for fs in files:
-				cut_id +=1
-				if cut_id in halving_ids:
-					half_data = True
-				else:
-					half_data = False
 				f = open(fs[0])
 				t = f.readlines()
 				f.close()
 				plot_title = fs[1]
+				mdid = int(re.findall(r'[0-9]+',plot_title)[-1])
+				if mdid in self.halving_ids:
+					half_data = True
+				else:
+					half_data = False
 				x = []
 				y = []
 				xcount = 1 # specific for cutting data
@@ -241,39 +242,39 @@ class Analysis_plot:
 		plot_color="cornflowerblue"
 		inset_color = "darkslategray"
 		#fig = plt.figure(dpi=self.dpi)
-		fig, ax1 = plt.subplots(dpi=self.dpi)
+		fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
 		#fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
 		if EnlargeYaxis:
 			axes = plt.axes()
 			axes.set_xlim([0,X[len(X)-1]])
 			axes.set_ylim([0,Ymax*max(Y)])
-		ax1.plot(X,Y)
+		ax1.plot(X,Y,color=plot_color)
 		ax1.set_ylabel(self.ana_type, fontsize=self.fontsize)
 		ax1.set_xlabel(Xaxis, fontsize=self.fontsize)
 		ax1.set_ylim(min(Y)-2,max(Y)+0.25)
 		ax1.grid(True)
 
 		if self.mmpbsa:
-			ax2 = plt.axes([0,0,1,1])
+			# inset data res 170-210
 			if self.mmpbsa_inset:
-				inset_x   = []
-				inset_y   = []
+				inset1_x   = []
+				inset1_y   = []
 				for i in self.mmpbsa_inset_range:
-					inset_x.append( X[i] )
-					inset_y.append( Y[i] )
-				ax2.tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
-				ax2.set_xticks(np.arange(self.mmpbsa_inset_range[0], self.mmpbsa_inset_range[-1]+1, self.mmpbsa_inset_restick), minor=False)
-				ip = InsetPosition(ax1, [self.mmpbsa_inset_XY[0],self.mmpbsa_inset_XY[1],0.4,0.45])
-				ax2.set_axes_locator(ip)
-				mark_inset(ax1, ax2, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=5)
-				ax2.plot(inset_x,inset_y,color=plot_color)
-				#ax2.axvline(x=178,color='green')
-				#ax2.axvline(x=209,color='red')
-				ax2.grid(True)
+					inset1_x.append( X[i] )
+					inset1_y.append( Y[i] )
+				inset1 = plt.axes([0,0,1,1],label='upinset')
+				inset1.tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
+				inset1.set_xticks(np.arange(self.mmpbsa_inset_range[0], self.mmpbsa_inset_range[-1]+1, self.mmpbsa_inset_restick), minor=False)
+				ip1 = InsetPosition(ax1, [self.mmpbsa_inset_XY[0],self.mmpbsa_inset_XY[1],0.4,0.45])
+				inset1.set_axes_locator(ip1)
+				mark_inset(ax1, inset1, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=-1)
+				inset1.plot(inset1_x,inset1_y,color=plot_color)
+				inset1.axvline(x=178,color='green')
+				inset1.axvline(x=209,color='red')
 			
 			note = self.peaks(X=X,Y=Y)
 			for i in note:
-				text_color ='black'
+				text_color  ='black'
 				cor   = 0
 				if i[1] >0:
 					text_color = 'darkred'
@@ -282,7 +283,7 @@ class Analysis_plot:
 					cor = [0.2,0.4][1]
 				if self.mmpbsa_inset:
 					if i[0] in self.mmpbsa_inset_range:
-						ax2.text(i[0],i[1],self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=inset_color, fontsize=self.fontsize)
+						inset1.text(i[0],i[1],self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=inset_color, fontsize=self.fontsize)
 					else:
 						ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=text_color, fontsize=self.fontsize)
 				else:		
@@ -308,6 +309,7 @@ class Analysis_plot:
 		inset_color = "darkslategray"
 		fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True, dpi=self.dpi)
 		ax1.plot(X[0],Y[0],color=plot_color)
+		ax1.set_ylim(min(Y[0])-0.5,max(Y[0])+2)
 		ax1.set_title(name[0], fontsize=self.fontsize)
 		ax1.grid()
 		if self.mmpbsa:
@@ -346,6 +348,7 @@ class Analysis_plot:
 					ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=text_color, fontsize=self.fontsize)
 
 		ax2.plot(X[1],Y[1],color=plot_color)
+		ax2.set_ylim(min(Y[1])-0.5,max(Y[1])+2)
 		ax2.set_title(name[1], fontsize=self.fontsize)
 		ax2.grid()
 		#ax2.set_ylim([-4.5,0.2])
@@ -684,7 +687,7 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 		if ph_reverse:
 			data_file.reverse()
 		#linha abaixo para plotar 5 mds da nativa	
-		ingore_ph        = ['', ['Ehyd-PETcarb_7.00.dat','Ehyd-PETcarb_9.00.dat'][1]][1]
+		ingore_ph        = ['', ['Ehyd-PETcarb_7.00.dat','Ehyd-PETcarb_9.00.dat'][1]][0]
 		ignore_dyn_MD    = {'MD_7.00_system.rms':[],'MD_7.00_system_rmsf.agr':[],'Ehyd-PETcarb_7.00.dat': igph7md,'Ehyd-PETcarb_9.00.dat':igph9md}
 		ignore_dyn_CpHMD = {'Ehyd-PETcarb_7.00.dat': igph7cphmd,'Ehyd-PETcarb_9.00.dat':igph9cphmd}
 		subdivision_leg  = {'Ehyd-PETcarb_7.00.dat': 'A','Ehyd-PETcarb_9.00.dat':'B'}
@@ -693,7 +696,7 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 			for d in path_list:
 				if dyn_value not in ignore_dyn_MD[ph_f] and ph_f != ingore_ph:
 					# label needed for 'allin_one_f3d' :: 'pH %c MD %d'%(ph_f[-8],dyn_value) 
-					if variant[enzyme] == 0 or variant[enzyme] == 4:
+					if variant[enzyme] == 0 and tpe == 'allin_one' or variant[enzyme] == 4:
 						legend = 'MD %d'%(dyn_value)
 					else:
 						legend = 'pH %c MD %d %c'%(ph_f[-8],dyn_value,subdivision_leg[ph_f])
@@ -718,7 +721,7 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 		ph         = [7,9][0]
 		
 		#md_id = (0,0)
-		ENZ2id = {'Nat':(1,5), 'D206EH237K':(1,6), 'H237K':(1,1), 'H237Knored':(1,1)}
+		ENZ2id = {'Nat':(1,5), 'D206E':(4,6), 'D206EH237K':(1,6), 'H237K':(1,1), 'H237Knored':(1,1)}
 		md_id = ENZ2id[enzyme] 
 		#mmpbsa_cut = -1
 		if tpe == 'one':
@@ -819,18 +822,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	default_mod = True
 	inset_tick      = 10
 	mmpbsa_inset_XY = (0.10,0.10)
+	halving_ids = [[],[1,2,3]][1]
 	# If the flag '-i' is read then 'default_mod' becames False  
 
 	temp_mod = Default_modifier(on=default_mod,tpe=dic_Type[1],
-	anatp=['rmsd','rmsf','radgyr','dist'][0],File=File,File2=File2, 
-	enzyme=['Nat','D206E','D206EH237K','H237K','H237Knored','Nat_nored'][4], mmpbsa=[True,False][0],
-	mmpbsa_cut=-0.5, mmpbsa_inset=[True,False][0], mmpbsa_inset_range=[(169,210),(150,160)][0],
+	anatp=['rmsd','rmsf','radgyr','dist'][3],File=File,File2=File2, 
+	enzyme=['Nat','D206E','D206EH237K','H237K','H237Knored','Nat_nored'][1], mmpbsa=[True,False][0],
+	mmpbsa_cut=-0.5, mmpbsa_inset=[True,False][1], mmpbsa_inset_range=[(169,210),(150,160)][0],
 	merge_legend=merge_legend,supertitle=['%s-BHET pH7'%['IsPETase','D206EH237K'][1],''][1],
 	mean_flag=[True,False][1],rareplot=[True,False][1],interface=[True,False][1],
 	multi_label_loc=(.685,0.5),forced_3Dz=['ph','index'][0],
-	forced_mean=[True,False][1], fmv=[4.65,4.75,4.97][0], ph_reverse=[True,False][1],
-	eng=[True,False][0],fontsize=[8,12,14][1],mdlistrange=range(1,1),
-	igph7md=[],igph9md=[1],igph7cphmd=[],igph9cphmd=[])
+	forced_mean=[True,False][1], fmv=[4.65,4.75,4.97][0], ph_reverse=[True,False][0],
+	eng=[True,False][0],fontsize=[8,12,14][1],mdlistrange=range(1,6),
+	igph7md=[],igph9md=[],igph7cphmd=[],igph9cphmd=[])
 
 	#print("\nmodifiers:",temp_mod)
 	
@@ -1013,7 +1017,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(type=tpe, plot_interface=interface, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut,  fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(type=tpe, plot_interface=interface, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
