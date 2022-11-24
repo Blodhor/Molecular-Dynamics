@@ -1185,21 +1185,38 @@ equil_files: Equilibration files name (without .extension).'''
 			self.prod_cph(ph=ph_range, trescnt=int(res_cnt))
 
 		#gambiarra## Make it right! this have to work after production!!!
-		g = open('execMMPBSA.readme','w')
-		g.write('MMPBSA.py -O -i mmpbsa.in -o RESULTS_MMPBSA.dat -do DECOMP_MMPBSA.dat -sp ../../systemHMR.prmtop -cp COMPLEX-HMR.prmtop -rp RECEPTOR-HMR.prmtop -lp LIGAND-HMR.prmtop -y Production_7.00.nc > exec_ph7_mmpbsa.out &\n')
-		g.close()
-		
-		g = open('simMMPBSAmove.sh','w')
-		description = 'Script - Simple command to move all necessary\n#MMPBSA files to the correct directory. No execution since it is optional.'
-		g.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
-		g.write('mv execMMPBSA.readme Equilibration/\n')
 		if self.docking:
-			g.write('mv execMMPBSA.readme Equilibration/Production_*/\n')
-			g.write('mv mmpbsa.in Equilibration/Production_*/\n')
-			g.write('mv RECEPTOR-HMR.prmtop Equilibration/Production_*/\n')
-			g.write('mv LIGAND-HMR.prmtop Equilibration/Production_*/\n')
-			g.write('mv COMPLEX-HMR.prmtop Equilibration/Production_*/\n')
-		g.close()
+			pH =[]
+			while ph_range[0] <= ph_range[1]:
+				pH.append(ph_i)
+				ph_i += self.pH_step
+
+			if self.cph:
+				prod_nc = 'CpHMD_prod_%.2f.nc'
+			else:
+				prod_nc = 'Production_%.2f.nc'
+			description = 'Script - Run Energy decomposition analysis on each production.'
+			
+			if self.cph:
+				place = 'Cph/CpHMD_prod_'
+			else:
+				place = 'Equilibration/Production_'
+
+			for p in pH:
+				g = open('pH%.2f_execMMPBSA.sh'%p,'w')
+				g.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
+				g.write('cd %s\n'%(place+'%.2f/'%p))
+				g.write('MMPBSA.py -O -i mmpbsa.in -o RESULTS_MMPBSA.dat -do DECOMP_MMPBSA.dat -sp ../../systemHMR.prmtop -cp COMPLEX-HMR.prmtop -rp RECEPTOR-HMR.prmtop -lp LIGAND-HMR.prmtop -y %s > pH%.2f_mmpbsa.out &\n'%(prod_nc%p,p))
+				g.close()
+
+			g = open('simMMPBSAmove.sh','w')
+			description = 'Script - Simple command to move all necessary\n#MMPBSA files to the correct directory. No execution since it is optional.'
+			g.write('#!/bin/bash\n#\n#%s\n#\n#Autor:%s\n#Email:%s\n%s\n'%(description,self.autor,self.email,self.linebreak))
+			g.write('cp mmpbsa.in %s*/\n'%place)
+			g.write('cp RECEPTOR-HMR.prmtop %s*/\n'%place)
+			g.write('cp LIGAND-HMR.prmtop %s*/\n'%place)
+			g.write('cp COMPLEX-HMR.prmtop %s*/\n'%place)
+			g.close()
 		# Minimization-annealing-equilibration-prodMD/CpHMD
 		cmd('rm simulation.sh')
 		f = open('simulation.sh','w')
