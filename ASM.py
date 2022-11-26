@@ -1187,7 +1187,8 @@ equil_files: Equilibration files name (without .extension).'''
 		#gambiarra## Make it right! this have to work after production!!!
 		if self.docking:
 			pH =[]
-			while ph_range[0] <= ph_range[1]:
+			ph_i = ph_range[0]
+			while ph_i <= ph_range[1]:
 				pH.append(ph_i)
 				ph_i += self.pH_step
 
