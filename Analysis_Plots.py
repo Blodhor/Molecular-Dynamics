@@ -51,6 +51,7 @@ class Analysis_plot:
 		mmpbsa: Boolean argument. If True the data will be considered the 'decode_mmpbsa.py' format.
 		mmpbsa_cut: Energy limit for which residue is highlighted on the plot. 
 		'''
+		self.ID_shift = 28
 		self.lang_set          = 0
 		if eng:
 			self.lang_set      = 1
@@ -296,11 +297,11 @@ class Analysis_plot:
 					cor = [0.2,0.4][1]
 				if self.mmpbsa_inset:
 					if i[0] in self.mmpbsa_inset_range:
-						inset1.text(i[0],i[1],self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=inset_color, fontsize=self.fontsize)
+						inset1.text(i[0],i[1],self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=inset_color, fontsize=self.fontsize)
 					else:
-						ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=text_color, fontsize=self.fontsize)
+						ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
 				else:		
-					ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=text_color, fontsize=self.fontsize)
+					ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
 		
 		'''plt.plot(X,Y)
 		plt.title(name, fontsize=self.fontsize)
@@ -354,11 +355,11 @@ class Analysis_plot:
 					cor = [0.2,0.4][1]
 				if self.mmpbsa_inset:
 					if i[0] in self.mmpbsa_inset_range:
-						inset1.text(i[0],i[1],self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=inset_color, fontsize=self.fontsize)
+						inset1.text(i[0],i[1],self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=inset_color, fontsize=self.fontsize)
 					else:
-						ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=text_color, fontsize=self.fontsize)
+						ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
 				else:		
-					ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=text_color, fontsize=self.fontsize)
+					ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
 
 		ax2.plot(X[1],Y[1],color=plot_color)
 		ax2.set_ylim(min(Y[1])-0.5,max(Y[1])+2)
@@ -399,11 +400,11 @@ class Analysis_plot:
 					cor = [0,0.35][1]	
 				if self.mmpbsa_inset:
 					if i[0] in self.mmpbsa_inset_range:
-						inset2.text(i[0],i[1]+cor, self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=inset_color, fontsize=self.fontsize)
+						inset2.text(i[0],i[1]+cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=inset_color, fontsize=self.fontsize)
 					else:
-						ax2.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=text_color, fontsize=self.fontsize)
+						ax2.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
 				else:
-					ax2.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0])+"(%d)"%(i[0]+28), color=text_color, fontsize=self.fontsize)
+					ax2.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
 
 		if self.mmpbsa:			
 			for ts in [ax1,ax2]:
@@ -435,8 +436,7 @@ class Analysis_plot:
 		inset_color = "darkslategray"
 		vline_c     = 'purple'
 		vline_thickness = [0.25,0.75][1]
-		res_correction = 28
-		print('residue correction', res_correction)
+		print('residue correction', self.ID_shift)
 		fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, sharex=True, dpi=self.dpi)
 		max_y = -50
 		min_y = +50
@@ -450,8 +450,8 @@ class Analysis_plot:
 
 		X_0 = []
 		for xx in X[0]:
-			X_0.append(xx+res_correction)
-		#ax1.plot([X_0[0]]*res_correction,[Y[0]]*res_correction,color=plot_color)
+			X_0.append(xx+self.ID_shift)
+		#ax1.plot([X_0[0]]*self.ID_shift,[Y[0]]*self.ID_shift,color=plot_color)
 		ax1.plot(X_0,Y[0],color=plot_color)
 		ax1.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
 		ax1.set_title(name[0], fontsize=self.fontsize)
@@ -485,11 +485,11 @@ class Analysis_plot:
 					cor = [0.2,0.4][1]
 				if self.mmpbsa_inset:
 					if i[0] in self.mmpbsa_inset_range:
-						inset1.text(i[0]+res_correction,i[1],self.mmpbsa_res[0][i[0]-1]+str(i[0]+res_correction), color=inset_color, fontsize=self.fontsize*0.5)
+						inset1.text(i[0]+self.ID_shift,i[1],self.mmpbsa_res[0][i[0]-1]+str(i[0]+self.ID_shift), color=inset_color, fontsize=self.fontsize*0.5)
 					else:
-						ax1.text(i[0]+res_correction, i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]+res_correction), color=text_color, fontsize=self.fontsize*0.5)
+						ax1.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
 				else:		
-					ax1.text(i[0]+res_correction, i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]+res_correction), color=text_color, fontsize=self.fontsize*0.5)
+					ax1.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
 
 		ax2.plot(X_0,Y[1],color=plot_color)
 		ax2.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
@@ -529,11 +529,11 @@ class Analysis_plot:
 					cor = [0,0.35][1]	
 				if self.mmpbsa_inset:
 					if i[0] in self.mmpbsa_inset_range:
-						inset2.text(i[0]+res_correction,i[1]+cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+res_correction), color=inset_color, fontsize=self.fontsize*0.5)
+						inset2.text(i[0]+self.ID_shift,i[1]+cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+self.ID_shift), color=inset_color, fontsize=self.fontsize*0.5)
 					else:
-						ax2.text(i[0]+res_correction, i[1]-cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+res_correction), color=text_color, fontsize=self.fontsize*0.5)
+						ax2.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
 				else:
-					ax2.text(i[0]+res_correction, i[1]-cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+res_correction), color=text_color, fontsize=self.fontsize*0.5)
+					ax2.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
 
 		ax3.plot(X_0,Y[2],color=plot_color)
 		ax3.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
@@ -570,18 +570,18 @@ class Analysis_plot:
 					cor = [0,0.35][1]	
 				if self.mmpbsa_inset:
 					if i[0] in self.mmpbsa_inset_range:
-						inset3.text(i[0]+res_correction,i[1]+cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+res_correction), color=inset_color, fontsize=self.fontsize*0.5)
+						inset3.text(i[0]+self.ID_shift,i[1]+cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+self.ID_shift), color=inset_color, fontsize=self.fontsize*0.5)
 					else:
-						ax3.text(i[0]+res_correction, i[1]-cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+res_correction), color=text_color, fontsize=self.fontsize*0.5)
+						ax3.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
 				else:
-					ax3.text(i[0]+res_correction, i[1]-cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+res_correction), color=text_color, fontsize=self.fontsize*0.5)
+					ax3.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
 
 		if self.mmpbsa:			
 			for ts in [ax1,ax2,ax3]:
 				ts.set_xlabel(Xaxis,fontsize=self.fontsize)
-				ts.axvline(x=132+res_correction,color=vline_c,lw=vline_thickness,zorder=-1)
-				ts.axvline(x=178+res_correction,color=vline_c,lw=vline_thickness,zorder=-1)
-				ts.axvline(x=209+res_correction,color=vline_c,lw=vline_thickness,zorder=-1)
+				ts.axvline(x=132+self.ID_shift,color=vline_c,lw=vline_thickness,zorder=-1)
+				ts.axvline(x=178+self.ID_shift,color=vline_c,lw=vline_thickness,zorder=-1)
+				ts.axvline(x=209+self.ID_shift,color=vline_c,lw=vline_thickness,zorder=-1)
 		
 			ax2.set_ylabel(self.ana_type,fontsize=self.fontsize*1.25)
 		else:
