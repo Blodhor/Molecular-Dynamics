@@ -6,7 +6,7 @@ from mpl_toolkits.axes_grid1.inset_locator import (inset_axes, InsetPosition, ma
 import re
 
 class Analysis_plot:
-	_Types = ['one','two','2ph_2merge','four','four_2merge','allin_one']
+	_Types = ['one','two','2ph_2merge','1c3p','four','four_2merge','allin_one']
 	def __init__(self, type = 'one', print_mean=False, names=[('file.dat','analysis_title')], analysisType = 'rmsd', largerYaxis = False, 
 	Yenlarger = 2, frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
 	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5),
@@ -92,7 +92,7 @@ class Analysis_plot:
 		self.mmpbsa_res           = []
 		self.plot_interface    = plot_interface
 
-		if type == 'allin_one' or type == 'allin_one_f3d':
+		if type == 'allin_one' or type == 'allin_one_f3d' or type == '1c3p':
 			self.restriction_break = True
 
 		if 'radgyr' in analysisType:
@@ -116,6 +116,9 @@ class Analysis_plot:
 		elif XTlabels != -1 and type == 'two':
 			self.plot_two(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
 			name= [XTlabels[0][1], XTlabels[1][1]])
+		elif XTlabels != -1 and type == '1c3p':
+			self.plot_1c3p(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
+			name= [XTlabels[0][1], XTlabels[1][1], XTlabels[2][1]])
 		elif XTlabels != -1 and type == '2ph_2merge': 
 			self.plot_two_2merge(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
 			name= [XTlabels[i][1] for i in range(len(XTlabels))])
@@ -203,17 +206,27 @@ class Analysis_plot:
 				plot_title = fs[1]
 				x = []
 				y = []
+				if self.restriction_break:
+					decomp_res = []
 				default_counter = {'HIP': 'HIS', 'AS4': 'ASP', 'GL4': 'GLU'}
 				for i in t:
 					data = i.split()
 					if "Total" not in i and i != '' and i != '\n':
 						if 'R' in data[2]:
 							if data[0] in default_counter:
-								self.mmpbsa_res.append( default_counter[data[0]] )
+								if self.restriction_break:
+									decomp_res.append( default_counter[data[0]] )
+								else:
+									self.mmpbsa_res.append( default_counter[data[0]] )
 							else:
-								self.mmpbsa_res.append( data[0] )
+								if self.restriction_break:
+									decomp_res.append( data[0] )
+								else:
+									self.mmpbsa_res.append( data[0] )
 							x.append( int(data[1]) )
 							y.append( float(data[3]) )
+				if self.restriction_break:
+					self.mmpbsa_res.append( decomp_res )
 				self.X.append(x)
 				self.Y.append(y)
 				XTlabel.append( (xname,plot_title) )
@@ -402,6 +415,181 @@ class Analysis_plot:
 			
 		#pyplot.subplots can hide redundant axes
 		for ts in [ax1,ax2]:
+			ts.label_outer()
+		
+		if self.supertitle:
+			plt.suptitle(self.suptitle,fontsize=self.fontsize)
+		
+		if not self.plot_interface:
+			if file_name == '':
+				file_name = 'Figure.jpeg'  
+			plt.savefig(file_name,bbox_inches='tight')
+		else:
+			plt.show()
+
+	def plot_1c3p(self, file_name=["Figure_7.jpeg","Figure_8.jpeg",''][-1], X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"]):
+		'''Plots two X-Y datasets sharing x,y - axis.'''
+		
+		mark_color  ="lightsteelblue"
+		plot_color  ="cornflowerblue"
+		inset_color = "darkslategray"
+		vline_c     = 'purple'
+		vline_thickness = [0.25,0.75][1]
+		res_correction = 28
+		print('residue correction', res_correction)
+		fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, sharex=True, dpi=self.dpi)
+		max_y = -50
+		min_y = +50
+		for yy in Y:
+			max_y = max(max_y,max(yy))
+			min_y = min(min_y,min(yy))
+			#print(max_y,min_y)
+		y_tick=np.arange(round(min_y,1),round(max_y,1)+1,round((max_y-min_y)/4,1))
+		plt.setp((ax1, ax2, ax3), yticks=y_tick)
+		plt.subplots_adjust(hspace=0.3)
+
+		X_0 = []
+		for xx in X[0]:
+			X_0.append(xx+res_correction)
+		#ax1.plot([X_0[0]]*res_correction,[Y[0]]*res_correction,color=plot_color)
+		ax1.plot(X_0,Y[0],color=plot_color)
+		ax1.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
+		ax1.set_title(name[0], fontsize=self.fontsize)
+		ax1.grid()
+		if self.mmpbsa:
+			# inset data res 170-210
+			if self.mmpbsa_inset:
+				inset1_x   = []
+				inset1_y   = []
+				for i in self.mmpbsa_inset_range:
+					inset1_x.append( X_0[i] )
+					inset1_y.append( Y[0][i] )
+				inset1 = plt.axes([0,0,1,1],label='upinset')
+				inset1.tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
+				inset1.set_xticks(np.arange(self.mmpbsa_inset_range[0], self.mmpbsa_inset_range[-1]+1, self.mmpbsa_inset_restick), minor=False)
+				ip1 = InsetPosition(ax1, [self.mmpbsa_inset_XY[0],self.mmpbsa_inset_XY[1],0.4,0.45])
+				inset1.set_axes_locator(ip1)
+				mark_inset(ax1, inset1, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=-1)
+				inset1.plot(inset1_x,inset1_y,color=plot_color)
+				#inset1.axvline(x=178,color='green')
+				#inset1.axvline(x=209,color='red')
+			
+			note = self.peaks(X=X[0],Y=Y[0])
+			for i in note:
+				text_color  ='black'
+				cor   = 0
+				if i[1] >0:
+					text_color = 'darkred'
+					cor   = [0,0.2,0.4][2]
+				if i[0] == 180:
+					cor = [0.2,0.4][1]
+				if self.mmpbsa_inset:
+					if i[0] in self.mmpbsa_inset_range:
+						inset1.text(i[0]+res_correction,i[1],self.mmpbsa_res[0][i[0]-1]+str(i[0]+res_correction), color=inset_color, fontsize=self.fontsize*0.5)
+					else:
+						ax1.text(i[0]+res_correction, i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]+res_correction), color=text_color, fontsize=self.fontsize*0.5)
+				else:		
+					ax1.text(i[0]+res_correction, i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]+res_correction), color=text_color, fontsize=self.fontsize*0.5)
+
+		ax2.plot(X_0,Y[1],color=plot_color)
+		ax2.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
+		ax2.set_title(name[1], fontsize=self.fontsize)
+		ax2.grid()
+		#ax2.set_ylim([-4.5,0.2])
+		if self.mmpbsa:
+			if self.mmpbsa_inset:
+				inset2_x   = []
+				inset2_y   = []
+				for i in self.mmpbsa_inset_range:
+					inset2_x.append( X_0[i] )
+					inset2_y.append( Y[1][i] )
+				inset2 = plt.axes([0,0,1,1],label='downinset')
+				inset2.tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
+				inset2.set_xticks(np.arange(self.mmpbsa_inset_range[0], self.mmpbsa_inset_range[-1]+1, self.mmpbsa_inset_restick), minor=False)
+				ip2 = InsetPosition(ax2, [self.mmpbsa_inset_XY[0],self.mmpbsa_inset_XY[1],0.4,0.45])
+				mark_inset(ax2, inset2, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=-1)
+				inset2.set_axes_locator(ip2)
+				inset2.plot(inset2_x,inset2_y,color=plot_color)
+				inset2.axvline(x=209,color='red')
+
+			note = self.peaks(X=X[1],Y=Y[1])
+			for i in note:
+				#ajustments with 'cor' are manual for now 
+				text_color = 'black'
+				cor   = 0
+				if i[1] >0:
+					text_color = 'darkred'
+					cor   = [0,0.2,0.6][0]
+				if i[0] == 178:
+					text_color = 'green'
+					cor = 0.5
+				elif i[0] == 132:
+					cor = [0,0.15,1.2][2]	
+				elif i[0] == 157:
+					cor = [0,0.35][1]	
+				if self.mmpbsa_inset:
+					if i[0] in self.mmpbsa_inset_range:
+						inset2.text(i[0]+res_correction,i[1]+cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+res_correction), color=inset_color, fontsize=self.fontsize*0.5)
+					else:
+						ax2.text(i[0]+res_correction, i[1]-cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+res_correction), color=text_color, fontsize=self.fontsize*0.5)
+				else:
+					ax2.text(i[0]+res_correction, i[1]-cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+res_correction), color=text_color, fontsize=self.fontsize*0.5)
+
+		ax3.plot(X_0,Y[2],color=plot_color)
+		ax3.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
+		ax3.set_title(name[2], fontsize=self.fontsize)
+		ax3.grid()
+		if self.mmpbsa:
+			if self.mmpbsa_inset:
+				inset3_x   = []
+				inset3_y   = []
+				for i in self.mmpbsa_inset_range:
+					inset3_x.append( X_0[i] )
+					inset3_y.append( Y[2][i] )
+				inset3 = plt.axes([0,0,1,1],label='downinset')
+				inset3.tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
+				inset3.set_xticks(np.arange(self.mmpbsa_inset_range[0], self.mmpbsa_inset_range[-1]+1, self.mmpbsa_inset_restick), minor=False)
+				ip3 = InsetPosition(ax3, [self.mmpbsa_inset_XY[0],self.mmpbsa_inset_XY[1],0.4,0.45])
+				mark_inset(ax3, inset3, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=-1)
+				inset3.set_axes_locator(ip3)
+				inset3.plot(inset3_x,inset3_y,color=plot_color)
+				inset3.axvline(x=209,color='red')
+
+			note = self.peaks(X=X[2],Y=Y[2])
+			for i in note:
+				#ajustments with 'cor' are manual for now 
+				text_color = 'black'
+				cor   = 0
+				if i[1] >0:
+					text_color = 'darkred'
+					cor   = [0,0.2,0.6][2]
+				if i[0] == 178:
+					text_color = 'green'
+					cor = 0.8
+				elif i[0] == 157:
+					cor = [0,0.35][1]	
+				if self.mmpbsa_inset:
+					if i[0] in self.mmpbsa_inset_range:
+						inset3.text(i[0]+res_correction,i[1]+cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+res_correction), color=inset_color, fontsize=self.fontsize*0.5)
+					else:
+						ax3.text(i[0]+res_correction, i[1]-cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+res_correction), color=text_color, fontsize=self.fontsize*0.5)
+				else:
+					ax3.text(i[0]+res_correction, i[1]-cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+res_correction), color=text_color, fontsize=self.fontsize*0.5)
+
+		if self.mmpbsa:			
+			for ts in [ax1,ax2,ax3]:
+				ts.set_xlabel(Xaxis,fontsize=self.fontsize)
+				ts.axvline(x=132+res_correction,color=vline_c,lw=vline_thickness,zorder=-1)
+				ts.axvline(x=178+res_correction,color=vline_c,lw=vline_thickness,zorder=-1)
+				ts.axvline(x=209+res_correction,color=vline_c,lw=vline_thickness,zorder=-1)
+		
+			ax2.set_ylabel(self.ana_type,fontsize=self.fontsize*1.25)
+		else:
+			for ts in [ax1,ax2,ax3]:
+				ts.set(xlabel=Xaxis, ylabel=self.ana_type, fontsize=self.fontsize)
+			
+		#pyplot.subplots can hide redundant axes
+		for ts in [ax1,ax2,ax3]:
 			ts.label_outer()
 		
 		if self.supertitle:
@@ -633,7 +821,7 @@ center 10'''
 
 def Default_modifier(on=False,tpe='allin_one', mmpbsa=[True,False][1],
 mmpbsa_inset=False, mmpbsa_cut=-0.5, mmpbsa_inset_range=(169,210), interface=True,
-anatp='dist',File=[],File2=[],enzyme=['Nat','D206E','D206EH237K'][2],
+anatp='dist',File=[],File2=[],enzyme=['Nat','D206E','D206EH237K'][2],met=[0,1][0],
 merge_legend=['NativaS1','NativaS2'],supertitle='Produção',
 mean_flag=False,rareplot=False,multi_label_loc=(.74,0.72),
 forced_3Dz=['ph','index'][1],forced_mean=False, fmv=4.75,
@@ -721,11 +909,19 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 		ph         = [7,9][0]
 		
 		#md_id = (0,0)
-		ENZ2id = {'Nat':(1,5), 'D206E':(4,6), 'D206EH237K':(1,6), 'H237K':(1,1), 'H237Knored':(1,1)}
-		md_id = ENZ2id[enzyme] 
+		ENZ2id = {'WT-D-DH':(1,4,6),'Nat':(1,5), 'D206E':(4,6), 'D206EH237K':(1,6), 'H237K':(1,1), 'H237Knored':(1,1)}
+		md_id = ENZ2id[enzyme]
+		metodo = ['MD','CpHMD'][met] 
 		#mmpbsa_cut = -1
-		if tpe == 'one':
-			File = [('%spH%d-%s-C8X-MD%d_bind.dat'%(path,ph,enzyme,md_id[0]),
+		if enzyme == 'WT-D-DH':
+			File = [('%spH%d-Nat-C8X-MD%d_bind.dat'%(path,ph,md_id[0]),
+			'WT-BHET'),
+			('%spH%d-D206E-C8X-MD%d_bind.dat'%(path,ph,md_id[1]),
+			'D206E-BHET'),
+			('%spH%d-D206EH237K-C8X-MD%d_bind.dat'%(path,ph,md_id[2]),
+			'D206E/H237K-BHET')]
+		elif tpe == 'one':
+			File = [('%spH%d-%s-C8X-%s%d_bind.dat'%(path,ph,enzyme,metodo,md_id[0]),
 			'%s-BHET pH%d MD%d'%(enzyme,ph,md_id[0]))]
 		elif tpe == 'two':
 			#coloca uma linha vertical verde no E206 e um roxa no K209!! 
@@ -782,7 +978,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 '''
-	dic_Type      = {1:'one', 13:'allin_one', 133:'allin_one_f3d', 2:'two', 22: '2ph_2merge', 4:'four', 42: 'four_2merge'}
+	dic_Type      = {1:'one', 13:'allin_one', 133:'allin_one_f3d', -13:'1c3p', 2:'two', 22: '2ph_2merge', 4:'four', 42: 'four_2merge'}
 
 	#default keys
 	interface    = True
@@ -808,6 +1004,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	nano         = True  # False
 	dpi          = [100,200,300][2]
 	mean_flag    = False
+	
+	debug = False
+	debug_dic = {}
 
 	# special cases #IGNORE THIS
 	File         = []
@@ -823,12 +1022,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	inset_tick      = 10
 	mmpbsa_inset_XY = (0.10,0.10)
 	halving_ids = [[],[1,2,3]][1]
+	met= 0 # MD ## met=1 := CpHMD
 	# If the flag '-i' is read then 'default_mod' becames False  
-
+	#tpe=-13 eh 1 coluna 3 linhas
 	temp_mod = Default_modifier(on=default_mod,tpe=dic_Type[1],
 	anatp=['rmsd','rmsf','radgyr','dist'][3],File=File,File2=File2, 
-	enzyme=['Nat','D206E','D206EH237K','H237K','H237Knored','Nat_nored'][1], mmpbsa=[True,False][0],
-	mmpbsa_cut=-0.5, mmpbsa_inset=[True,False][1], mmpbsa_inset_range=[(169,210),(150,160)][0],
+	enzyme=['Nat','D206E','D206EH237K','H237K','H237Knored','Nat_nored','WT-D-DH'][0], mmpbsa=[True,False][0],
+	met=1,mmpbsa_cut=[-0.5,-1.5][0], mmpbsa_inset=[True,False][1], mmpbsa_inset_range=[(169,210),(150,160)][0],
 	merge_legend=merge_legend,supertitle=['%s-BHET pH7'%['IsPETase','D206EH237K'][1],''][1],
 	mean_flag=[True,False][1],rareplot=[True,False][1],interface=[True,False][1],
 	multi_label_loc=(.685,0.5),forced_3Dz=['ph','index'][0],
@@ -845,7 +1045,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-fontsize","-jpeg","-edinsetXYpos","-edinsetX","-edXtick","-edcomp","-edcut","-eng","-h","--help",'-type','-index3d','-mean', '-i', '-anatp','-stitle','-fram2time', '-framstp','-nanosec','-dpi','-lblcrd','-mlbpos']
+	flags = ["&","-v","--version","-fontsize","-jpeg","-edinsetXYpos","-edinsetX","-edXtick","-edcomp","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
 
 	# Flag verification
 	for i in arg:
@@ -855,25 +1055,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 					#Some flags may require a number as the next arg
 					continue
 			except ValueError:
-				if i.lower() not in flags:
+				if i not in flags:
 					print("Unkown Flag used: ", i)
+					print("Please check if the CASE is correct as below!")
+					print("Flags: ",flags)
 					inst_only = True
 					break
 
 	if "-jpeg" in arg:
 		interface = False
-			
+
 	cut = 0 # counter for input flags
 	for i in range(len(arg)):
 		if cut == i:
-			if arg[i].lower() == "&":
+			if arg[i] == "&":
 				break
-			elif arg[i].lower() == "-v" or arg[i].lower() == "--version":
+			elif arg[i] == "-v" or arg[i] == "--version":
 				version_only = True
 				print("Current version: %s\n"%version_n)
 				print(version)
 				break
-			elif arg[i].lower() == "-h" or arg[i].lower() == "--help":
+			elif arg[i] == "-h" or arg[i] == "--help":
 				inst_only = True
 				print("Welcome to Analysis plot %s:\n"%version_n)
 				print("Copyright (C) 2021  Braga, B. C.\nThis program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.\n")
@@ -886,7 +1088,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-jpeg\t\t(Recommended when dpi is too big) Saves picture directly to 'Figure.jpeg' instead of generating the interface.\n")
 				print("\t-mean\t\t(Valid only for type 'allin_one') Print a horizontal line with the mean value of all the data given.\n")
 				print("\t-edcomp\t\t(Valid only for types 'one' and 'two') Sets analysis for energy decomposition on the format of 'decode_mmpbsa.py'.\n")
-				print("\t-edcut\t\tSets the higher energy limit for highlighting residues on the energy decomposition plot.\n")
+				print("\t-edcut\t\tSets the higher energy limit for highlighting residues on the energy decomposition plot. Default:%s\n"%str(mmpbsa_cut))
 				print("\t-edinsetXYpos\t\tSets the inset position relative to the original plot (values between 0 and 1). Ex for 10%% Res axis and 5%% energy axis: -edinsetXYpos 0.1,0.05\n")
 				print("\t-edinsetX\t\tSets the residue range for the inset plot. Ex: -edinsetX 169-210\n")
 				print("\t-edXtick\t\tSets the residue Ticks size. Ex: -edXtick 10\n")
@@ -903,44 +1105,60 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\n\t$ python3 Analysis_Plots.py -type four -stitle Production -anatp radgyr -lblcrd (16.61,200) -i ph7.00_radgyr.dat pH=7.00 ph8.00_radgyr.dat pH=8.00 ph9.00_radgyr.dat pH=9.00 ph10.00_radgyr.dat pH=10.00 -fram2time 10000 -nanosec\n")
 				break
 
-			elif arg[i].lower() == "-type":
+			elif arg[i] == "-debug":
+				debug = True
+				inst_only = True
+				# A flag alone cannot set the loop to jump the next argument 
+				#continue
+			elif arg[i] == "-type":
 				tpe = arg[i+1]
+				debug_dic['tpe'] = arg[i+1] 
 				continue
-			elif arg[i].lower() == "-fontsize":
+			elif arg[i] == "-fontsize":
 				fontsize = int(arg[i+1])
+				debug_dic['fontsize'] = arg[i+1]
 				continue
-			elif arg[i].lower() == "-mean":
+			elif arg[i] == "-mean":
 				mean_flag = True
-				continue
-			elif arg[i].lower() == "-edcomp":
+				debug_dic['mean'] = True
+				#continue
+			elif arg[i] == "-edcomp":
 				mmpbsa = True
-				continue
-			elif arg[i].lower() == "-edcut":
+				debug_dic['edcomp'] = True
+				#continue
+			elif arg[i] == "-edcut":
 				mmpbsa_cut = int(arg[i+1])
+				debug_dic['edcomp cut'] = arg[i+1]
 				continue
-			elif arg[i].lower() == "-edXtick":
+			elif arg[i] == "-edXtick":
 				inset_tick = int(arg[i+1])
+				debug_dic['edXtick'] = arg[i+1]
 				continue
-			elif arg[i].lower() == "-edinsetX":
+			elif arg[i] == "-edinsetX":
 				#169-210
 				range_temp         = arg[i+1].split('-')
 				mmpbsa_inset_range = (int(range_temp[0]),int(range_temp[1]))
+				debug_dic['edinsetX'] = mmpbsa_inset_range
 				continue
-			elif arg[i].lower() == "-edinsetXYpos":
+			elif arg[i] == "-edinsetXYpos":
 				#0.1,0.05
 				rangep_temp         = arg[i+1].split(',')
 				mmpbsa_inset_XY = (float(range_temp[0]),float(range_temp[1]))
+				debug_dic['edinsetXYpos'] = mmpbsa_inset_XY
 				continue
-			elif arg[i].lower() == "-eng":
+			elif arg[i] == "-eng":
 				eng = True
-				continue
-			elif arg[i].lower() == "-index3d":
+				debug_dic['eng'] = True
+				#continue
+			elif arg[i] == "-index3d":
 				tpe = 'allin_one_f3d'
-				continue
-			elif arg[i].lower() == "-anatp":
+				debug_dic['index3d'] = (True,'tpe:'+tpe)
+				#continue
+			elif arg[i] == "-anatp":
 				anatp = arg[i+1]
+				debug_dic['anatp'] = anatp
 				continue
-			elif arg[i].lower() == "-i":
+			elif arg[i] == "-i":
 				default_mod = False
 				File = []
 				#File.append( (arg[i+1], arg[i+2]) ) # arg[i+2] != 'Production pH=7.00' !!
@@ -963,15 +1181,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 							break
 						cc_t += 1
 					cc = cc_t -1
-					#print((a_t,b_t))
+					if debug:
+						print((a_t,b_t))
 					if len(b_t) > 0:
 						File.append( (a_t, b_t) )
 					else:
 						i = cc  
 						break
 					cc += 1
+				debug_dic['i'] = File	
 				continue
-			elif arg[i].lower() == "-stitle":
+			elif arg[i] == "-stitle":
 				sup_t = ''
 				cc = i + 1
 				while cc < len(arg):
@@ -984,31 +1204,41 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 						break
 					cc += 1
 				supertitle = sup_t
+				debug_dic['stitle'] = sup_t
 				continue
-			elif arg[i].lower() == "-lblcrd":
+			elif arg[i] == "-lblcrd":
 				#temp_ar = arg[i+1][1:-1].split(',')
 				#tempx, tempy = arg
 				labx = float(arg[i+1])
 				laby = float(arg[i+2])
+				debug_dic['lblcrd'] = (labx,laby)
 				continue
-			elif arg[i].lower() == "-mlbpos":
+			elif arg[i] == "-mlbpos":
 				multi_label_loc = (float(arg[i+1]),float(arg[i+2]))
+				debug_dic['mlbpos'] = multi_label_loc
 				continue
-			elif arg[i].lower() == "-fram2time":
+			elif arg[i] == "-fram2time":
 				fram2time = True
 				framstp = float(arg[i+1])
+				debug_dic['fram2time'] = (True,framstp)
 				continue
-			elif arg[i].lower() == "-nanosec":
+			elif arg[i] == "-nanosec":
 				nano = True
+				debug_dic['nanosec'] = True
 				#continue
-			elif arg[i].lower() == "-dpi":
+			elif arg[i] == "-dpi":
 				dpi = int(arg[i+1])
+				debug_dic['dpi'] = dpi
 				continue
 			cut +=1
 
 		else: #cut!= i means that the current arg[i] was used in the previous iteration
 			cut = i+1
 
+	if debug:
+		print("Arguments:",arg)
+		print("Input read:",debug_dic)
+				
 	if default_mod and temp_mod != -1:
 		tpe,anatp,File,File2,merge_legend,supertitle,mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize,forced_mean,fmv,mmpbsa,mmpbsa_inset,mmpbsa_inset_range,mmpbsa_cut,interface = temp_mod
 	
