@@ -101,7 +101,7 @@ if __name__ == "__main__":
 	inst_only = False
 	cpin_name = ''
 	cpout_name = ''
-	flags = ["&","-h","--help",'-cpin','-cpout','-lines']
+	flags = ["&","-h","--help",'-cpin','-cpout']
 
 	#pode muda a vontade 'path','cpin','cpout' e 'Default'
 	#  que nao altera nada se tiver flag de entrada
@@ -114,14 +114,12 @@ if __name__ == "__main__":
 	for i in arg:
 		if i[0] == '-':
 			try:
-				if type(float(i)) == type(2.3):
-					#ignore this
-					continue
-			except ValueError:
 				if i.lower() not in flags:
-					print("Unkown Flag used: ", i)
+					print("Unknown Flag used: ", i)
 					inst_only = True
 					break
+			except:
+				print("Unknown input comand, please check the --help option!")
 
 	i = 0
 	while i < len(arg):
