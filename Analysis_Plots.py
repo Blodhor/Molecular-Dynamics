@@ -7,12 +7,12 @@ import re
 
 class Analysis_plot:
 	_Types = ['one','two','2ph_2merge','1c3p','four','four_2merge','allin_one']
-	def __init__(self, type = 'one', print_mean=False, names=[('file.dat','analysis_title')], analysisType = 'rmsd', largerYaxis = False, 
-	Yenlarger = 2, frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
+	def __init__(self, type = 'one', print_mean=False, names=[('file.dat','analysis_title')], analysisType = 'rmsd',
+	frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
 	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5),
 	forced_3Dzaxis=['ph','index'][1], forced_mean=False, fmv=4.75, eng=False, fontsize=10, mmpbsa=False,
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
-	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[]):
+	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False):
 		'''Parameters:
 		
 		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other, 'four'/'four_2merge' datasets in a matrix fashion or multiple datasets in one XY frame ('allin_one').
@@ -21,11 +21,7 @@ class Analysis_plot:
 
 		names: Data Files, the format expected is .dat, if any other is used do not expect a pretty result.
 		
-		analysisType: Y-axis label between: rmsd; rmsf; radgyr.
-		
-		largerYaxis: Boolean argument. Sets if the Y-axis  will enlarge or not.
-		
-		Yenlarger: Sets the Y-axis max value, mutiplying itself to max(Y-dataset). 
+		analysisType: Y-axis label between: rmsd; rmsf; radgyr; dist; prot_state.
 		
 		frameToTime: Boolean argument. For rmsd and radgyr analysis. If True X-axis will change from frame to time (pico seconds).
 			
@@ -100,47 +96,58 @@ class Analysis_plot:
 			self.ana_type = ['Raio de giro ($\AA$)','Radgyr ($\AA$)'][self.lang_set]
 		elif 'dist' in analysisType:
 			self.ana_type = ['Distância ($\AA$)','Distance ($\AA$)'][self.lang_set]
+		elif 'prot_state' in analysisType:
+			self.ana_type = ['Estado de Protonação','Protonation State'][self.lang_set]
 		else:
 			self.ana_type = analysisType.upper()+' ($\AA$)'
 		
 		if self.mmpbsa:
 			XTlabels    = self.XY_decomp(files=names)
-			largerYaxis = [True,False][1]
-			Yenlarger   = 1.2
 		else:
 			XTlabels = self.XY(files=names)
-		#print(XTlabels, '\nnames:',names)
 
-		if XTlabels != -1 and type == 'one':
-			self.plot_one(X=self.X[0], Y=self.Y[0], Xaxis=XTlabels[0][0], 
-			name= XTlabels[0][1], EnlargeYaxis=largerYaxis, Ymax=Yenlarger)
-		elif XTlabels != -1 and type == 'two':
-			self.plot_two(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
-			name= [XTlabels[0][1], XTlabels[1][1]])
-		elif XTlabels != -1 and type == '1c3p':
-			self.plot_1c3p(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
-			name= [XTlabels[0][1], XTlabels[1][1], XTlabels[2][1]])
-		elif XTlabels != -1 and type == '2ph_2merge': 
-			self.plot_two_2merge(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
-			name= [XTlabels[i][1] for i in range(len(XTlabels))])
-		elif XTlabels != -1 and type == 'four':
-			self.plot_four(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
-			name= [XTlabels[i][1] for i in range(len(XTlabels))]) #[XTlabels[0][1], XTlabels[1][1], XTlabels[2][1], XTlabels[3][1]]
-		elif XTlabels != -1 and type == 'four_2merge': 
-			self.plot_four_2merge(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
-			name= [XTlabels[i][1] for i in range(len(XTlabels))])
-		elif XTlabels != -1 and type == 'allin_one':
-			self.multi_in_one(labels=[XTlabels[i][1] for i in range(len(XTlabels))], label_loc=multi_merge_label_loc, eixoy=self.ana_type, eixox=XTlabels[0][0],mean=print_mean)
-		elif XTlabels != -1 and type == 'allin_one_f3d':
-			self.multi_in_one_forced_3d(Zaxis=forced_3Dzaxis,labels=[XTlabels[i][1] for i in range(len(XTlabels))], label_loc=multi_merge_label_loc, titulo =suptitle, eixoy=self.ana_type, eixox=XTlabels[0][0],mean=print_mean)
+		if debug:
+			print(XTlabels, '\nnames:',names)
+			#print(self.X)
+			#print(self.Y)
+			print("tamanho X e Y:",len(self.X[0]),len(self.Y[0]))
+			
 		else:
-			print("Type must in the list:",self._Types, "!\n")
+			if XTlabels != -1 and type == 'one':
+				self.plot_one(X=self.X[0], Y=self.Y[0], Xaxis=XTlabels[0][0], 
+				name= XTlabels[0][1])
+			elif XTlabels != -1 and type == 'two':
+				self.plot_two(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
+				name= [XTlabels[0][1], XTlabels[1][1]])
+			elif XTlabels != -1 and type == '1c3p':
+				self.plot_1c3p(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
+				name= [XTlabels[0][1], XTlabels[1][1], XTlabels[2][1]])
+			elif XTlabels != -1 and type == '2ph_2merge': 
+				self.plot_two_2merge(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
+				name= [XTlabels[i][1] for i in range(len(XTlabels))])
+			elif XTlabels != -1 and type == 'four':
+				self.plot_four(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
+				name= [XTlabels[i][1] for i in range(len(XTlabels))]) #[XTlabels[0][1], XTlabels[1][1], XTlabels[2][1], XTlabels[3][1]]
+			elif XTlabels != -1 and type == 'four_2merge': 
+				self.plot_four_2merge(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
+				name= [XTlabels[i][1] for i in range(len(XTlabels))])
+			elif XTlabels != -1 and type == 'allin_one':
+				self.multi_in_one(labels=[XTlabels[i][1] for i in range(len(XTlabels))], label_loc=multi_merge_label_loc, eixoy=self.ana_type, eixox=XTlabels[0][0],mean=print_mean)
+			elif XTlabels != -1 and type == 'allin_one_f3d':
+				self.multi_in_one_forced_3d(Zaxis=forced_3Dzaxis,labels=[XTlabels[i][1] for i in range(len(XTlabels))], label_loc=multi_merge_label_loc, titulo =suptitle, eixoy=self.ana_type, eixox=XTlabels[0][0],mean=print_mean)
+			else:
+				print("Type must in the list:",self._Types, "!\n")
 
 	def XY(self, files = [('file1.dat','title1'), ('file2.dat','title2')]):
 		''' Gets X and Y datasets and returns its respectives x-label and title as a list of tuples.'''
+		prot_state= False
+		if ['Estado de Protonação','Protonation State'][self.lang_set] in self.ana_type:
+			prot_state = True
 
 		if len(files) in [1,2,4,8] or self.restriction_break:
 			xname = 'T'
+			if prot_state:
+				xname = ['Tempo (ns)','Time (ns)'][self.lang_set]
 			XTlabel = []
 			for fs in files:
 				f = open(fs[0])
@@ -170,22 +177,27 @@ class Analysis_plot:
 							else:
 								xname = ['Tempo (ps)','Time (ps)'][self.lang_set]
 					elif len(data) == 2:
-						x_value = float(data[0])
-						if half_data:
-							if x_value%2 ==0:
-								continue
-							x_value = xcount
+						if prot_state:
+							x.append( float(data[1]) )
+							y.append( int(data[0]) )
+						else:
+							x_value = float(data[0])
+							y.append( float(data[1]) )
+							if half_data:
+								if x_value%2 ==0:
+									continue
+								x_value = xcount
+
 						if 'RMSF' in self.ana_type:
 							x.append( int(x_value) )
-						elif self.frameToTime:
+						elif self.frameToTime and not prot_state:
 							if self.nanosec:
 								x.append( x_value* self.frameStep * self.timeStep/1000)
 							else:
 								x.append( x_value* self.frameStep * self.timeStep)
-						else:
+						elif not prot_state:
 							x.append( x_value )
-						xcount += 1	
-						y.append( float(data[1]) )
+						xcount += 1
 				self.X.append(x)
 				self.Y.append(y)
 				XTlabel.append( (xname,plot_title) )
@@ -249,26 +261,28 @@ class Analysis_plot:
 					notes.append( (X[i],Y[i]) )
 		return notes	
 
-	def plot_one(self, X = [], Y = [], Xaxis = "Frames", name = "Título", EnlargeYaxis = False, Ymax = 2, file_name=''):
+	def plot_one(self, X = [], Y = [], Xaxis = "Frames", name = "Título", file_name=''):
 		'''Plots one X-Y dataset.'''
 
 		mark_color="lightsteelblue"
 		plot_color="cornflowerblue"
 		inset_color = "darkslategray"
-		#fig = plt.figure(dpi=self.dpi)
-		fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
-		#fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
-		if EnlargeYaxis:
-			axes = plt.axes()
-			axes.set_xlim([0,X[len(X)-1]])
-			axes.set_ylim([0,Ymax*max(Y)])
-		ax1.plot(X,Y,color=plot_color)
-		ax1.set_ylabel(self.ana_type, fontsize=self.fontsize)
-		ax1.set_xlabel(Xaxis, fontsize=self.fontsize)
-		ax1.set_ylim(min(Y)-2,max(Y)+0.25)
-		ax1.grid(True)
-
-		if self.mmpbsa:
+		
+		if not self.mmpbsa: 
+			fig = plt.figure(dpi=self.dpi)
+			#fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
+			plt.plot(X,Y,'o',ms=1)
+			plt.title(name, fontsize=self.fontsize)
+			plt.ylabel(self.ana_type, fontsize=self.fontsize)
+			plt.yticks(range(0,max(Y)+1))
+			plt.xlabel(Xaxis, fontsize=self.fontsize)
+		else:
+			fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
+			ax1.plot(X,Y,color=plot_color)
+			ax1.set_ylabel(self.ana_type, fontsize=self.fontsize)
+			ax1.set_xlabel(Xaxis, fontsize=self.fontsize)
+			ax1.grid(True)
+			ax1.set_ylim(min(Y)-2,max(Y)+0.25)
 			# inset data res 170-210
 			if self.mmpbsa_inset:
 				inset1_x   = []
@@ -302,11 +316,6 @@ class Analysis_plot:
 						ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
 				else:		
 					ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
-		
-		'''plt.plot(X,Y)
-		plt.title(name, fontsize=self.fontsize)
-		plt.ylabel(self.ana_type, fontsize=self.fontsize)
-		plt.xlabel(Xaxis, fontsize=self.fontsize)'''
 		
 		if not self.plot_interface:
 			if file_name == '':
@@ -826,24 +835,25 @@ merge_legend=['NativaS1','NativaS2'],supertitle='Produção',
 mean_flag=False,rareplot=False,multi_label_loc=(.74,0.72),
 forced_3Dz=['ph','index'][1],forced_mean=False, fmv=4.75,
 eng=[True,False][0],fontsize=14,mdlistrange=range(1,3), ph_reverse=False,
-igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
+igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[],
+res=('LYS209','LYS 237')):
 
 	if not on:
 		return -1
 	File      = []
 	File2     = []
 			
-	if tpe == 'four':
+	if tpe == 'four' and anatp !='prot_state':
 		path = ['ASP206_GLU_Hotfix1.1/', 'nativaHotfix1.1/All_backbone/'][1]
 		for value in ['7.00','8.00','9.00','10.00']:
 			File.append( ('%sph%s_%s.dat'%(path,value,anatp),'pH='+value) )
-	elif tpe == 'four_2merge':
+	elif tpe == 'four_2merge' and anatp !='prot_state':
 		path         = ['nativaHotfix1.1/All_backbone/', 'ASP206_GLU_Hotfix1.1/']
 		merge_legend = ['Nativa', 'ASP206GLU']
 		for value in ['7.00','8.00','9.00','10.00']:
 			for p in path:
 				File.append( ('%sph%s_%s.dat'%(p,value,anatp),'pH='+value) )
-	elif tpe == '2ph_2merge':
+	elif tpe == '2ph_2merge' and anatp !='prot_state':
 		path = 'PETase_Dynamics/gpu-ultra/' 
 		s1   = 'Jan_no_warp/'
 		s2   = 'Julho_no_warpReplicata/'
@@ -851,7 +861,7 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 		for value in ['7.00','9.00']:
 			File.append( ('%sph%s_%s.dat'%(path+s1,value,anatp),'pH='+value) )
 			File.append( ('%sph%s_%s.dat'%(path+[s2,smut][0],value,anatp),'pH='+value) )
-	elif tpe == 'two':
+	elif tpe == 'two' and anatp !='prot_state':
 		if bckbne_comp:
 			path    = 'nativaHotfix1.1/'
 			ph_comp = '9.00'
@@ -863,7 +873,7 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 			s2   = 'Julho_no_warpReplicata/' #'HIS237_GLU/' #'ASP206_GLU-replicata/'
 			for value in ['7.00','9.00']:
 				File.append( ('%sph%s_%s.dat'%(path+s2,value,anatp),'pH='+value) )
-	elif tpe == 'allin_one' or tpe == 'allin_one_f3d':
+	elif tpe == 'allin_one' or tpe == 'allin_one_f3d' and anatp !='prot_state':
 		variant         = {'Nat':0,'D206E':1,'D206EH237K':2,'Nat_nored':4, 'H237K':3}
 		path0			= 'PETase_Dynamics/gpu-ultra/Dock_run/'
 		path            = [path0+ss for ss in ['Nat_C8X/','D206E_C8X/MD_only/','D206EH237K_C8X/MD_only/','H237K','Nat_nonreduced-C8X/'] ]
@@ -898,13 +908,14 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 					if dyn_value not in ignore_dyn_CpHMD[ph_f]:
 						File2.append( (path[3]+d+ph_f,'pH %c CpHMD %d'%(ph_f[-8],dyn_value)) )
 					dyn_value += 1
-	else:
-		path = ['PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/','PETase_Dynamics/gpu-ultra/Dock_run/H237K_C8X/'][1]
+	elif anatp !='prot_state':
+		path = ['PETase_Dynamics/gpu-ultra/Dock_run/Nat_C8X/','PETase_Dynamics/gpu-ultra/Dock_run/H237K_C8X/'][0]
 		rep_type = ['MD','CpHMD'][0]
 		#framstp  = int(framstp/2)
 		rep  = ['Run0_%s/'%rep_type,'Replicata1_%s/'%rep_type,'Replicata2_%s/'%rep_type,'MD1/']
 		File = [('%sEhyd-PETcarb_%s.dat'%(path+rep[-1],'7.00'),'')]
-	if mmpbsa:
+	
+	if mmpbsa and anatp !='prot_state':
 		path       = 'IsPETase-BHET_binding/'
 		ph         = [7,9][0]
 		
@@ -929,6 +940,14 @@ igph7md=[1,3,5],igph9md=[1,3,5],igph7cphmd=[],igph9cphmd=[]):
 			'MD%d'%(md_id[0])),
 			('%spH%d-%s-C8X-MD%d_bind.dat'%(path,ph,enzyme,md_id[1]),
 			'MD%d'%(md_id[1]))]
+	elif anatp=='prot_state':
+		path       = 'Dev_cpoutAnalyser/'
+		ENZ2id = {'Nat':(1,5), 'D206E':(1,6), 'D206EH237K':(1,6)}
+		md_id = ENZ2id[enzyme]
+		if tpe == 'one':
+			File = [('%s_CpH7MD%d-%s_SvT.dat'%(path+enzyme,md_id[0],res[0]),
+			'%s'%(res[1]))]
+		
 
 	return ( tpe,anatp,File,File2, merge_legend,supertitle, 
 	mean_flag,rareplot,multi_label_loc,forced_3Dz,eng,fontsize,
@@ -988,7 +1007,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	mmpbsa_cut         = -0.5
 	version_only = False
 	inst_only    = False
-	anatp        = ['rmsd','rmsf','radgyr','dist'][3]
+	anatp        = ['rmsd','rmsf','radgyr','dist','prot_state'][3]
 	tpe          = dic_Type[133]
 	fontsize     = 10
 	eng          = False
@@ -1005,8 +1024,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	dpi          = [100,200,300][2]
 	mean_flag    = False
 	
-	debug = False
-	debug_dic = {}
+	debug        = False # for the arguments only
+	debug_inside = [True,False][1] # to help fix plot problems
+	debug_dic    = {}
 
 	# special cases #IGNORE THIS
 	File         = []
@@ -1021,20 +1041,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	default_mod = True
 	inset_tick      = 10
 	mmpbsa_inset_XY = (0.10,0.10)
-	halving_ids = [[],[1,2,3]][1]
+	halving_ids = [[],[1,2,3]][0]
 	met= 0 # MD ## met=1 := CpHMD
 	# If the flag '-i' is read then 'default_mod' becames False  
 	#tpe=-13 eh 1 coluna 3 linhas
 	temp_mod = Default_modifier(on=default_mod,tpe=dic_Type[1],
-	anatp=['rmsd','rmsf','radgyr','dist'][3],File=File,File2=File2, 
-	enzyme=['Nat','D206E','D206EH237K','H237K','H237Knored','Nat_nored','WT-D-DH'][0], mmpbsa=[True,False][0],
+	anatp=['rmsd','rmsf','radgyr','dist','prot_state'][4],File=File,File2=File2, 
+	enzyme=['Nat','D206E','D206EH237K','H237K','H237Knored','Nat_nored','WT-D-DH'][2], mmpbsa=[True,False][1],
 	met=1,mmpbsa_cut=[-0.5,-1.5][0], mmpbsa_inset=[True,False][1], mmpbsa_inset_range=[(169,210),(150,160)][0],
 	merge_legend=merge_legend,supertitle=['%s-BHET pH7'%['IsPETase','D206EH237K'][1],''][1],
 	mean_flag=[True,False][1],rareplot=[True,False][1],interface=[True,False][1],
 	multi_label_loc=(.685,0.5),forced_3Dz=['ph','index'][0],
-	forced_mean=[True,False][1], fmv=[4.65,4.75,4.97][0], ph_reverse=[True,False][0],
+	forced_mean=[True,False][1], fmv=[4.65,4.75,4.97][0], ph_reverse=[True,False][1],
 	eng=[True,False][0],fontsize=[8,12,14][1],mdlistrange=range(1,6),
-	igph7md=[],igph9md=[],igph7cphmd=[],igph9cphmd=[])
+	igph7md=[],igph9md=[1,2,3,4,5,6],igph7cphmd=[],igph9cphmd=[],
+	res=[('GL4178','GLU 206'),('LYS209','LYS 237'),('TYR59','TYR 87')][1])
 
 	#print("\nmodifiers:",temp_mod)
 	
@@ -1092,7 +1113,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-edinsetXYpos\t\tSets the inset position relative to the original plot (values between 0 and 1). Ex for 10%% Res axis and 5%% energy axis: -edinsetXYpos 0.1,0.05\n")
 				print("\t-edinsetX\t\tSets the residue range for the inset plot. Ex: -edinsetX 169-210\n")
 				print("\t-edXtick\t\tSets the residue Ticks size. Ex: -edXtick 10\n")
-				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist.\n")
+				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist;\n\t\tprot_state (Tested only with type one).\n")
 				print("\t-i\t\tinput data file(s) with a name for the plot (separated by space).\n\t\t\tEg.: -i ph7.00_rmsd.dat pH=7.00\n")
 				print("\t-stitle\t\t(Valid only for type 'four') Title for comparison plot.\n")
 				print("\t-lblcrd\t(Valid only for type 'four') Label coords.\n")
@@ -1247,10 +1268,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(type=tpe, plot_interface=interface, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(type=tpe, plot_interface=interface, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
-			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, largerYaxis=True, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
+			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
 			ob4.X = []
 			ob4.Y = []
 			
