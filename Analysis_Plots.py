@@ -276,11 +276,11 @@ class Analysis_plot:
 			#fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
 			if ['Estado de Protonação','Protonation State'][self.lang_set] in self.ana_type:
 				plt.plot(X,Y,'o',ms=1)
+				plt.yticks(range(0,self.max_state+1))
 			else:
 				plt.plot(X,Y)
 			plt.title(name, fontsize=self.fontsize)
 			plt.ylabel(self.ana_type, fontsize=self.fontsize)
-			plt.yticks(range(0,self.max_state+1))
 			plt.xlabel(Xaxis, fontsize=self.fontsize)
 		else:
 			fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
