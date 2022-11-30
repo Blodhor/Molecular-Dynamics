@@ -90,8 +90,68 @@ def cpout_read(arq='system.cpout', residues=[],total_time=200):
 	f.close()
 	return freq_perc
 
-path = 'Dev_cpoutAnalyser/'
-cpin  = 'D206EH237K_CpH7MD1.cpin'
-cpout = 'D206EH237K_CpH7MD1.cpout'
-res = input_resname(path+cpin)
-print(cpout_read(path+cpout,res))
+if __name__ == "__main__":
+	from os import system as cmd
+	import sys
+	arg = sys.argv
+
+	#default lines
+	lini      = 7
+	lfinal    = 273
+	inst_only = False
+	cpin_name = ''
+	cpout_name = ''
+	flags = ["&","-h","--help",'-cpin','-cpout','-lines']
+
+	#pode muda a vontade 'path','cpin','cpout' e 'Default'
+	#  que nao altera nada se tiver flag de entrada
+	path    = 'Dev_cpoutAnalyser/'
+	cpin    = 'D206EH237K_CpH7MD1.cpin'
+	cpout   = 'D206EH237K_CpH7MD1.cpout'
+	Default = True
+
+	# Flag verification
+	for i in arg:
+		if i[0] == '-':
+			try:
+				if type(float(i)) == type(2.3):
+					#ignore this
+					continue
+			except ValueError:
+				if i.lower() not in flags:
+					print("Unkown Flag used: ", i)
+					inst_only = True
+					break
+
+	i = 0
+	while i < len(arg):
+		if inst_only:
+			break
+		elif arg[i].lower() == "&":
+			break
+		elif arg[i].lower() == "-h" or arg[i].lower() == "--help":
+			inst_only = True
+			print("\nUsage:\n\t-h or --help\t\tPrints this message.\n")
+			print("\t-cpin\t\tYour System cpin file.\n")
+			print("\t-cpout\t\tYour System production stage cpout file.\n")
+			print("\t-Ex:\n\t\tpython.exe -cpin system.cpin -cpout Prod.cpout\n")
+			break
+
+		# Key verifications
+		elif arg[i].lower() == '-cpin':
+			Default=False
+			i+=1
+			cpin_name = arg[i]
+		elif arg[i].lower() == '-cpout':
+			Default=False
+			i+=1
+			cpout_name = arg[i]
+		i+=1
+
+	if Default:
+		cpin_name  = path+cpin
+		cpout_name = path+cpout
+
+	if not inst_only:
+		res = input_resname(cpin_name)
+		cpout_read(cpout_name,res)
