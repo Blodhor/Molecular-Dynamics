@@ -47,6 +47,7 @@ class Analysis_plot:
 		mmpbsa: Boolean argument. If True the data will be considered the 'decode_mmpbsa.py' format.
 		mmpbsa_cut: Energy limit for which residue is highlighted on the plot. 
 		'''
+		self.max_state = 0
 		self.ID_shift = 28
 		self.lang_set          = 0
 		if eng:
@@ -180,6 +181,8 @@ class Analysis_plot:
 						if prot_state:
 							x.append( float(data[1]) )
 							y.append( int(data[0]) )
+							if int(data[0]) > self.max_state:
+								self.max_state = int(data[0])
 						else:
 							x_value = float(data[0])
 							y.append( float(data[1]) )
@@ -271,10 +274,13 @@ class Analysis_plot:
 		if not self.mmpbsa: 
 			fig = plt.figure(dpi=self.dpi)
 			#fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
-			plt.plot(X,Y,'o',ms=1)
+			if ['Estado de Protonação','Protonation State'][self.lang_set] in self.ana_type:
+				plt.plot(X,Y,'o',ms=1)
+			else:
+				plt.plot(X,Y)
 			plt.title(name, fontsize=self.fontsize)
 			plt.ylabel(self.ana_type, fontsize=self.fontsize)
-			plt.yticks(range(0,max(Y)+1))
+			plt.yticks(range(0,self.max_state+1))
 			plt.xlabel(Xaxis, fontsize=self.fontsize)
 		else:
 			fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
