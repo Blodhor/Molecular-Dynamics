@@ -13,7 +13,7 @@ def input_resname(arq="system.cpin"):
 			#print("0: ",i)
 			continue
 		if li:
-			if "RESSTATE" not in i:
+			if "Residue:" in i:
 				for j in range(1,len(i)):
 					if "'" not in i[j]:
 						names += i[j]
