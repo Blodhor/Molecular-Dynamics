@@ -141,7 +141,7 @@ if __name__ == "__main__":
 			print("\t-duration\t\tDuration of your production stage in nano seconds.\n")
 			print("\t-cpin\t\tYour System cpin file.\n")
 			print("\t-cpout\t\tYour System production stage cpout file.\n")
-			print("\t-Ex:\n\t\tpython.exe -cpin system.cpin -cpout Prod.cpout -duration 200 -compact 100\n")
+			print("\t-Ex:\n\t\tpython.exe Prot_transition.py -cpin system.cpin -cpout Prod.cpout -duration 200 -compact 100\n")
 			break
 
 		# Key verifications
