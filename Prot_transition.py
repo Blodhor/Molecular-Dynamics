@@ -33,8 +33,9 @@ def input_resname(arq="system.cpin"):
 		res_id.pop()
 	return res_id
 
-def cpout_read(arq='system.cpout', residues=[],total_time=200):
+def cpout_read(arq='system.cpout', residues=[],total_time=200.0,compact=1):
 	#total_time in nanosec
+	#compact: 1==all data; 2==half; 3==a third...
 	arq_name= arq.split('.')[0]
 	f = open(arq,'r')
 	temp = f.readlines()
@@ -66,11 +67,14 @@ def cpout_read(arq='system.cpout', residues=[],total_time=200):
 		f = open("%s-%s_SvT.dat"%(arq_name,nm[0]+nm[1]),"w")
 		f.write('Prot_State\tTime (ns)\n')
 		saves = len(res_rt[i])
-		step  = round(1.0*total_time/saves,4)
-		time  = 0 
+		step  = round(total_time/saves,4)
+		time  = 0
+		counter = 0 
 		for j in res_rt[i]:
-			time += step
-			f.write('\t%s\t%.4f\n'%(j,time))
+			time    += step
+			counter += 1
+			if counter%compact ==0:
+				f.write('\t%s\t%.4f\n'%(j,time))
 		f.close()
 	
 	freq_perc = {}
@@ -96,20 +100,23 @@ if __name__ == "__main__":
 	arg = sys.argv
 
 	#default lines
-	lini      = 7
-	lfinal    = 273
-	inst_only = False
-	cpin_name = ''
+	inst_only  = False
+	cpin_name  = ''
 	cpout_name = ''
-	flags = ["&","-h","--help",'-cpin','-cpout']
+	compact    = 500
+	dur        = 200.0 #ns
+	flags = ["&","-h","--help",'-cpin','-cpout','-compact','-duration']
 
 	#pode muda a vontade 'path','cpin','cpout' e 'Default'
 	#  que nao altera nada se tiver flag de entrada
-	path    = 'Dev_cpoutAnalyser/'
-	cpin    = 'D206EH237K_CpH7MD1.cpin'
-	cpout   = 'D206EH237K_CpH7MD1.cpout'
 	Default = True
-
+	path     = 'Dev_cpoutAnalyser/'
+	enzyme   = ['Nat','D206EH237K'][0]
+	md_id    = {1:1,3:3}[3]
+	inp_name = '%s_CpH7MD%d'%(enzyme,md_id)
+	cpin     = '%s.cpin'%inp_name
+	cpout    = '%s.cpout'%inp_name
+	
 	# Flag verification
 	for i in arg:
 		if i[0] == '-':
@@ -130,12 +137,20 @@ if __name__ == "__main__":
 		elif arg[i].lower() == "-h" or arg[i].lower() == "--help":
 			inst_only = True
 			print("\nUsage:\n\t-h or --help\t\tPrints this message.\n")
+			print("\t-compact\t\tCompression factor.Ex: 1 means all data, 10 means a tenth.\n")
+			print("\t-duration\t\tDuration of your production stage in nano seconds.\n")
 			print("\t-cpin\t\tYour System cpin file.\n")
 			print("\t-cpout\t\tYour System production stage cpout file.\n")
-			print("\t-Ex:\n\t\tpython.exe -cpin system.cpin -cpout Prod.cpout\n")
+			print("\t-Ex:\n\t\tpython.exe -cpin system.cpin -cpout Prod.cpout -duration 200 -compact 100\n")
 			break
 
 		# Key verifications
+		elif arg[i].lower() == '-compact':
+			i+=1
+			compact = int(arg[i])
+		elif arg[i].lower() == '-duration':
+			i+=1
+			dur = float(arg[i])
 		elif arg[i].lower() == '-cpin':
 			Default=False
 			i+=1
@@ -152,4 +167,4 @@ if __name__ == "__main__":
 
 	if not inst_only:
 		res = input_resname(cpin_name)
-		cpout_read(cpout_name,res)
+		cpout_read(arq=cpout_name,residues=res,total_time=dur,compact=compact)
