@@ -168,11 +168,11 @@ class Analysis_plot:
 					if i != '' and i[0] == '#':
 						if 'RMSF' in self.ana_type:
 							xname = ['Resíduo','Residue'][self.lang_set]
-						elif not self.frameToTime:
+						elif not prot_state and not self.frameToTime:
 							xname = data[0][1:]
 							if 'frame' in xname.lower():
 								xname = ['Instância','Frame'][self.lang_set]
-						else:
+						elif not prot_state:
 							if self.nanosec:
 								xname = ['Tempo (ns)','Time (ns)'][self.lang_set]
 							else:
@@ -948,10 +948,10 @@ res=('LYS209','LYS 237')):
 			'MD%d'%(md_id[1]))]
 	elif anatp=='prot_state':
 		path       = 'Dev_cpoutAnalyser/'
-		ENZ2id = {'Nat':(1,5), 'D206E':(1,6), 'D206EH237K':(1,6)}
+		ENZ2id = {'Nat':(1,3), 'D206E':(1,6), 'D206EH237K':(1,6)}
 		md_id = ENZ2id[enzyme]
 		if tpe == 'one':
-			File = [('%s_CpH7MD%d-%s_SvT.dat'%(path+enzyme,md_id[0],res[0]),
+			File = [('%s_CpH7MD%d-%s_SvT.dat'%(path+enzyme,md_id[1],res[0]),
 			'%s'%(res[1]))]
 		
 
@@ -1053,15 +1053,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	#tpe=-13 eh 1 coluna 3 linhas
 	temp_mod = Default_modifier(on=default_mod,tpe=dic_Type[1],
 	anatp=['rmsd','rmsf','radgyr','dist','prot_state'][4],File=File,File2=File2, 
-	enzyme=['Nat','D206E','D206EH237K','H237K','H237Knored','Nat_nored','WT-D-DH'][2], mmpbsa=[True,False][1],
+	enzyme=['Nat','D206E','D206EH237K','H237K','H237Knored','Nat_nored','WT-D-DH'][0], mmpbsa=[True,False][1],
 	met=1,mmpbsa_cut=[-0.5,-1.5][0], mmpbsa_inset=[True,False][1], mmpbsa_inset_range=[(169,210),(150,160)][0],
 	merge_legend=merge_legend,supertitle=['%s-BHET pH7'%['IsPETase','D206EH237K'][1],''][1],
 	mean_flag=[True,False][1],rareplot=[True,False][1],interface=[True,False][1],
 	multi_label_loc=(.685,0.5),forced_3Dz=['ph','index'][0],
 	forced_mean=[True,False][1], fmv=[4.65,4.75,4.97][0], ph_reverse=[True,False][1],
-	eng=[True,False][0],fontsize=[8,12,14][1],mdlistrange=range(1,6),
+	eng=[True,False][0],fontsize=[8,12,14][1],mdlistrange=range(1,4),
 	igph7md=[],igph9md=[1,2,3,4,5,6],igph7cphmd=[],igph9cphmd=[],
-	res=[('GL4178','GLU 206'),('LYS209','LYS 237'),('TYR59','TYR 87')][1])
+	res=[('GL4178','GLU 206'),('LYS209','LYS 237'),('AS4178','ASP 206'),('HIP209','HIS 237'),('TYR59','TYR 87')][3])
 
 	#print("\nmodifiers:",temp_mod)
 	
@@ -1108,7 +1108,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("Copyright (C) 2021  Braga, B. C.\nThis program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.\n")
 				print("\nUsage:\n\t-v or --version\t\tprints current version, the python libraries needed and the data format expected.\n")
 				print("\t-h or --help\t\tprints this message.\n")
-				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information (ex:RMSD for pH7 and pH8).\n\t\tfour: Plots four data files with the same axis information (Eg.:RMSD for pH5, pH6, pH7, pH8).\n\t\tallin_one: Plots every dataset given in one XY frame.\n")
+				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information.\n\t\tfour: Plots four data files with the same axis information.\n\t\tallin_one: Plots every dataset given in one XY frame.\n")
 				print("\t-eng\tSets default texts language to english. If this flag is not called the texts will be set on portuguese.\n")
 				print("\t-fontsize\tInteger value for the fontsize of labels and inplot texts (Default=%d).\n"%fontsize)
 				print("\t-index3d\t(Valid only for type 'allin_one') Creates a 3D plot with a index axis separating your datasets.\n")
