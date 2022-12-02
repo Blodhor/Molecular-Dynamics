@@ -25,13 +25,12 @@ def input_resname(arq="system.cpin"):
 	for i in data:
 		names += i
 	data = names.split(',')
-	if "System:" in data[0]:
-		res_id = data[1:]
-	else:
-		res_id = data
-	if res_id[-1]=='':
-		res_id.pop()
-	return res_id
+	filt = []
+	for i in data:
+		if "Residue:" in i:
+			filt.append(i)
+	
+	return filt
 
 def cpout_read(arq='system.cpout', residues=[],total_time=200.0,compact=1):
 	#total_time in nanosec
@@ -63,6 +62,7 @@ def cpout_read(arq='system.cpout', residues=[],total_time=200.0,compact=1):
 
 	for i in res_rt:
 		tt = i.split(":") # Residue: TYR 59
+		#print(i,tt)
 		nm = tt[1].split()
 		f = open("%s-%s_SvT.dat"%(arq_name,nm[0]+nm[1]),"w")
 		f.write('Prot_State\tTime (ns)\n')
@@ -111,8 +111,8 @@ if __name__ == "__main__":
 	#  que nao altera nada se tiver flag de entrada
 	Default = True
 	path     = 'Dev_cpoutAnalyser/'
-	enzyme   = ['Nat','D206EH237K'][0]
-	md_id    = {1:1,3:3}[3]
+	enzyme   = ['Nat','D206EH237K'][1]
+	md_id    = {1:1,3:3}[1]
 	inp_name = '%s_CpH7MD%d'%(enzyme,md_id)
 	cpin     = '%s.cpin'%inp_name
 	cpout    = '%s.cpout'%inp_name
