@@ -7,21 +7,23 @@ import re
 
 class Analysis_plot:
 	_Types = ['one','two','2ph_2merge','1c3p','four','four_2merge','allin_one']
-	def __init__(self, type = 'one', print_mean=False, names=[('file.dat','analysis_title')], analysisType = 'rmsd',
+	def __init__(self, type = 'one', print_mean=False, names=[('file.dat','analysis_title')], analysisType = 'rmsd',mult_ana_plot=[],
 	frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
 	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5),
 	forced_3Dzaxis=['ph','index'][1], forced_mean=False, fmv=4.75, eng=False, fontsize=10, mmpbsa=False,
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
-	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False):
+	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg'):
 		'''Parameters:
 		
+		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
+
 		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other, 'four'/'four_2merge' datasets in a matrix fashion or multiple datasets in one XY frame ('allin_one').
 
 		print_mean: (For type 'allin_one') prints the mean line of all data
 
 		names: Data Files, the format expected is .dat, if any other is used do not expect a pretty result.
 		
-		analysisType: Y-axis label between: rmsd; rmsf; radgyr; dist; prot_state.
+		analysisType: Y-axis label between: rmsd; rmsf; radgyr; dist; edcomp; prot_state.
 		
 		frameToTime: Boolean argument. For rmsd and radgyr analysis. If True X-axis will change from frame to time (pico seconds).
 			
@@ -47,6 +49,7 @@ class Analysis_plot:
 		mmpbsa: Boolean argument. If True the data will be considered the 'decode_mmpbsa.py' format.
 		mmpbsa_cut: Energy limit for which residue is highlighted on the plot. 
 		'''
+		self.file_name = file_name
 		self.max_state = 0
 		self.ID_shift = 28
 		self.lang_set          = 0
@@ -102,10 +105,48 @@ class Analysis_plot:
 		else:
 			self.ana_type = analysisType.upper()+' ($\AA$)'
 		
-		if self.mmpbsa:
-			XTlabels    = self.XY_decomp(files=names)
+		self.mult_ana = False
+		self.ana_list = []
+		if len(mult_ana_plot) == len(names):
+			self.mult_ana = True
+			self.ana_list = mult_ana_plot
+			##
+			if type in ['2ph_2merge','four_2merge','allin_one','allin_one_f3d']:
+				XTlabels = -1
+				print("Can not merge different types of analysis into one plot.")
+			else:
+				XTlabels=[]
+				new_list = []
+				j=-1
+				for i in self.ana_list:
+					j +=1
+					if i =='edcomp':
+						new_list.append(['Decomposição de energia\n(kcal/mol)','Energy decomposition\n(kcal/mol)'][self.lang_set])
+						XTlabels.extend( self.XY_decomp(files=names) )
+					else:
+						if i=='radgyr':
+							temp = ['Raio de giro ($\AA$)','Radgyr ($\AA$)'][self.lang_set]
+						elif i=='dist':
+							temp = ['Distância ($\AA$)','Distance ($\AA$)'][self.lang_set] 
+						elif i=='prot_state':
+							temp = ['Estado de Protonação','Protonation State'][self.lang_set] 
+						else:
+							temp = analysisType.upper()+' ($\AA$)'
+						new_list.append( temp )
+						if debug:
+							print(temp)
+						XTlabels.extend( self.XY(files=[names[j]],ana_type=temp) )
+				self.ana_list = new_list
 		else:
-			XTlabels = self.XY(files=names)
+			if len(mult_ana_plot) >0 and len(names)> 2:
+				print("'-multana' doesn't include the analysis for all the files!")
+				print("-multana: ",mult_ana_plot)
+				print("-i:", names)
+				XTlabels = -1
+			elif self.mmpbsa:
+				XTlabels = self.XY_decomp(files=names)
+			else:
+				XTlabels = self.XY(files=names,ana_type=self.ana_type)
 
 		if debug:
 			print(XTlabels, '\nnames:',names)
@@ -118,17 +159,17 @@ class Analysis_plot:
 				self.plot_one(X=self.X[0], Y=self.Y[0], Xaxis=XTlabels[0][0], 
 				name= XTlabels[0][1])
 			elif XTlabels != -1 and type == 'two':
-				self.plot_two(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
+				self.plot_two(X=self.X, Y=self.Y, Xaxis=[XTlabels[0][0],XTlabels[1][0]],
 				name= [XTlabels[0][1], XTlabels[1][1]])
 			elif XTlabels != -1 and type == '1c3p':
-				self.plot_1c3p(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
+				self.plot_1c3p(X=self.X, Y=self.Y, Xaxis=[XTlabels[0][0],XTlabels[1][0],XTlabels[2][0]],
 				name= [XTlabels[0][1], XTlabels[1][1], XTlabels[2][1]])
+			elif XTlabels != -1 and type == 'four':
+				self.plot_four(X=self.X, Y=self.Y, Xaxis=[XTlabels[0][0],XTlabels[1][0],XTlabels[2][0],XTlabels[3][0]],
+				name= [XTlabels[i][1] for i in range(len(XTlabels))]) #[XTlabels[0][1], XTlabels[1][1], XTlabels[2][1], XTlabels[3][1]]
 			elif XTlabels != -1 and type == '2ph_2merge': 
 				self.plot_two_2merge(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
 				name= [XTlabels[i][1] for i in range(len(XTlabels))])
-			elif XTlabels != -1 and type == 'four':
-				self.plot_four(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
-				name= [XTlabels[i][1] for i in range(len(XTlabels))]) #[XTlabels[0][1], XTlabels[1][1], XTlabels[2][1], XTlabels[3][1]]
 			elif XTlabels != -1 and type == 'four_2merge': 
 				self.plot_four_2merge(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
 				name= [XTlabels[i][1] for i in range(len(XTlabels))])
@@ -139,10 +180,10 @@ class Analysis_plot:
 			else:
 				print("Type must in the list:",self._Types, "!\n")
 
-	def XY(self, files = [('file1.dat','title1'), ('file2.dat','title2')]):
+	def XY(self, files = [('file1.dat','title1'), ('file2.dat','title2')],ana_type='self.ana_type'):
 		''' Gets X and Y datasets and returns its respectives x-label and title as a list of tuples.'''
 		prot_state= False
-		if ['Estado de Protonação','Protonation State'][self.lang_set] in self.ana_type:
+		if ['Estado de Protonação','Protonation State'][self.lang_set] in ana_type:
 			prot_state = True
 
 		if len(files) in [1,2,4,8] or self.restriction_break:
@@ -166,7 +207,7 @@ class Analysis_plot:
 				for i in t:
 					data = i.split()
 					if i != '' and i[0] == '#':
-						if 'RMSF' in self.ana_type:
+						if 'RMSF' in ana_type:
 							xname = ['Resíduo','Residue'][self.lang_set]
 						elif not prot_state and not self.frameToTime:
 							xname = data[0][1:]
@@ -191,7 +232,7 @@ class Analysis_plot:
 									continue
 								x_value = xcount
 
-						if 'RMSF' in self.ana_type:
+						if 'RMSF' in ana_type:
 							x.append( int(x_value) )
 						elif self.frameToTime and not prot_state:
 							if self.nanosec:
@@ -213,7 +254,8 @@ class Analysis_plot:
 
 		if len(files) in [1,2,4,8] or self.restriction_break:
 			xname = ['Resíduo','Residue'][self.lang_set]
-			self.ana_type = ['Decomposição de energia\n(kcal/mol)','Energy decomposition\n(kcal/mol)'][self.lang_set]
+			if not self.mult_ana:
+				self.ana_type = ['Decomposição de energia\n(kcal/mol)','Energy decomposition\n(kcal/mol)'][self.lang_set]
 			XTlabel = []
 			for fs in files:
 				f = open(fs[0])
@@ -264,7 +306,7 @@ class Analysis_plot:
 					notes.append( (X[i],Y[i]) )
 		return notes	
 
-	def plot_one(self, X = [], Y = [], Xaxis = "Frames", name = "Título", file_name=''):
+	def plot_one(self, X = [], Y = [], Xaxis = "Frames", name = "Título"):
 		'''Plots one X-Y dataset.'''
 
 		mark_color="lightsteelblue"
@@ -324,25 +366,46 @@ class Analysis_plot:
 					ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
 		
 		if not self.plot_interface:
-			if file_name == '':
-				file_name = 'Figure.jpeg'  
-			plt.savefig(file_name,bbox_inches='tight')
+			plt.savefig(self.file_name,bbox_inches='tight')
 		else:
 			plt.show()
 
-	def plot_two(self, file_name=["Figure_7.jpeg","Figure_8.jpeg",''][-1], X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"]):
+	def plot_two(self, X = [[], []], Y = [[], []], Xaxis = ["Frames"], name = ["Título"]):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 		
 		mark_color  ="lightsteelblue"
 		plot_color  ="cornflowerblue"
 		inset_color = "darkslategray"
-		fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True, dpi=self.dpi)
-		ax1.plot(X[0],Y[0],color=plot_color)
-		ax1.set_ylim(min(Y[0])-0.5,max(Y[0])+2)
+		share=True
+		if self.mult_ana:
+			share = False
+		fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=share, dpi=self.dpi)
+		anatest = ['Estado de Protonação','Protonation State'][self.lang_set]
+		if self.mult_ana:
+			jj = -1
+			for ts in [ax1, ax2]:
+				jj+=1 
+				if self.ana_list[0]==anatest:
+					plt.setp(ts, yticks=range(0,self.max_state+1))
+				'''else:
+					plt.setp(ts, yticks=y_tick)'''
+
+		if self.mult_ana and self.ana_list[0]==anatest or anatest in self.ana_type:
+			ax1.plot(X[0],Y[0],'o',ms=1)
+		else:
+			ax1.plot(X[0],Y[0],color=plot_color)
+			ax1.set_ylim(min(Y[0])-0.5,max(Y[0])+0.5)
 		ax1.set_title(name[0], fontsize=self.fontsize)
 		ax1.grid()
-		if self.mmpbsa:
+
+		if self.mult_ana and self.ana_list[0]=='edcomp' or self.mmpbsa:
 			# inset data res 170-210
+			ax1.set_xlabel(Xaxis[0],fontsize=self.fontsize)
+			if self.mult_ana:
+				ylb = self.ana_list[0]
+			else:
+				ylb = self.ana_type
+			ax1.set_ylabel(ylb,fontsize=self.fontsize)
 			if self.mmpbsa_inset:
 				inset1_x   = []
 				inset1_y   = []
@@ -375,13 +438,30 @@ class Analysis_plot:
 						ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
 				else:		
 					ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
-
-		ax2.plot(X[1],Y[1],color=plot_color)
-		ax2.set_ylim(min(Y[1])-0.5,max(Y[1])+2)
+		else:
+			if self.mult_ana:
+				ylb = self.ana_list[0]
+			else:
+				ylb = self.ana_type
+			ax1.set_xlabel(Xaxis[0], fontsize=self.fontsize)
+			ax1.set_ylabel(ylb, fontsize=self.fontsize)	
+		
+		if self.mult_ana and self.ana_list[1]==anatest or anatest in self.ana_type:
+			ax2.plot(X[1],Y[1],'o',ms=1)
+		else:
+			ax2.plot(X[1],Y[1],color=plot_color)
+			ax2.set_ylim(min(Y[1])-0.5,max(Y[1])+2)
 		ax2.set_title(name[1], fontsize=self.fontsize)
 		ax2.grid()
 		#ax2.set_ylim([-4.5,0.2])
-		if self.mmpbsa:
+		if self.mult_ana and self.ana_list[1]=='edcomp' or self.mmpbsa:
+			ax2.set_xlabel(Xaxis[1],fontsize=self.fontsize)
+			if self.mult_ana:
+				ylb = self.ana_list[1]
+			else:
+				ylb = self.ana_type
+			ax2.set_ylabel(ylb,fontsize=self.fontsize)
+			
 			if self.mmpbsa_inset:
 				inset2_x   = []
 				inset2_y   = []
@@ -420,14 +500,13 @@ class Analysis_plot:
 						ax2.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
 				else:
 					ax2.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
-
-		if self.mmpbsa:			
-			for ts in [ax1,ax2]:
-				ts.set_xlabel(Xaxis,fontsize=self.fontsize)
-				ts.set_ylabel(self.ana_type,fontsize=self.fontsize)
 		else:
-			for ts in [ax1,ax2]:
-				ts.set(xlabel=Xaxis, ylabel=self.ana_type, fontsize=self.fontsize)
+			if self.mult_ana:
+				ylb = self.ana_list[1]
+			else:
+				ylb = self.ana_type
+			ax2.set_xlabel(Xaxis[1], fontsize=self.fontsize)
+			ax2.set_ylabel(ylb, fontsize=self.fontsize)
 			
 		#pyplot.subplots can hide redundant axes
 		for ts in [ax1,ax2]:
@@ -437,21 +516,20 @@ class Analysis_plot:
 			plt.suptitle(self.suptitle,fontsize=self.fontsize)
 		
 		if not self.plot_interface:
-			if file_name == '':
-				file_name = 'Figure.jpeg'  
-			plt.savefig(file_name,bbox_inches='tight')
+			plt.savefig(self.file_name,bbox_inches='tight')
 		else:
 			plt.show()
 
-	def plot_1c3p(self, file_name=["Figure_7.jpeg","Figure_8.jpeg",''][-1], X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"]):
+	def plot_1c3p(self, X = [[], []], Y = [[], []], Xaxis = ["Frames"], name = ["Título"]):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 		
+		#testar com multi ana!!!!!!!!!!!!!11
+
 		mark_color  ="lightsteelblue"
 		plot_color  ="cornflowerblue"
 		inset_color = "darkslategray"
 		vline_c     = 'purple'
 		vline_thickness = [0.25,0.75][1]
-		print('residue correction', self.ID_shift)
 		fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, sharex=True, dpi=self.dpi)
 		max_y = -50
 		min_y = +50
@@ -460,18 +538,41 @@ class Analysis_plot:
 			min_y = min(min_y,min(yy))
 			#print(max_y,min_y)
 		y_tick=np.arange(round(min_y,1),round(max_y,1)+1,round((max_y-min_y)/4,1))
-		plt.setp((ax1, ax2, ax3), yticks=y_tick)
+		
+		anatest = ['Estado de Protonação','Protonation State'][self.lang_set]
+		anatest2 = ['Decomposição de energia\n(kcal/mol)','Energy decomposition\n(kcal/mol)'][self.lang_set] 
+		if not self.mult_ana:
+			plt.setp((ax1, ax2, ax3), yticks=y_tick)
+		else:
+			jj = -1
+			for ts in [ax1, ax2, ax3]:
+				jj+=1 
+				if self.ana_list[jj]==anatest:
+					plt.setp(ts, yticks=range(0,self.max_state+1))
+				else:
+					plt.setp(ts, yticks=y_tick)
 		plt.subplots_adjust(hspace=0.3)
 
-		X_0 = []
-		for xx in X[0]:
-			X_0.append(xx+self.ID_shift)
-		#ax1.plot([X_0[0]]*self.ID_shift,[Y[0]]*self.ID_shift,color=plot_color)
-		ax1.plot(X_0,Y[0],color=plot_color)
-		ax1.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
+		if self.mult_ana and self.ana_list[0]==anatest or anatest in self.ana_type:
+			ax1.plot(X[0],Y[0],'o',ms=1)
+		elif anatest2 in self.ana_type:
+			print('residue correction', self.ID_shift)
+			X_0 = []
+			for xx in X[0]:
+				X_0.append(xx+self.ID_shift)
+			ax1.plot(X_0,Y[0],color=plot_color)
+			ax1.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
+		else:
+			ax1.plot(X[0],Y[0],color=plot_color)
 		ax1.set_title(name[0], fontsize=self.fontsize)
 		ax1.grid()
-		if self.mmpbsa:
+		if self.mult_ana and self.ana_list[0]=='edcomp' or self.mmpbsa:
+			ax1.set_xlabel(Xaxis[0],fontsize=self.fontsize)
+			if self.mult_ana:
+				ylb = self.ana_list[0]
+			else:
+				ylb = self.ana_type
+			ax1.set_ylabel(ylb,fontsize=self.fontsize)
 			# inset data res 170-210
 			if self.mmpbsa_inset:
 				inset1_x   = []
@@ -506,12 +607,26 @@ class Analysis_plot:
 				else:		
 					ax1.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
 
-		ax2.plot(X_0,Y[1],color=plot_color)
-		ax2.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
+		if self.mult_ana and self.ana_list[1]==anatest or anatest in self.ana_type:
+			ax2.plot(X[1],Y[1],'o',ms=1)
+		elif anatest2 in self.ana_type:
+			X_1 = []
+			for xx in X[1]:
+				X_1.append(xx+self.ID_shift)
+			ax2.plot(X_1,Y[1],color=plot_color)
+			ax2.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
+		else:
+			ax2.plot(X[1],Y[1],color=plot_color)
 		ax2.set_title(name[1], fontsize=self.fontsize)
 		ax2.grid()
 		#ax2.set_ylim([-4.5,0.2])
-		if self.mmpbsa:
+		if self.mult_ana and self.ana_list[1]=='edcomp' or self.mmpbsa:
+			ax2.set_xlabel(Xaxis[1],fontsize=self.fontsize)
+			if self.mult_ana:
+				ylb = self.ana_list[1]
+			else:
+				ylb = self.ana_type
+			ax2.set_ylabel(ylb,fontsize=self.fontsize)
 			if self.mmpbsa_inset:
 				inset2_x   = []
 				inset2_y   = []
@@ -550,11 +665,25 @@ class Analysis_plot:
 				else:
 					ax2.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
 
-		ax3.plot(X_0,Y[2],color=plot_color)
-		ax3.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
+		if self.mult_ana and self.ana_list[2]==anatest or anatest in self.ana_type:
+			ax3.plot(X[2],Y[2],'o',ms=1)
+		elif anatest2 in self.ana_type:
+			X_2 = []
+			for xx in X[2]:
+				X_2.append(xx+self.ID_shift)
+			ax3.plot(X_2,Y[2],color=plot_color)
+			ax3.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
+		else:
+			ax3.plot(X[2],Y[2],color=plot_color)
 		ax3.set_title(name[2], fontsize=self.fontsize)
 		ax3.grid()
-		if self.mmpbsa:
+		if self.mult_ana and self.ana_list[2]=='edcomp' or self.mmpbsa:
+			ax3.set_xlabel(Xaxis[2],fontsize=self.fontsize)
+			if self.mult_ana:
+				ylb = self.ana_list[2]
+			else:
+				ylb = self.ana_type
+			ax3.set_ylabel(ylb,fontsize=self.fontsize)
 			if self.mmpbsa_inset:
 				inset3_x   = []
 				inset3_y   = []
@@ -591,18 +720,28 @@ class Analysis_plot:
 				else:
 					ax3.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
 
-		if self.mmpbsa:			
+		if self.mult_ana:
+			counter = -1
 			for ts in [ax1,ax2,ax3]:
-				ts.set_xlabel(Xaxis,fontsize=self.fontsize)
+				counter += 1
+				ts.set_xlabel(Xaxis[counter],fontsize=self.fontsize)
+				ts.set_ylabel(self.ana_list[counter],fontsize=self.fontsize*0.8)	
+		elif self.mmpbsa:
+			counter=-1			
+			for ts in [ax1,ax2,ax3]:
+				counter+=1
+				ts.set_xlabel(Xaxis[counter],fontsize=self.fontsize)
 				ts.axvline(x=132+self.ID_shift,color=vline_c,lw=vline_thickness,zorder=-1)
 				ts.axvline(x=178+self.ID_shift,color=vline_c,lw=vline_thickness,zorder=-1)
 				ts.axvline(x=209+self.ID_shift,color=vline_c,lw=vline_thickness,zorder=-1)
-		
+			#labelling ax2 only but with bigger font
 			ax2.set_ylabel(self.ana_type,fontsize=self.fontsize*1.25)
 		else:
+			counter = -1
 			for ts in [ax1,ax2,ax3]:
-				ts.set(xlabel=Xaxis, ylabel=self.ana_type, fontsize=self.fontsize)
-			
+				counter += 1
+				ts.set_xlabel(Xaxis[counter], fontsize=self.fontsize)
+				ts.set_ylabel(self.ana_type, fontsize=self.fontsize)	
 		#pyplot.subplots can hide redundant axes
 		for ts in [ax1,ax2,ax3]:
 			ts.label_outer()
@@ -611,13 +750,11 @@ class Analysis_plot:
 			plt.suptitle(self.suptitle,fontsize=self.fontsize)
 		
 		if not self.plot_interface:
-			if file_name == '':
-				file_name = 'Figure.jpeg'  
-			plt.savefig(file_name,bbox_inches='tight')
+			plt.savefig(self.file_name,bbox_inches='tight')
 		else:
 			plt.show()
 
-	def plot_two_2merge(self, X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"], file_name=''):
+	def plot_two_2merge(self, X = [[], []], Y = [[], []], Xaxis = "Frames", name = ["Título"]):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 
 		fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True, sharey=True, dpi=self.dpi)
@@ -641,13 +778,11 @@ class Analysis_plot:
 			plt.suptitle(self.suptitle,fontsize=self.fontsize)
 		
 		if not self.plot_interface:
-			if file_name == '':
-				file_name = 'Figure.jpeg'  
-			plt.savefig(file_name,bbox_inches='tight')
+			plt.savefig(self.file_name,bbox_inches='tight')
 		else:
 			plt.show()
 
-	def plot_four(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"], file_name=''):
+	def plot_four(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = ["Frames"], name = ["Título"]):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 
 		plt.figure(dpi=self.dpi)
@@ -655,33 +790,38 @@ class Analysis_plot:
 		plt.plot(X[0],Y[0])
 		plt.text(x=self.labelpx, y=self.labelpy, s=name[0], color=self.label_color, fontsize=self.fontsize)
 		plt.ylabel(self.ana_type, fontsize=self.fontsize)
+		plt.xlabel(Xaxis[0], fontsize=self.fontsize)
 		plt.grid(True)
 		ax2 = plt.subplot(222, sharey=ax1)		
 		plt.plot(X[1],Y[1])
 		plt.text(x=self.labelpx, y=self.labelpy, s=name[1], color=self.label_color, fontsize=self.fontsize)
+		plt.ylabel(self.ana_type, fontsize=self.fontsize)
+		plt.xlabel(Xaxis[1], fontsize=self.fontsize)
 		plt.grid(True)
 		ax3 = plt.subplot(223, sharex=ax1)
 		plt.plot(X[2],Y[2])
 		plt.text(x=self.labelpx, y=self.labelpy, s=name[2], color=self.label_color, fontsize=self.fontsize)
 		plt.ylabel(self.ana_type, fontsize=self.fontsize)
-		plt.xlabel(Xaxis, fontsize=self.fontsize)
+		plt.xlabel(Xaxis[2], fontsize=self.fontsize)
 		plt.grid(True)
 		ax4 = plt.subplot(224, sharex=ax2, sharey=ax3)
 		plt.plot(X[3],Y[3])
 		plt.text(x=self.labelpx, y=self.labelpy, s=name[3], color=self.label_color, fontsize=self.fontsize)
-		plt.xlabel(Xaxis, fontsize=self.fontsize)
+		plt.ylabel(self.ana_type, fontsize=self.fontsize)
+		plt.xlabel(Xaxis[3], fontsize=self.fontsize)
 		plt.grid(True)
 		if self.supertitle:
 			plt.suptitle(self.suptitle,fontsize=self.fontsize)
 		
+		for ts in [ax1,ax2,ax3,ax4]:
+			ts.label_outer()
+
 		if not self.plot_interface:
-			if file_name == '':
-				file_name = 'Figure.jpeg'  
-			plt.savefig(file_name,bbox_inches='tight')
+			plt.savefig(self.file_name,bbox_inches='tight')
 		else:
 			plt.show()
 
-	def plot_four_2merge(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"], file_name=''):
+	def plot_four_2merge(self, X = [[], [], [], []], Y = [[], [], [], []], Xaxis = "Frames", name = ["Título"]):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 
 		fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2, sharex=True, sharey=True, dpi=self.dpi)
@@ -706,13 +846,11 @@ class Analysis_plot:
 			plt.suptitle(self.suptitle,fontsize=self.fontsize)
 		
 		if not self.plot_interface:
-			if file_name == '':
-				file_name = 'Figure.jpeg'  
-			plt.savefig(file_name,bbox_inches='tight')
+			plt.savefig(self.file_name,bbox_inches='tight')
 		else:
 			plt.show()
 
-	def multi_in_one(self, file_name=["Figure_6.jpeg",''][1], labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), eixoy="Y(X)", eixox="X",mean=False):
+	def multi_in_one(self, labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), eixoy="Y(X)", eixox="X",mean=False):
     	# X = [[],[],'...'], Y = [[],[],'...']
 		# X := self.X ;      Y := self.Y
 		if len(self.X) != len(self.Y):
@@ -742,13 +880,11 @@ class Analysis_plot:
 		plt.xlabel(eixox, fontsize=self.fontsize)
 		
 		if not self.plot_interface:
-			if file_name == '':
-				file_name = 'Figure.jpeg'  
-			plt.savefig(file_name,bbox_inches='tight')
+			plt.savefig(self.file_name,bbox_inches='tight')
 		else:
 			plt.show()
 
-	def multi_in_one_forced_3d(self, file_name=["Figure.jpeg",''][1],text=['',"(I)","(II)"][0], Zaxis=['ph','index'][1], labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), titulo ="Ajuste da curva T1", eixoy="Y(X)", eixox="X",mean=False):
+	def multi_in_one_forced_3d(self,text=['',"(I)","(II)"][0], Zaxis=['ph','index'][1], labels=['Run 0','Replicata 1','...'], label_loc=(0.5,0.5), titulo ="Ajuste da curva T1", eixoy="Y(X)", eixox="X",mean=False):
 		if len(self.X) != len(self.Y):
 			print('For some reason the number of Y datasets is different from de number of X datasets.')
 			return -1
@@ -828,9 +964,7 @@ center 10'''
 		#ax1.plot(Xw,Yw,'o',color=w_color,ms=pointsize)
 		
 		if not self.plot_interface:
-			if file_name == '':
-				file_name = 'Figure.jpeg'  
-			plt.savefig(file_name,bbox_inches='tight')
+			plt.savefig(self.file_name,bbox_inches='tight')
 		else:
 			plt.show()
 
@@ -1043,6 +1177,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	rareplot     = False
 	multi_label_loc=(.685,0.5)
 	#mmpbsa_cut must be negative!!
+	mult_ana_plot = [] # multiple analysis
+	file_name = 'Figure.jpeg'
 
 	default_mod = True
 	inset_tick      = 10
@@ -1072,7 +1208,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-fontsize","-jpeg","-edinsetXYpos","-edinsetX","-edXtick","-edcomp","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
+	flags = ["&","-v","--version","-fontsize","-jpeg","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
 
 	# Flag verification
 	for i in arg:
@@ -1114,12 +1250,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-index3d\t(Valid only for type 'allin_one') Creates a 3D plot with a index axis separating your datasets.\n")
 				print("\t-jpeg\t\t(Recommended when dpi is too big) Saves picture directly to 'Figure.jpeg' instead of generating the interface.\n")
 				print("\t-mean\t\t(Valid only for type 'allin_one') Print a horizontal line with the mean value of all the data given.\n")
-				print("\t-edcomp\t\t(Valid only for types 'one' and 'two') Sets analysis for energy decomposition on the format of 'decode_mmpbsa.py'.\n")
+				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist;\n\t\tedcomp (Valid only for types 'one' and 'two') Energy decomposition on the format of 'decode_mmpbsa.py'\n\t\tprot_state (Tested only with type one).\n")
+				print("\t-multana\t\t(Has priority over 'anatp', and it's empty by default) Sets one analysis type for each file on the input flag '-i'. The first analysis will be set for the first input file, the second analysis for the second file and so on.\n")
 				print("\t-edcut\t\tSets the higher energy limit for highlighting residues on the energy decomposition plot. Default:%s\n"%str(mmpbsa_cut))
 				print("\t-edinsetXYpos\t\tSets the inset position relative to the original plot (values between 0 and 1). Ex for 10%% Res axis and 5%% energy axis: -edinsetXYpos 0.1,0.05\n")
 				print("\t-edinsetX\t\tSets the residue range for the inset plot. Ex: -edinsetX 169-210\n")
 				print("\t-edXtick\t\tSets the residue Ticks size. Ex: -edXtick 10\n")
-				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist;\n\t\tprot_state (Tested only with type one).\n")
 				print("\t-i\t\tinput data file(s) with a name for the plot (separated by space).\n\t\t\tEg.: -i ph7.00_rmsd.dat pH=7.00\n")
 				print("\t-stitle\t\t(Valid only for type 'four') Title for comparison plot.\n")
 				print("\t-lblcrd\t(Valid only for type 'four') Label coords.\n")
@@ -1149,10 +1285,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				mean_flag = True
 				debug_dic['mean'] = True
 				#continue
-			elif arg[i] == "-edcomp":
-				mmpbsa = True
-				debug_dic['edcomp'] = True
-				#continue
 			elif arg[i] == "-edcut":
 				mmpbsa_cut = int(arg[i+1])
 				debug_dic['edcomp cut'] = arg[i+1]
@@ -1181,9 +1313,34 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				tpe = 'allin_one_f3d'
 				debug_dic['index3d'] = (True,'tpe:'+tpe)
 				#continue
+			elif arg[i] == "-jpeg":
+				debug_dic["-jpeg"] = (True,file_name)
+				if arg[i+1] not in flags:
+					file_name = arg[i+1]
+					debug_dic["-jpeg"] = (True,file_name)
+					continue
+				#continue
 			elif arg[i] == "-anatp":
 				anatp = arg[i+1]
 				debug_dic['anatp'] = anatp
+				if anatp == 'edcomp':
+					mmpbsa = True
+					debug_dic['edcomp'] = True		
+				continue
+			elif arg[i] == "-multana":
+				cc = i+1
+				if "," in arg[cc] and arg[cc+1] in flags:
+					mult_ana_plot = arg[cc].split(",")
+					i = cc
+				else:
+					while cc < len(arg):
+						if arg[cc] not in flags:
+							mult_ana_plot.append( arg[cc] )
+						else:
+							i = cc - 1
+							break
+						cc += 1
+				debug_dic['multana'] = mult_ana_plot	
 				continue
 			elif arg[i] == "-i":
 				default_mod = False
@@ -1274,7 +1431,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(type=tpe, plot_interface=interface, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(type=tpe, plot_interface=interface, file_name=file_name, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
