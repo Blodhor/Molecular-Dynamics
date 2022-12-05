@@ -329,6 +329,7 @@ class Analysis_plot:
 			ax1.plot(X,Y,color=plot_color)
 			ax1.set_ylabel(self.ana_type, fontsize=self.fontsize)
 			ax1.set_xlabel(Xaxis, fontsize=self.fontsize)
+			plt.title(name, fontsize=self.fontsize)
 			ax1.grid(True)
 			ax1.set_ylim(min(Y)-2,max(Y)+0.25)
 			# inset data res 170-210
