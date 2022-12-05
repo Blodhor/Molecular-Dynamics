@@ -1286,7 +1286,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				debug_dic['mean'] = True
 				#continue
 			elif arg[i] == "-edcut":
-				mmpbsa_cut = int(arg[i+1])
+				mmpbsa_cut = float(arg[i+1])
 				debug_dic['edcomp cut'] = arg[i+1]
 				continue
 			elif arg[i] == "-edXtick":
