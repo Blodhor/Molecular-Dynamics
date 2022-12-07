@@ -1146,7 +1146,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	version_only = False
 	inst_only    = False
 	anatp        = ['rmsd','rmsf','radgyr','dist','prot_state'][3]
-	tpe          = dic_Type[133]
+	tpe          = dic_Type[13]
 	fontsize     = 10
 	eng          = False
 	forced_3Dz   = 'index'
