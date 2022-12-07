@@ -107,7 +107,7 @@ class Analysis_plot:
 		
 		self.mult_ana = False
 		self.ana_list = []
-		if len(mult_ana_plot) == len(names):
+		if mult_ana_plot != [] and len(mult_ana_plot) == len(names):
 			self.mult_ana = True
 			self.ana_list = mult_ana_plot
 			##
@@ -571,9 +571,8 @@ class Analysis_plot:
 			ax1.set_xlabel(Xaxis[0],fontsize=self.fontsize)
 			if self.mult_ana:
 				ylb = self.ana_list[0]
-			else:
-				ylb = self.ana_type
-			ax1.set_ylabel(ylb,fontsize=self.fontsize)
+				ax1.set_ylabel(ylb,fontsize=self.fontsize)
+			
 			# inset data res 170-210
 			if self.mmpbsa_inset:
 				inset1_x   = []
@@ -625,9 +624,8 @@ class Analysis_plot:
 			ax2.set_xlabel(Xaxis[1],fontsize=self.fontsize)
 			if self.mult_ana:
 				ylb = self.ana_list[1]
-			else:
-				ylb = self.ana_type
-			ax2.set_ylabel(ylb,fontsize=self.fontsize)
+				ax2.set_ylabel(ylb,fontsize=self.fontsize)
+
 			if self.mmpbsa_inset:
 				inset2_x   = []
 				inset2_y   = []
@@ -682,9 +680,8 @@ class Analysis_plot:
 			ax3.set_xlabel(Xaxis[2],fontsize=self.fontsize)
 			if self.mult_ana:
 				ylb = self.ana_list[2]
-			else:
-				ylb = self.ana_type
-			ax3.set_ylabel(ylb,fontsize=self.fontsize)
+				ax3.set_ylabel(ylb,fontsize=self.fontsize)
+
 			if self.mmpbsa_inset:
 				inset3_x   = []
 				inset3_y   = []
