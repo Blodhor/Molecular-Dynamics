@@ -196,7 +196,11 @@ class Analysis_plot:
 				t = f.readlines()
 				f.close()
 				plot_title = fs[1]
-				mdid = int(re.findall(r'[0-9]+',plot_title)[-1])
+				try:
+					mdid = int(re.findall(r'[0-9]+',plot_title)[-1])
+				except IndexError:
+					print("No MD id found on plot title, setting to default.")
+					mdid = 1
 				if mdid in self.halving_ids:
 					half_data = True
 				else:
