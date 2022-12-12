@@ -230,11 +230,13 @@ class Analysis_plot:
 								self.max_state = int(data[0])
 						else:
 							x_value = float(data[0])
-							y.append( float(data[1]) )
 							if half_data:
 								if x_value%2 ==0:
 									continue
 								x_value = xcount
+								y.append( float(data[1]) )
+							else:
+								y.append( float(data[1]) )
 
 						if 'RMSF' in ana_type:
 							x.append( int(x_value) )
@@ -1189,15 +1191,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	met= 0 # MD ## met=1 := CpHMD
 	# If the flag '-i' is read then 'default_mod' becames False  
 	#tpe=-13 eh 1 coluna 3 linhas
-	temp_mod = Default_modifier(on=default_mod,tpe=dic_Type[1],
-	anatp=['rmsd','rmsf','radgyr','dist','prot_state'][4],File=File,File2=File2, 
+	temp_mod = Default_modifier(on=default_mod,tpe=dic_Type[13],
+	anatp=['rmsd','rmsf','radgyr','dist','prot_state'][3],File=File,File2=File2, 
 	enzyme=['Nat','D206E','D206EH237K','H237K','H237Knored','Nat_nored','WT-D-DH'][0], mmpbsa=[True,False][1],
-	met=1,mmpbsa_cut=[-0.5,-1.5][0], mmpbsa_inset=[True,False][1], mmpbsa_inset_range=[(169,210),(150,160)][0],
+	met=0,mmpbsa_cut=[-0.5,-1.5][0], mmpbsa_inset=[True,False][1], mmpbsa_inset_range=[(169,210),(150,160)][0],
 	merge_legend=merge_legend,supertitle=['%s-BHET pH7'%['IsPETase','D206EH237K'][1],''][1],
 	mean_flag=[True,False][1],rareplot=[True,False][1],interface=[True,False][1],
 	multi_label_loc=(.685,0.5),forced_3Dz=['ph','index'][0],
 	forced_mean=[True,False][1], fmv=[4.65,4.75,4.97][0], ph_reverse=[True,False][1],
-	eng=[True,False][0],fontsize=[8,12,14][1],mdlistrange=range(1,4),
+	eng=[True,False][0],fontsize=[8,12,14][1],mdlistrange=range(1,6),
 	igph7md=[],igph9md=[1,2,3,4,5,6],igph7cphmd=[],igph9cphmd=[],
 	res=[('GL4178','GLU 206'),('LYS209','LYS 237'),('AS4178','ASP 206'),('HIP209','HIS 237'),('TYR59','TYR 87')][3])
 
@@ -1259,7 +1261,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-edinsetX\t\tSets the residue range for the inset plot. Ex: -edinsetX 169-210\n")
 				print("\t-edXtick\t\tSets the residue Ticks size. Ex: -edXtick 10\n")
 				print("\t-i\t\tinput data file(s) with a name for the plot (separated by space).\n\t\t\tEg.: -i ph7.00_rmsd.dat pH=7.00\n")
-				print("\t-stitle\t\t(Valid only for type 'four') Title for comparison plot.\n")
+				print("\t-stitle\t\tTitle for comparison plot.\n")
 				print("\t-lblcrd\t(Valid only for type 'four') Label coords.\n")
 				print("\t-mlbpos\t(Valid only for type 'allin_one') Label position based on axis percentage. Eg.: -mlbpos 0.5 0.8\n")
 				print("\t-fram2time\t(For anatp = rmsd or radgyr) Sets X-axis will change from frame to time (pico seconds). Must inform frame-step conversion.\n\t\t\tEg.: -fram2time 10000\n")
