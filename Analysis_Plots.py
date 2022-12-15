@@ -414,18 +414,17 @@ class Analysis_plot:
 		########
 		data_i = -1
 		inset  = []
-		vline_thickness = [0.25,0.75][1]
+		vline_thickness = [0.25,0.75][0]
 		for ts in [ax1, ax2]:
 			data_i +=1
+			X_0 = X[data_i]
 			if self.mult_ana and self.ana_list[0]==anatest or anatest in self.ana_type:
-				ts.plot(X[data_i],Y[data_i],'o',ms=1)
+				ts.plot(X_0,Y[data_i],'o',ms=1)
 			else:
 				if self.ana_type ==['Decomposição de energia\n(kcal/mol)','Energy decomposition\n(kcal/mol)'][self.lang_set]:
 					X_0 = []
 					for xx in X[data_i]:
 						X_0.append(xx+self.ID_shift)
-				else:
-					X_0 = X[data_i]
 				ts.plot(X_0,Y[data_i],color=plot_color)
 				if self.mult_ana:
 					ts.set_ylim(min(Y[data_i])-0.5,max(Y[data_i])+0.5)
@@ -433,17 +432,25 @@ class Analysis_plot:
 			if self.mmpbsa:
 				ts.axvline(x=178+self.ID_shift,color='green',lw=vline_thickness,zorder=-1)
 				ts.axvline(x=209+self.ID_shift,color='green',lw=vline_thickness,zorder=-1)
-			ts.set_title(name[data_i], fontsize=self.fontsize)
+			ts.set_title(name[data_i], color='skyblue',weight='bold', fontsize=self.fontsize)
 			ts.grid(self.grid)
+			if self.mult_ana:
+				ylb = self.ana_list[data_i]
+			else:
+				ylb = self.ana_type
+			
+			#esboco zuado
+			#ylb='Binding Energy' ##########
+			#plt.setp(ts, yticks=[0],xticks=[])#######
+			ts.set_xlabel(Xaxis[data_i], fontsize=self.fontsize)
+			#ts.text(160, -2, 'S', color='orange', fontsize=self.fontsize)
+			#ts.text(161, -2.5, 'M', color='blue', fontsize=self.fontsize)
+			ts.set_ylabel(ylb, fontsize=self.fontsize)
+			if ts == ax2:
+				ts.text(237, -1, 'K', color='green', fontsize=self.fontsize)
 
 			if self.mult_ana and self.ana_list[data_i]=='edcomp' or self.mmpbsa:
 				# inset data res 170-210
-				ts.set_xlabel(Xaxis[data_i],fontsize=self.fontsize)
-				if self.mult_ana:
-					ylb = self.ana_list[data_i]
-				else:
-					ylb = self.ana_type
-				ts.set_ylabel(ylb,fontsize=self.fontsize)
 				if self.mmpbsa_inset:
 					inset_x   = []
 					inset_y   = []
@@ -462,28 +469,34 @@ class Analysis_plot:
 					inset[data_i].axvline(x=209,color='red')
 			
 				note = self.peaks(X=X[data_i],Y=Y[data_i])
+				res_petase={87:('blue','Y'),160:('orange','S'),161:('blue','M'),185:('purple','W')}
 				for i in note:
 					text_color  ='black'
 					cor   = 0
-					if i[1] >0:
-						text_color = 'darkred'
-						cor   = [0,0.2,0.4][2]
-					if i[0] == 180:
-						cor = [0.2,0.4][1]
+					if ylb!='Binding Energy':
+						nota = self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift)
+					elif i[0]+self.ID_shift in res_petase:
+						text_color = res_petase[i[0]+self.ID_shift][0]
+						nota = res_petase[i[0]+self.ID_shift][1]
+					elif i[0]+self.ID_shift==206:
+						if ts == ax1:
+							text_color = 'orange'
+							nota = 'D'
+						else:
+							text_color = 'green'
+							nota = 'E'
+					elif i[0]+self.ID_shift==237:
+						if ts == ax1:
+							text_color = 'red'
+							nota = 'H (Unfavorable)'
 					if self.mmpbsa_inset:
 						if i[0] in self.mmpbsa_inset_range:
-							inset[data_i].text(i[0],i[1],self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=inset_color, fontsize=self.fontsize)
+							inset[data_i].text(i[0]+self.ID_shift,i[1],nota, color=inset_color, fontsize=self.fontsize)
 						else:
-							ts.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
+							ts.text(i[0]+self.ID_shift, i[1]-cor, nota, color=text_color, fontsize=self.fontsize)
 					else:		
-						ts.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
-			else:
-				if self.mult_ana:
-					ylb = self.ana_list[data_i]
-				else:
-					ylb = self.ana_type
-				ts.set_xlabel(Xaxis[data_i], fontsize=self.fontsize)
-				ts.set_ylabel(ylb, fontsize=self.fontsize)	
+						ts.text(i[0]+self.ID_shift, i[1]-cor, nota, color=text_color, fontsize=self.fontsize)
+					
 		
 		'''if self.mult_ana and self.ana_list[1]==anatest or anatest in self.ana_type:
 			ax2.plot(X[1],Y[1],'o',ms=1)
