@@ -71,11 +71,11 @@ def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb
 					c_count = 0
 					o_count = 0
 					for t in [alt1_info[2],alt2_info[2],alt3_info[2]]:
-						if t == 'C' or 'C' in t[0]:
+						if t == 'C':
 							c_count += 1
-						elif t == 'O' or 'O' in t[0]:
+						elif t == 'O':
 							o_count += 1
-					if (main_info[2] == 'C' or 'C' in main_info[2][0]) and c_count == 1 and o_count == 2:
+					if main_info[2] == 'C' and c_count == 1 and o_count == 2:
 						# main == C carbonyl
 						main_xyz = (float(main_info[5]),float(main_info[6]),float(main_info[7]))
 						rcarbs.append(dist(atm1=ser_hydroxyl,atm2=main_xyz))
@@ -98,48 +98,33 @@ def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb
 
 	return label_out
 
-def plot_AEvsR(dpi=100,Xg=[],Xw=[],Yg=[],Yw=[],Xw_ins=[],Xg_ins=[],Yw_ins=[],Yg_ins=[],titulo ="Configurations",eixoy="Vina score (kcal/mol)",eixox="$r_{hc}\,(Angstrom)$"):
-	'''#this works
-	plt.figure(dpi=dpi)
-    plt.plot(Xg,Yg,'bo',Xw,Yw,'ro')
-    plt.title(titulo)
-    plt.ylabel(eixoy)
-    plt.xlabel(eixox)
-	plt.show()'''
-	
-	'''# filter to make the picture smoother
-	xw = []
-	yw = []
-	for i in range(len(Xw)):
-		temp = [Xw[i],Yw[i]]
-		if temp[0] < 9 and temp[1] < -4.2:
-			xw.append(Xw[i])
-			yw.append(Yw[i])'''
-
-	fig, ax1 = plt.subplots()
-	ax1.plot(Xg,Yg,'bo')
-	ax1.plot(Xw,Yw,'ro')
-	ax1.set_xlabel(eixox)
-	ax1.set_ylabel(eixoy)
-	ax1.set_xlim(2.5,17)
-	ax1.set_ylim(-6,-1.8)
+def plot_AEvsR(dpi=300,file_name='Figure_3.jpeg',pointsize=4,Xg=[],Yg=[],g_color='royalblue',Xw=[],Yw=[],w_color='deepskyblue',Xg_ins=[],Yg_ins=[],mark_color='black',titulo ="",eixoy="Vina score (kcal/mol)",eixox="$r_{hc}\,(\AA)$"):
+	#                                      'mediumseagreen'                'deepskyblue'
+	fonte=[12,14,16][2]
+	fig, ax1 = plt.subplots(dpi=dpi)
+	ax1.plot(Xg,Yg,'o',color=g_color,ms=pointsize)
+	ax1.plot(Xw,Yw,'o',color=w_color,ms=pointsize)
+	ax1.set_xlabel(eixox,fontsize=fonte)
+	ax1.set_ylabel(eixoy,fontsize=fonte)
+	#ax1.set_xlim(2.5,17)
+	ax1.set_ylim(-6.0,-1.8)
 
 	# Create a set of inset Axes: these should fill the bounding box allocated to
 	# them.
 	ax2 = plt.axes([0,0,1,1])
 	# Manually set the position and relative size of the inset axes within ax1
-	ip = InsetPosition(ax1, [0.5,0.5,0.5,0.5]) # parant axes; inset X edgde, Y edge, width% to parent, height% to parent
+	ip = InsetPosition(ax1, [0.5,0.525,0.5,0.475]) # parant axes; inset X edgde, Y edge, width% to parent, height% to parent
 	ax2.set_axes_locator(ip)
 	# Mark the region corresponding to the inset axes on ax1 and draw lines
-	# in grey linking the two axes.
-	mark_inset(ax1, ax2, loc1=2, loc2=4, fc="none", ec='black')
+	# linking the two axes.
+	# high zorder makes it being drawn above other objects, small zorder are drawn first
+	mark_inset(ax1, ax2, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=5)
 
-	ax2.plot(Xg_ins,Yg_ins,'bo')
-	ax2.plot(Xw_ins,Yw_ins,'ro')
+	ax2.plot(Xg_ins,Yg_ins,'o',color=g_color,ms=pointsize)
+	plt.savefig(file_name,bbox_inches='tight')
+	#plt.show()
 
-	plt.show()
-
-def Main(ref = (-20.465,-10.036,7.369), arg = ['AvR_DockingPlot.py', 'PDBFILE.pdb'], inset_factor=10):
+def Main(ref = (-1.062,-12.604,-11.209), arg = ['AvR_DockingPlot.py', 'PDBFILE.pdb'], inset_factor=10):
 
 	# ref := hydroxyl on serine 160 from 6eqe.pdb
 
@@ -180,15 +165,10 @@ def Main(ref = (-20.465,-10.036,7.369), arg = ['AvR_DockingPlot.py', 'PDBFILE.pd
 
 	Xg_ins = []
 	Yg_ins = []
-	Xw_ins = []
-	Yw_ins = []
 	for i in range(int(len(rPaeVmodel)/inset_factor)):
 		if rPaeVmodel[i][3][0] <= bw_limit:
 			Yg_ins.append(rPaeVmodel[i][3][0])
 			Xg_ins.append(rPaeVmodel[i][3][1])
-		else:
-			Yw_ins.append(rPaeVmodel[i][3][0])
-			Xw_ins.append(rPaeVmodel[i][3][1])
 
 	if len(rVmodel) < 5:
 		top_r = rVmodel
@@ -217,7 +197,7 @@ def Main(ref = (-20.465,-10.036,7.369), arg = ['AvR_DockingPlot.py', 'PDBFILE.pd
 	f.write('\n')
 	f.close()
 
-	plot_AEvsR(Xg=r_g,Yg=ae_g,Xw=r_w,Yw=ae_w,Xw_ins=Xw_ins,Xg_ins=Xg_ins,Yw_ins=Yw_ins,Yg_ins=Yg_ins)
+	plot_AEvsR(Xg=r_g,Yg=ae_g,Xw=r_w,Yw=ae_w,Xg_ins=Xg_ins,Yg_ins=Yg_ins)
 	
 def Help(arg = ['AvR_DockingPlot.py', '-h']):
 	print("Please run this code as follows:\n(Option 1): $ pythonCompilerV3+ %s PDBFILE.pdb\n"%arg[0])
@@ -233,5 +213,7 @@ if __name__ == "__main__":
 			Main(arg=arg)
 		elif arg[2].lower() == 'ref' and len(arg) == 6:
 			Main(ref=(float(arg[3]),float(arg[4]),float(arg[5])),arg=arg)
+		else:
+			Help()
 	except:
 		Help()
