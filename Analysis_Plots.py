@@ -12,7 +12,8 @@ class Analysis_plot:
 	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5),
 	forced_3Dzaxis=['ph','index'][1], forced_mean=False, fmv=4.75, eng=False, fontsize=10, mmpbsa=False,
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
-	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True):
+	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True,
+	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],ID_shift=28):
 		'''Parameters:
 		
 		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
@@ -52,7 +53,10 @@ class Analysis_plot:
 		self.file_name = file_name
 		self.grid      = grid
 		self.max_state = 0
-		self.ID_shift  = 28
+		self.ID_shift        = ID_shift
+		self.vlines          = vlines
+		self.vline_thickness = vline_thickness
+		self.vline_color     = vline_color 
 		self.lang_set          = 0
 		if eng:
 			self.lang_set      = 1
@@ -330,14 +334,21 @@ class Analysis_plot:
 				plt.plot(X,Y)
 			plt.title(name, fontsize=self.fontsize)
 			plt.ylabel(self.ana_type, fontsize=self.fontsize)
+			for xid in self.vlines:
+				plt.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
 			plt.xlabel(Xaxis, fontsize=self.fontsize)
 		else:
 			fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
-			ax1.plot(X,Y,color=plot_color)
+			X_0 = []
+			for xx in X:
+				X_0.append(xx+self.ID_shift)
+			ax1.plot(X_0,Y,color=plot_color)
 			ax1.set_ylabel(self.ana_type, fontsize=self.fontsize)
 			ax1.set_xlabel(Xaxis, fontsize=self.fontsize)
 			plt.title(name, fontsize=self.fontsize)
 			ax1.grid(self.grid)
+			for xid in self.vlines:
+				ax1.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
 			ax1.set_ylim(min(Y)-2,max(Y)+0.25)
 			# inset data res 170-210
 			if self.mmpbsa_inset:
@@ -372,7 +383,7 @@ class Analysis_plot:
 						ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
 				else:		
 					ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
-		
+	
 		if not self.plot_interface:
 			plt.savefig(self.file_name,bbox_inches='tight')
 		else:
@@ -414,7 +425,6 @@ class Analysis_plot:
 		########
 		data_i = -1
 		inset  = []
-		vline_thickness = [0.25,0.75][0]
 		for ts in [ax1, ax2]:
 			data_i +=1
 			X_0 = X[data_i]
@@ -430,8 +440,8 @@ class Analysis_plot:
 					ts.set_ylim(min(Y[data_i])-0.5,max(Y[data_i])+0.5)
 			
 			if self.mmpbsa:
-				ts.axvline(x=178+self.ID_shift,color='green',lw=vline_thickness,zorder=-1)
-				ts.axvline(x=209+self.ID_shift,color='green',lw=vline_thickness,zorder=-1)
+				for xid in self.vlines:
+					ts.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
 			ts.set_title(name[data_i], color='skyblue',weight='bold', fontsize=self.fontsize)
 			ts.grid(self.grid)
 			if self.mult_ana:
@@ -440,10 +450,10 @@ class Analysis_plot:
 				ylb = self.ana_type
 			
 			#esboco zuado
-			#ylb='Binding Energy' ##########
-			#plt.setp(ts, yticks=[0],xticks=[])#######
+			##ylb='Binding Energy' ##########
+			##plt.setp(ts, yticks=[0],xticks=[])#######
 			ts.set_xlabel(Xaxis[data_i], fontsize=self.fontsize)
-			#ts.text(160, -2, 'S', color='orange', fontsize=self.fontsize)
+			##ts.text(160, -2, 'S', color='orange', fontsize=self.fontsize)
 			#ts.text(161, -2.5, 'M', color='blue', fontsize=self.fontsize)
 			ts.set_ylabel(ylb, fontsize=self.fontsize)
 			if ts == ax2:
@@ -498,69 +508,6 @@ class Analysis_plot:
 						ts.text(i[0]+self.ID_shift, i[1]-cor, nota, color=text_color, fontsize=self.fontsize)
 					
 		
-		'''if self.mult_ana and self.ana_list[1]==anatest or anatest in self.ana_type:
-			ax2.plot(X[1],Y[1],'o',ms=1)
-		else:
-			ax2.plot(X[1],Y[1],color=plot_color)
-			if self.mult_ana:
-				ax2.set_ylim(min(Y[1])-0.5,max(Y[1])+2)
-		ax2.set_title(name[1], fontsize=self.fontsize)
-		ax2.grid(self.grid)
-		#ax2.set_ylim([-4.5,0.2])
-		if self.mult_ana and self.ana_list[1]=='edcomp' or self.mmpbsa:
-			ax2.set_xlabel(Xaxis[1],fontsize=self.fontsize)
-			if self.mult_ana:
-				ylb = self.ana_list[1]
-			else:
-				ylb = self.ana_type
-			ax2.set_ylabel(ylb,fontsize=self.fontsize)
-			
-			if self.mmpbsa_inset:
-				inset2_x   = []
-				inset2_y   = []
-				for i in self.mmpbsa_inset_range:
-					inset2_x.append( X[1][i] )
-					inset2_y.append( Y[1][i] )
-				inset2 = plt.axes([0,0,1,1],label='downinset')
-				inset2.tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
-				inset2.set_xticks(np.arange(self.mmpbsa_inset_range[0], self.mmpbsa_inset_range[-1]+1, self.mmpbsa_inset_restick), minor=False)
-				ip2 = InsetPosition(ax2, [self.mmpbsa_inset_XY[0],self.mmpbsa_inset_XY[1],0.4,0.45])
-				mark_inset(ax2, inset2, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=-1)
-				inset2.set_axes_locator(ip2)
-				inset2.plot(inset2_x,inset2_y,color=plot_color)
-				inset2.axvline(x=209,color='red')
-
-			note = self.peaks(X=X[1],Y=Y[1])
-			for i in note:
-				#ajustments with 'cor' are manual for now 
-				text_color = 'black'
-				cor   = 0
-				if i[1] >0:
-					text_color = 'darkred'
-					cor   = [0,0.2,0.6][2]
-				if i[0] == 180:
-					cor = 0.2
-				elif i[0] == 59:
-					cor = [0,-0.5][1]	
-				elif i[0] == 133:
-					cor = [0,0.15,1.2][2]	
-				elif i[0] == 157:
-					cor = [0,0.35][1]	
-				if self.mmpbsa_inset:
-					if i[0] in self.mmpbsa_inset_range:
-						inset2.text(i[0],i[1]+cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=inset_color, fontsize=self.fontsize)
-					else:
-						ax2.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
-				else:
-					ax2.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
-		else:
-			if self.mult_ana:
-				ylb = self.ana_list[1]
-			else:
-				ylb = self.ana_type
-			ax2.set_xlabel(Xaxis[1], fontsize=self.fontsize)
-			ax2.set_ylabel(ylb, fontsize=self.fontsize)'''
-			
 		#pyplot.subplots can hide redundant axes
 		for ts in [ax1,ax2]:
 			ts.label_outer()
@@ -581,8 +528,6 @@ class Analysis_plot:
 		mark_color  ="lightsteelblue"
 		plot_color  ="cornflowerblue"
 		inset_color = "darkslategray"
-		vline_c     = 'purple'
-		vline_thickness = [0.25,0.75][1]
 		fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, sharex=True, dpi=self.dpi)
 		max_y = -50
 		min_y = +50
@@ -781,9 +726,8 @@ class Analysis_plot:
 			for ts in [ax1,ax2,ax3]:
 				counter+=1
 				ts.set_xlabel(Xaxis[counter],fontsize=self.fontsize)
-				ts.axvline(x=132+self.ID_shift,color=vline_c,lw=vline_thickness,zorder=-1)
-				ts.axvline(x=178+self.ID_shift,color=vline_c,lw=vline_thickness,zorder=-1)
-				ts.axvline(x=209+self.ID_shift,color=vline_c,lw=vline_thickness,zorder=-1)
+				for xid in self.vlines:
+					ts.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
 			#labelling ax2 only but with bigger font
 			ax2.set_ylabel(self.ana_type,fontsize=self.fontsize*1.25)
 		else:
@@ -819,6 +763,8 @@ class Analysis_plot:
 			ap.set_title(name[big_pp], fontsize=self.fontsize)
 			#ap.text(x=self.labelpx, y=self.labelpy, s=name[big_pp], color=self.label_color)
 			ap.grid(self.grid)
+			for xid in self.vlines:
+				ap.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
 			big_pp += 2
 		
 		for ts in axs:
@@ -865,6 +811,8 @@ class Analysis_plot:
 		
 		for ts in [ax1,ax2,ax3,ax4]:
 			ts.label_outer()
+			for xid in self.vlines:
+				ts.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
 
 		if not self.plot_interface:
 			plt.savefig(self.file_name,bbox_inches='tight')
@@ -884,6 +832,8 @@ class Analysis_plot:
 			ap.set_title(name[big_pp], fontsize=self.fontsize)
 			#ap.text(x=self.labelpx, y=self.labelpy, s=name[big_pp], color=self.label_color)
 			ap.grid(self.grid)
+			for xid in self.vlines:
+				ap.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
 			big_pp += 2
 
 		for ts in axs:
@@ -914,6 +864,9 @@ class Analysis_plot:
 			mean_value.append( sum(self.Y[i])/len(self.Y[i]) )
 			plt.plot(self.X[i], self.Y[i])
 
+		for xid in self.vlines:
+			plt.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
+			
 		if mean:
 			mean_multi = sum(mean_value)/len(mean_value)
 			mean_line  = [mean_multi]*len(self.X[0])
@@ -1146,7 +1099,7 @@ res=('LYS209','LYS 237')):
 if __name__ == "__main__":
 	import sys
 	arg = sys.argv
-	version_n = 1.2
+	version_n = 1.3
 	version = ''' Analysis plot - Pyplot extension for RMSD, RMSF and Radgyr data analysis.
 
 Python3 modules needed: 
@@ -1228,8 +1181,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	rareplot     = False
 	multi_label_loc=(.685,0.5)
 	#mmpbsa_cut must be negative!!
-	mult_ana_plot = [] # multiple analysis
-	file_name = 'Figure.jpeg'
+	mult_ana_plot   = [] # multiple analysis
+	file_name       = 'Figure.jpeg'
+	vline_color     = 'purple'
+	vline_thickness = 0.25
+	vlines          = [] #[132,178,209]
+	ID_shift        = 28
 
 	default_mod = True
 	inset_tick      = 10
@@ -1259,7 +1216,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
+	flags = ["&","-v","--version","-xshift","-vcolor","-vlines","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
 
 	# Flag verification
 	for i in arg:
@@ -1295,18 +1252,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("Copyright (C) 2021  Braga, B. C.\nThis program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.\n")
 				print("\nUsage:\n\t-v or --version\t\tprints current version, the python libraries needed and the data format expected.\n")
 				print("\t-h or --help\t\tprints this message.\n")
-				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information.\n\t\tfour: Plots four data files with the same axis information.\n\t\tallin_one: Plots every dataset given in one XY frame.\n")
+				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information.\n\t\tfour: Plots four data files with the same axis information.\n\t\tallin_one: Plots every dataset given in one XY frame.\n\t\t1c3p: 1 column with 3 plots.")
 				print("\t-eng\tSets default texts language to english. If this flag is not called the texts will be set on portuguese.\n")
+				print("\t-vlines\tPlot vertical lines. Eg.: -vlines 178,209\n")
+				print("\t-vcolor\tSets the color for the vertical lines (Default: purple).\n")
+				print("\t-xshift\t(Valid for 'edcomp' only) Adds to the X points, to shift the data in the x-axis (Default: 28).\n")
 				print("\t-fontsize\tInteger value for the fontsize of labels and inplot texts (Default=%d).\n"%fontsize)
 				print("\t-index3d\t(Valid only for type 'allin_one') Creates a 3D plot with a index axis separating your datasets.\n")
 				print("\t-jpeg\t\t(Recommended when dpi is too big) Saves picture directly to 'Figure.jpeg' instead of generating the interface.\n")
 				print("\t-nogrid\t\tTurn off 'grid' option.\n")
 				print("\t-mean\t\t(Valid only for type 'allin_one') Print a horizontal line with the mean value of all the data given.\n")
-				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist;\n\t\tedcomp (Valid only for types 'one' and 'two') Energy decomposition on the format of 'decode_mmpbsa.py'\n\t\tprot_state (Tested only with type one).\n")
+				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist;\n\t\tedcomp (Valid only for types 'one', 'two', and '1c3p') Energy decomposition on the format of 'decode_mmpbsa.py'\n\t\tprot_state (Tested only with type one).\n")
 				print("\t-multana\t\t(Has priority over 'anatp', and it's empty by default) Sets one analysis type for each file on the input flag '-i'. The first analysis will be set for the first input file, the second analysis for the second file and so on.\n")
 				print("\t-edcut\t\tSets the higher energy limit for highlighting residues on the energy decomposition plot. Default:%s\n"%str(mmpbsa_cut))
-				print("\t-edinsetXYpos\t\tSets the inset position relative to the original plot (values between 0 and 1). Ex for 10%% Res axis and 5%% energy axis: -edinsetXYpos 0.1,0.05\n")
-				print("\t-edinsetX\t\tSets the residue range for the inset plot. Ex: -edinsetX 169-210\n")
+				print("\t-edinsetXYpos\t\tSets the inset position relative to the original plot (values between 0 and 1). Eg. for 10%% Res axis and 5%% energy axis: -edinsetXYpos 0.1,0.05\n")
+				print("\t-edinsetX\t\tSets the residue range for the inset plot. Eg.: -edinsetX 169-210\n")
 				print("\t-edXtick\t\tSets the residue Ticks size. Ex: -edXtick 10\n")
 				print("\t-i\t\tinput data file(s) with a name for the plot (separated by space).\n\t\t\tEg.: -i ph7.00_rmsd.dat pH=7.00\n")
 				print("\t-stitle\t\tTitle for comparison plot.\n")
@@ -1327,7 +1287,39 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				#continue
 			elif arg[i] == "-type":
 				tpe = arg[i+1]
-				debug_dic['tpe'] = arg[i+1] 
+				debug_dic['tpe'] = tpe 
+				continue
+			elif arg[i] == "-xshift":
+				ID_shift = float(arg[i+1])
+				debug_dic['xshift'] = ID_shift 
+				continue
+			elif arg[i] == "-vcolor":
+				vline_color = arg[i+1]
+				debug_dic['vcolor'] = vline_color 
+				continue
+			elif arg[i] == "-vlines":
+				#132,178,209
+				cc = i+1
+				bool_check = "," in arg[cc]
+				if cc+1 < len(arg):
+					bool_check = "," in arg[cc] and arg[cc+1] in flags
+				
+				if bool_check:
+					temp = arg[cc].split(",")
+					i = cc
+				else:
+					# 132 178 209
+					while cc < len(arg):
+						if arg[cc] not in flags:
+							temp.append( arg[cc] )
+						else:
+							i = cc - 1
+							break
+						cc += 1
+				vlines = []
+				for jj in temp:
+					vlines.append(int(jj))
+				debug_dic['vlines'] = vlines 
 				continue
 			elif arg[i] == "-fontsize":
 				fontsize = int(arg[i+1])
@@ -1385,7 +1377,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				continue
 			elif arg[i] == "-multana":
 				cc = i+1
-				if "," in arg[cc] and arg[cc+1] in flags:
+				bool_check = "," in arg[cc]
+				if cc+1 < len(arg):
+					bool_check = "," in arg[cc] and arg[cc+1] in flags
+				
+				if bool_check:
 					mult_ana_plot = arg[cc].split(",")
 					i = cc
 				else:
@@ -1487,7 +1483,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(type=tpe, plot_interface=interface, grid=grid, file_name=file_name, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(type=tpe,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
