@@ -15,7 +15,7 @@ class Analysis_plot:
 	forced_3Dzaxis=['ph','index'][1], forced_mean=False, fmv=4.75, eng=False, fontsize=10, mmpbsa=False,
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
 	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True,
-	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],ID_shift=28,plotid='A'):
+	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A'):
 		'''Parameters:
 		
 		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
@@ -56,7 +56,10 @@ class Analysis_plot:
 		self.grid      = grid
 		self.max_state = 0
 		self.plotid    = plotid
-		self.ID_shift        = ID_shift
+		if bool_shift:
+			self.ID_shift = ID_shift
+		else:
+			self.ID_shift = 0
 		self.vlines          = vlines
 		self.vline_thickness = vline_thickness
 		self.vline_color     = vline_color 
@@ -347,7 +350,13 @@ class Analysis_plot:
 		mark_color="lightsteelblue"
 		plot_color="cornflowerblue"
 		inset_color = "darkslategray"
-		
+		if self.mmpbsa or 'RMSF' in self.ana_type:
+			X_0 = []
+			for xx in X:
+				X_0.append(xx+self.ID_shift)
+		else:
+			X_0 = X
+
 		if not self.mmpbsa: 
 			fig = plt.figure(dpi=self.dpi)
 			#fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
@@ -357,7 +366,7 @@ class Analysis_plot:
 				plt.plot(X,Y,'o',ms=1)
 				plt.yticks(range(0,self.max_state+1))
 			else:
-				plt.plot(X,Y)
+				plt.plot(X_0,Y)
 			plt.title(name, fontsize=self.fontsize)
 			plt.ylabel(self.ana_type, fontsize=self.fontsize)
 			for xid in self.vlines:
@@ -367,9 +376,6 @@ class Analysis_plot:
 			fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
 			if self.plotid != '':
 				self.plot_textid()
-			X_0 = []
-			for xx in X:
-				X_0.append(xx+self.ID_shift)
 			ax1.plot(X_0,Y,color=plot_color)
 			ax1.set_ylabel(self.ana_type, fontsize=self.fontsize)
 			ax1.set_xlabel(Xaxis, fontsize=self.fontsize)
@@ -383,7 +389,7 @@ class Analysis_plot:
 				inset1_x   = []
 				inset1_y   = []
 				for i in self.mmpbsa_inset_range:
-					inset1_x.append( X[i] )
+					inset1_x.append( X_0[i] )
 					inset1_y.append( Y[i] )
 				inset1 = plt.axes([0,0,1,1],label='upinset')
 				inset1.tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
@@ -395,7 +401,7 @@ class Analysis_plot:
 				inset1.axvline(x=178,color='green')
 				inset1.axvline(x=209,color='red')
 			
-			note = self.peaks(X=X,Y=Y)
+			note = self.peaks(X=X_0,Y=Y)
 			for i in note:
 				text_color  ='black'
 				cor   = 0
@@ -457,19 +463,24 @@ class Analysis_plot:
 		inset  = []
 		for ts in [ax1, ax2]:
 			data_i +=1
-			X_0 = X[data_i]
+			bool_me  = self.mult_ana and self.ana_list[data_i]=='edcomp'
+			bool_mrf = self.mult_ana and 'rmsf' in self.ana_list[data_i]
+			bool_erf = self.mmpbsa or 'RMSF' in self.ana_type
+			if bool_me or bool_mrf or bool_erf:
+				X_0 = []
+				for xx in X[data_i]:
+					X_0.append(xx+self.ID_shift)
+			else:
+				X_0 = X[data_i]
+
 			if self.mult_ana and self.ana_list[0]==anatest or anatest in self.ana_type:
 				ts.plot(X_0,Y[data_i],'o',ms=1)
 			else:
-				if self.ana_type ==['Decomposição de energia\n(kcal/mol)','Energy decomposition\n(kcal/mol)'][self.lang_set]:
-					X_0 = []
-					for xx in X[data_i]:
-						X_0.append(xx+self.ID_shift)
 				ts.plot(X_0,Y[data_i],color=plot_color)
 				if self.mult_ana:
 					ts.set_ylim(min(Y[data_i])-0.5,max(Y[data_i])+0.5)
 			
-			if self.mmpbsa:
+			if self.mult_ana and self.ana_list[data_i]=='edcomp' or self.mmpbsa:
 				for xid in self.vlines:
 					ts.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
 			ts.set_title(name[data_i], color='skyblue',weight='bold', fontsize=self.fontsize)
@@ -495,7 +506,7 @@ class Analysis_plot:
 					inset_x   = []
 					inset_y   = []
 					for i in self.mmpbsa_inset_range:
-						inset_x.append( X[data_i][i] )
+						inset_x.append( X_0[i] )
 						inset_y.append( Y[data_i][i] )
 					temp = plt.axes([0,0,1,1],label='upinset')
 					inset.append(temp)	
@@ -508,34 +519,34 @@ class Analysis_plot:
 					inset[data_i].axvline(x=178,color='green')
 					inset[data_i].axvline(x=209,color='red')
 			
-				note = self.peaks(X=X[data_i],Y=Y[data_i])
+				note = self.peaks(X=X_0,Y=Y[data_i])
 				res_petase={87:('blue','Y'),160:('orange','S'),161:('blue','M'),185:('purple','W')}
 				for i in note:
 					text_color  ='black'
 					cor   = 0
 					if ylb!='Binding Energy':
-						nota = self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift)
-					elif i[0]+self.ID_shift in res_petase:
-						text_color = res_petase[i[0]+self.ID_shift][0]
-						nota = res_petase[i[0]+self.ID_shift][1]
-					elif i[0]+self.ID_shift==206:
+						nota = self.mmpbsa_res[i[0]-1]+str(i[0])
+					elif i[0] in res_petase:
+						text_color = res_petase[i[0]][0]
+						nota = res_petase[i[0]][1]
+					elif i[0]==206:
 						if ts == ax1:
 							text_color = 'orange'
 							nota = 'D'
 						else:
 							text_color = 'green'
 							nota = 'E'
-					elif i[0]+self.ID_shift==237:
+					elif i[0]==237:
 						if ts == ax1:
 							text_color = 'red'
 							nota = 'H (Unfavorable)'
 					if self.mmpbsa_inset:
 						if i[0] in self.mmpbsa_inset_range:
-							inset[data_i].text(i[0]+self.ID_shift,i[1],nota, color=inset_color, fontsize=self.fontsize)
+							inset[data_i].text(i[0],i[1],nota, color=inset_color, fontsize=self.fontsize)
 						else:
-							ts.text(i[0]+self.ID_shift, i[1]-cor, nota, color=text_color, fontsize=self.fontsize)
+							ts.text(i[0], i[1]-cor, nota, color=text_color, fontsize=self.fontsize)
 					else:		
-						ts.text(i[0]+self.ID_shift, i[1]-cor, nota, color=text_color, fontsize=self.fontsize)
+						ts.text(i[0], i[1]-cor, nota, color=text_color, fontsize=self.fontsize)
 					
 		
 		#pyplot.subplots can hide redundant axes
@@ -585,169 +596,71 @@ class Analysis_plot:
 					plt.setp(ts, yticks=y_tick)
 		plt.subplots_adjust(hspace=0.3)
 
-		if self.mult_ana and self.ana_list[0]==anatest or anatest in self.ana_type:
-			ax1.plot(X[0],Y[0],'o',ms=1)
-		elif anatest2 in self.ana_type:
-			print('residue correction', self.ID_shift)
-			X_0 = []
-			for xx in X[0]:
-				X_0.append(xx+self.ID_shift)
-			ax1.plot(X_0,Y[0],color=plot_color)
-			ax1.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
-		else:
-			ax1.plot(X[0],Y[0],color=plot_color)
-		ax1.set_title(name[0], fontsize=self.fontsize)
-		ax1.grid(self.grid)
-		if self.mult_ana and self.ana_list[0]=='edcomp' or self.mmpbsa:
-			ax1.set_xlabel(Xaxis[0],fontsize=self.fontsize)
-			if self.mult_ana:
-				ylb = self.ana_list[0]
-				ax1.set_ylabel(ylb,fontsize=self.fontsize)
+		##### ver se tem redundancia com o plot_two
+		data_i = -1
+		inset  = []
+		for ts in [ax1, ax2, ax3]:
+			data_i +=1
+			bool_me  = self.mult_ana and self.ana_list[data_i]=='edcomp'
+			bool_mrf = self.mult_ana and 'rmsf' in self.ana_list[data_i]
+			bool_erf = self.mmpbsa or 'RMSF' in self.ana_type
+			if bool_me or bool_mrf or bool_erf:
+				X_0 = []
+				for xx in X[data_i]:
+					X_0.append(xx+self.ID_shift)
+			else:
+				X_0 = X[data_i]
+
+			if self.mult_ana and self.ana_list[data_i]==anatest or anatest in self.ana_type:
+				ts.plot(X_0,Y[data_i],'o',ms=1)
+			elif anatest2 in self.ana_type:
+				print('residue correction', self.ID_shift)
+				ts.plot(X_0,Y[data_i],color=plot_color)
+				ts.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
+			else:
+				ts.plot(X_0,Y[data_i],color=plot_color)
+			ts.set_title(name[data_i], fontsize=self.fontsize)
+			ts.grid(self.grid)
+			if self.mult_ana and self.ana_list[data_i]=='edcomp' or self.mmpbsa:
+				ts.set_xlabel(Xaxis[data_i],fontsize=self.fontsize)
+				if self.mult_ana:
+					ylb = self.ana_list[data_i]
+					ts.set_ylabel(ylb,fontsize=self.fontsize)
 			
-			# inset data res 170-210
-			if self.mmpbsa_inset:
-				inset1_x   = []
-				inset1_y   = []
-				for i in self.mmpbsa_inset_range:
-					inset1_x.append( X_0[i] )
-					inset1_y.append( Y[0][i] )
-				inset1 = plt.axes([0,0,1,1],label='upinset')
-				inset1.tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
-				inset1.set_xticks(np.arange(self.mmpbsa_inset_range[0], self.mmpbsa_inset_range[-1]+1, self.mmpbsa_inset_restick), minor=False)
-				ip1 = InsetPosition(ax1, [self.mmpbsa_inset_XY[0],self.mmpbsa_inset_XY[1],0.4,0.45])
-				inset1.set_axes_locator(ip1)
-				mark_inset(ax1, inset1, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=-1)
-				inset1.plot(inset1_x,inset1_y,color=plot_color)
-				#inset1.axvline(x=178,color='green')
-				#inset1.axvline(x=209,color='red')
+				# inset data res 170-210
+				if self.mmpbsa_inset:
+					inset1_x   = []
+					inset1_y   = []
+					for i in self.mmpbsa_inset_range:
+						inset1_x.append( X_0[i] )
+						inset1_y.append( Y[data_i][i] )
+					temp = plt.axes([0,0,1,1],label='upinset')
+					inset.append(temp)	
+					inset[data_i].tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
+					inset[data_i].set_xticks(np.arange(self.mmpbsa_inset_range[0], self.mmpbsa_inset_range[-1]+1, self.mmpbsa_inset_restick), minor=False)
+					ip = InsetPosition(ts, [self.mmpbsa_inset_XY[0],self.mmpbsa_inset_XY[1],0.4,0.45])
+					inset[data_i].set_axes_locator(ip)
+					mark_inset(ts, inset[data_i], loc1=2, loc2=4, fc="none", ec=mark_color,zorder=-1)
+					inset[data_i].plot(inset1_x,inset1_y,color=plot_color)
+					#inset1.axvline(x=178,color='green')
+					#inset1.axvline(x=209,color='red')
 			
-			note = self.peaks(X=X[0],Y=Y[0])
-			for i in note:
-				text_color  ='black'
-				cor   = 0
-				if i[1] >0:
-					text_color = 'darkred'
-					cor   = [0,0.2,0.4][2]
-				if i[0] == 180:
-					cor = [0.2,0.4][1]
-				if self.mmpbsa_inset:
-					if i[0] in self.mmpbsa_inset_range:
-						inset1.text(i[0]+self.ID_shift,i[1],self.mmpbsa_res[0][i[0]-1]+str(i[0]+self.ID_shift), color=inset_color, fontsize=self.fontsize*0.5)
-					else:
-						ax1.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
-				else:		
-					ax1.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
-
-		if self.mult_ana and self.ana_list[1]==anatest or anatest in self.ana_type:
-			ax2.plot(X[1],Y[1],'o',ms=1)
-		elif anatest2 in self.ana_type:
-			X_1 = []
-			for xx in X[1]:
-				X_1.append(xx+self.ID_shift)
-			ax2.plot(X_1,Y[1],color=plot_color)
-			ax2.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
-		else:
-			ax2.plot(X[1],Y[1],color=plot_color)
-		ax2.set_title(name[1], fontsize=self.fontsize)
-		ax2.grid(self.grid)
-		#ax2.set_ylim([-4.5,0.2])
-		if self.mult_ana and self.ana_list[1]=='edcomp' or self.mmpbsa:
-			ax2.set_xlabel(Xaxis[1],fontsize=self.fontsize)
-			if self.mult_ana:
-				ylb = self.ana_list[1]
-				ax2.set_ylabel(ylb,fontsize=self.fontsize)
-
-			if self.mmpbsa_inset:
-				inset2_x   = []
-				inset2_y   = []
-				for i in self.mmpbsa_inset_range:
-					inset2_x.append( X_0[i] )
-					inset2_y.append( Y[1][i] )
-				inset2 = plt.axes([0,0,1,1],label='downinset')
-				inset2.tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
-				inset2.set_xticks(np.arange(self.mmpbsa_inset_range[0], self.mmpbsa_inset_range[-1]+1, self.mmpbsa_inset_restick), minor=False)
-				ip2 = InsetPosition(ax2, [self.mmpbsa_inset_XY[0],self.mmpbsa_inset_XY[1],0.4,0.45])
-				mark_inset(ax2, inset2, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=-1)
-				inset2.set_axes_locator(ip2)
-				inset2.plot(inset2_x,inset2_y,color=plot_color)
-				inset2.axvline(x=209,color='red')
-
-			note = self.peaks(X=X[1],Y=Y[1])
-			for i in note:
-				#ajustments with 'cor' are manual for now 
-				text_color = 'black'
-				cor   = 0
-				if i[1] >0:
-					text_color = 'darkred'
-					cor   = [0,0.2,0.6][0]
-				if i[0] == 178:
-					text_color = 'green'
-					cor = 0.5
-				elif i[0] == 132:
-					cor = [0,0.15,1.2][2]	
-				elif i[0] == 157:
-					cor = [0,0.35][1]	
-				if self.mmpbsa_inset:
-					if i[0] in self.mmpbsa_inset_range:
-						inset2.text(i[0]+self.ID_shift,i[1]+cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+self.ID_shift), color=inset_color, fontsize=self.fontsize*0.5)
-					else:
-						ax2.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
-				else:
-					ax2.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[1][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
-
-		if self.mult_ana and self.ana_list[2]==anatest or anatest in self.ana_type:
-			ax3.plot(X[2],Y[2],'o',ms=1)
-		elif anatest2 in self.ana_type:
-			X_2 = []
-			for xx in X[2]:
-				X_2.append(xx+self.ID_shift)
-			ax3.plot(X_2,Y[2],color=plot_color)
-			ax3.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
-		else:
-			ax3.plot(X[2],Y[2],color=plot_color)
-		ax3.set_title(name[2], fontsize=self.fontsize)
-		ax3.grid(self.grid)
-		if self.mult_ana and self.ana_list[2]=='edcomp' or self.mmpbsa:
-			ax3.set_xlabel(Xaxis[2],fontsize=self.fontsize)
-			if self.mult_ana:
-				ylb = self.ana_list[2]
-				ax3.set_ylabel(ylb,fontsize=self.fontsize)
-
-			if self.mmpbsa_inset:
-				inset3_x   = []
-				inset3_y   = []
-				for i in self.mmpbsa_inset_range:
-					inset3_x.append( X_0[i] )
-					inset3_y.append( Y[2][i] )
-				inset3 = plt.axes([0,0,1,1],label='downinset')
-				inset3.tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
-				inset3.set_xticks(np.arange(self.mmpbsa_inset_range[0], self.mmpbsa_inset_range[-1]+1, self.mmpbsa_inset_restick), minor=False)
-				ip3 = InsetPosition(ax3, [self.mmpbsa_inset_XY[0],self.mmpbsa_inset_XY[1],0.4,0.45])
-				mark_inset(ax3, inset3, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=-1)
-				inset3.set_axes_locator(ip3)
-				inset3.plot(inset3_x,inset3_y,color=plot_color)
-				inset3.axvline(x=209,color='red')
-
-			note = self.peaks(X=X[2],Y=Y[2])
-			for i in note:
-				#ajustments with 'cor' are manual for now 
-				text_color = 'black'
-				cor   = 0
-				if i[1] >0:
-					text_color = 'darkred'
-					cor   = [0,0.2,0.6][2]
-				if i[0] == 178:
-					text_color = 'green'
-					cor = 0.8
-				elif i[0] == 157:
-					cor = [0,0.35][1]	
-				if self.mmpbsa_inset:
-					if i[0] in self.mmpbsa_inset_range:
-						inset3.text(i[0]+self.ID_shift,i[1]+cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+self.ID_shift), color=inset_color, fontsize=self.fontsize*0.5)
-					else:
-						ax3.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
-				else:
-					ax3.text(i[0]+self.ID_shift, i[1]-cor, self.mmpbsa_res[2][i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize*0.5)
+				note = self.peaks(X=X_0,Y=Y[data_i])
+				for i in note:
+					text_color  ='black'
+					cor   = 0
+					if i[1] >0:
+						text_color = 'darkred'
+						cor   = [0,0.2,0.4][2]
+					if i[0] == 180:
+						cor = [0.2,0.4][1]
+					if self.mmpbsa_inset:
+						if i[0] in self.mmpbsa_inset_range:
+							inset[data_i].text(i[0],i[1],self.mmpbsa_res[0][i[0]-1]+str(i[0]), color=inset_color, fontsize=self.fontsize*0.5)
+						else:
+							ts.text(i[0], i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]), color=text_color, fontsize=self.fontsize*0.5)
+					else:		
+						ts.text(i[0], i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]), color=text_color, fontsize=self.fontsize*0.5)
 
 		if self.mult_ana:
 			counter = -1
@@ -905,7 +818,13 @@ class Analysis_plot:
 		mean_value = []
 		for i in range(len(self.X)):
 			mean_value.append( sum(self.Y[i])/len(self.Y[i]) )
-			plt.plot(self.X[i], self.Y[i])
+			if self.mmpbsa or 'RMSF' in self.ana_type:
+				X_0 = []
+				for xx in X[i]:
+					X_0.append(xx+self.ID_shift)
+			else:
+				X_0 = X[i]
+			plt.plot(self.X_0, self.Y[i])
 
 		for xid in self.vlines:
 			plt.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
@@ -1143,7 +1062,7 @@ res=('LYS209','LYS 237')):
 
 if __name__ == "__main__":
 	arg = sys.argv
-	version_n = 1.3
+	version_n = 1.4
 	version = ''' Analysis plot - Pyplot extension for RMSD, RMSF and Radgyr data analysis.
 
 Python3 modules needed: 
@@ -1230,6 +1149,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	vline_color     = 'purple'
 	vline_thickness = 0.25
 	vlines          = [] #[132,178,209]
+	bool_shift      = False #ver flag -xshift
 	ID_shift        = 28
 	plotid          = ''
 
@@ -1301,7 +1221,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-eng\tSets default texts language to english. If this flag is not called the texts will be set on portuguese.\n")
 				print("\t-vlines\tPlot vertical lines. Eg.: -vlines 178,209\n")
 				print("\t-vcolor\tSets the color for the vertical lines (Default: purple).\n")
-				print("\t-xshift\t(Valid for 'edcomp' only) Adds to the X points, to shift the data in the x-axis (Default: 28).\n")
+				print("\t-xshift\t(Valid for 'edcomp' and 'rmsf' only) Adds to the X points, to shift the data in the x-axis (Default: 0).\n")
 				print("\t-fontsize\tInteger value for the fontsize of labels and inplot texts (Default=%d).\n"%fontsize)
 				print("\t-index3d\t(Valid only for type 'allin_one') Creates a 3D plot with a index axis separating your datasets.\n")
 				print("\t-jpeg\t\t(Recommended when dpi is too big) Saves picture directly to 'Figure.jpeg' instead of generating the interface.\n")
@@ -1340,7 +1260,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				debug_dic['id'] = plotid 
 				continue
 			elif arg[i] == "-xshift":
-				ID_shift = float(arg[i+1])
+				ID_shift   = float(arg[i+1])
+				bool_shift = True
 				debug_dic['xshift'] = ID_shift 
 				continue
 			elif arg[i] == "-vcolor":
@@ -1533,7 +1454,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
