@@ -820,11 +820,11 @@ class Analysis_plot:
 			mean_value.append( sum(self.Y[i])/len(self.Y[i]) )
 			if self.mmpbsa or 'RMSF' in self.ana_type:
 				X_0 = []
-				for xx in X[i]:
+				for xx in self.X[i]:
 					X_0.append(xx+self.ID_shift)
 			else:
-				X_0 = X[i]
-			plt.plot(self.X_0, self.Y[i])
+				X_0 = self.X[i]
+			plt.plot(X_0, self.Y[i])
 
 		for xid in self.vlines:
 			plt.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
