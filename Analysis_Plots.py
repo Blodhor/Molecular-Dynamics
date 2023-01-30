@@ -291,7 +291,7 @@ class Analysis_plot:
 				default_counter = {'HIP': 'HIS', 'AS4': 'ASP', 'GL4': 'GLU'}
 				for i in t:
 					data = i.split()
-					if "Total" not in i and i != '' and i != '\n':
+					if "Total" not in i and i != '' and i != '\n' and len(data)>=3:
 						if 'R' in data[2]:
 							if data[0] in default_counter:
 								if self.restriction_break:
@@ -323,7 +323,7 @@ class Analysis_plot:
 				false_peak.append( (X[i],Y[i]) )
 				if len(false_peak)==1:
 					notes.append( (X[i],Y[i]) )
-				elif false_peak[-1][0]-false_peak[-2][0] > 1:
+				elif abs(false_peak[-1][1]-false_peak[-2][1]) > abs(min(Y))/6.0:
 					#i don't want to see a bunch of neighbouring residues 
 					notes.append( (X[i],Y[i]) )
 		return notes	
@@ -388,7 +388,7 @@ class Analysis_plot:
 			ax1.grid(self.grid)
 			for xid in self.vlines:
 				ax1.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
-			ax1.set_ylim(min(Y)-2,max(Y)+0.25)
+			ax1.set_ylim(min(Y)-0.25,max(Y)+0.25)
 			# inset data res 170-210
 			if self.mmpbsa_inset:
 				inset1_x   = []
@@ -417,11 +417,11 @@ class Analysis_plot:
 					cor = [0.2,0.4][1]
 				if self.mmpbsa_inset:
 					if i[0] in self.mmpbsa_inset_range:
-						inset1.text(i[0],i[1],self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=inset_color, fontsize=self.fontsize)
+						inset1.text(i[0],i[1],self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0]), color=inset_color, fontsize=self.fontsize)
 					else:
-						ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
-				else:		
-					ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-1]+str(i[0]+self.ID_shift), color=text_color, fontsize=self.fontsize)
+						ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize)
+				else:
+					ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize)
 	
 		if not self.plot_interface:
 			plt.savefig(self.file_name,bbox_inches='tight')
@@ -530,7 +530,7 @@ class Analysis_plot:
 					text_color  ='black'
 					cor   = 0
 					if ylb!='Binding Energy':
-						nota = self.mmpbsa_res[i[0]-1]+str(i[0])
+						nota = self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0])
 					elif i[0] in res_petase:
 						text_color = res_petase[i[0]][0]
 						nota = res_petase[i[0]][1]
@@ -661,11 +661,11 @@ class Analysis_plot:
 						cor = [0.2,0.4][1]
 					if self.mmpbsa_inset:
 						if i[0] in self.mmpbsa_inset_range:
-							inset[data_i].text(i[0],i[1],self.mmpbsa_res[0][i[0]-1]+str(i[0]), color=inset_color, fontsize=self.fontsize*0.5)
+							inset[data_i].text(i[0],i[1],self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0]), color=inset_color, fontsize=self.fontsize*0.5)
 						else:
-							ts.text(i[0], i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]), color=text_color, fontsize=self.fontsize*0.5)
+							ts.text(i[0], i[1]-cor, self.mmpbsa_res[0][i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize*0.5)
 					else:		
-						ts.text(i[0], i[1]-cor, self.mmpbsa_res[0][i[0]-1]+str(i[0]), color=text_color, fontsize=self.fontsize*0.5)
+						ts.text(i[0], i[1]-cor, self.mmpbsa_res[0][i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize*0.5)
 
 		if self.mult_ana:
 			counter = -1
@@ -1265,7 +1265,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				debug_dic['id'] = plotid 
 				continue
 			elif arg[i] == "-xshift":
-				ID_shift   = float(arg[i+1])
+				ID_shift   = int(arg[i+1])
 				bool_shift = True
 				debug_dic['xshift'] = ID_shift 
 				continue
