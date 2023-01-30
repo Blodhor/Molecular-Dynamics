@@ -497,7 +497,7 @@ class Analysis_plot:
 			##ts.text(160, -2, 'S', color='orange', fontsize=self.fontsize)
 			#ts.text(161, -2.5, 'M', color='blue', fontsize=self.fontsize)
 			ts.set_ylabel(ylb, fontsize=self.fontsize)
-			if ts == ax2:
+			if ylb=='Binding Energy' and ts == ax2:
 				ts.text(237, -1, 'K', color='green', fontsize=self.fontsize)
 
 			if self.mult_ana and self.ana_list[data_i]=='edcomp' or self.mmpbsa:
