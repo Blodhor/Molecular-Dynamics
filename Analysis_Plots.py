@@ -103,6 +103,10 @@ class Analysis_plot:
 		self.mmpbsa_cut           = mmpbsa_cut
 		self.mmpbsa_res           = []
 		self.plot_interface    = plot_interface
+		self.multi_ids = True
+
+		if type in ['one','two','1c3p','four']:
+			self.multi_ids = False
 
 		if type == 'allin_one' or type == 'allin_one_f3d' or type == '1c3p':
 			self.restriction_break = True
@@ -158,7 +162,7 @@ class Analysis_plot:
 				XTlabels = self.XY_decomp(files=names)
 			else:
 				XTlabels = self.XY(files=names,ana_type=self.ana_type)
-
+		
 		if debug:
 			print(XTlabels, '\nnames:',names)
 			#print(self.X)
@@ -210,7 +214,8 @@ class Analysis_plot:
 				try:
 					mdid = int(re.findall(r'[0-9]+',plot_title)[-1])
 				except IndexError:
-					print("No MD id found on plot title, setting to default.")
+					if self.multi_ids:
+						print("No MD id found on plot title, setting to default.")
 					mdid = 1
 				if mdid in self.halving_ids:
 					half_data = True
