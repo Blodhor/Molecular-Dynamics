@@ -1,3 +1,4 @@
+# For xy and xyz plots
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -5,6 +6,8 @@ from matplotlib.font_manager import FontProperties
 from mpl_toolkits.axes_grid1.inset_locator import (inset_axes, InsetPosition, mark_inset)
 import re
 import sys
+# For images but not plots
+from matplotlib.transforms import IdentityTransform
 	
 class Analysis_plot:
 	max_num = sys.maxsize
@@ -15,7 +18,8 @@ class Analysis_plot:
 	forced_3Dzaxis=['ph','index'][1], forced_mean=False, fmv=4.75, eng=False, fontsize=10, mmpbsa=False,
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
 	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True,
-	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A'):
+	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A',
+	legend_only=False,legend_only_text=[]):
 		'''Parameters:
 		
 		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
@@ -122,7 +126,7 @@ class Analysis_plot:
 		
 		self.mult_ana = False
 		self.ana_list = []
-		if mult_ana_plot != [] and len(mult_ana_plot) == len(names):
+		if not legend_only and mult_ana_plot != [] and len(mult_ana_plot) == len(names):
 			self.mult_ana = True
 			self.ana_list = mult_ana_plot
 			##
@@ -152,7 +156,7 @@ class Analysis_plot:
 							print(temp)
 						XTlabels.extend( self.XY(files=[names[j]],ana_type=temp) )
 				self.ana_list = new_list
-		else:
+		elif not legend_only:
 			if len(mult_ana_plot) >0 and len(names)> 2:
 				print("'-multana' doesn't include the analysis for all the files!")
 				print("-multana: ",mult_ana_plot)
@@ -162,14 +166,15 @@ class Analysis_plot:
 				XTlabels = self.XY_decomp(files=names)
 			else:
 				XTlabels = self.XY(files=names,ana_type=self.ana_type)
-		
+		else:
+			self.legend_frame(text=legend_only_text)
+
 		if debug:
 			print(XTlabels, '\nnames:',names)
 			#print(self.X)
 			#print(self.Y)
 			print("tamanho X e Y:",len(self.X[0]),len(self.Y[0]))
-			
-		else:
+		elif not legend_only:
 			if XTlabels != -1 and type == 'one':
 				self.plot_one(X=self.X[0], Y=self.Y[0], Xaxis=XTlabels[0][0], 
 				name= XTlabels[0][1])
@@ -348,6 +353,22 @@ class Analysis_plot:
 			id_x = min_x - (max_x - min_x)/5.0 
 			id_y = max_y
 			plt.text(x=id_x,y=id_y,s='(%s)'%self.plotid,color='steelblue', fontsize=1.5*self.fontsize)
+
+	def legend_frame(self,text=[r"IQ: $\sigma_i=15$"]):
+		fig = plt.figure(dpi=self.dpi)
+		cc=0
+		'''fig.text(10, (len(text)*100)-cc, '', color='steelblue', fontsize=self.fontsize,
+        transform=IdentityTransform())'''
+		#500 limit of y
+		p = 500 /len(text)
+		for i in range(len(text)):
+			fig.text(50, 500 -(i+0.5)*p, text[i], color='steelblue', fontsize=self.fontsize,
+        	transform=IdentityTransform())
+		
+		if not self.plot_interface:
+			plt.savefig("Legend_box.jpeg",bbox_inches='tight',pad_inches=0.15)
+		else:
+			plt.show()
 
 	def plot_one(self, X = [], Y = [], Xaxis = "Frames", name = "Título"):
 		'''Plots one X-Y dataset.'''
@@ -1157,8 +1178,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	bool_shift      = False #ver flag -xshift
 	ID_shift        = 28
 	plotid          = ''
+	# for legend box only and no plots
+	## on flag '-i' i've set this to False so it does
+	#  not matter even if it's True here
+	l_o   = True 
+	# text to be printed
+	l_o_t = ['(A) All','(B) Wildtype','(C) D206E','(D) D206E/H237K','(E) H237K'] 
 
-	default_mod = True
+	default_mod     = True
 	inset_tick      = 10
 	mmpbsa_inset_XY = (0.10,0.10)
 	halving_ids = [[],[1,2,3]][0]
@@ -1372,7 +1399,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				continue
 			elif arg[i] == "-i":
 				default_mod = False
-				File = []
+				l_o         = False
+				File        = []
 				#File.append( (arg[i+1], arg[i+2]) ) # arg[i+2] != 'Production pH=7.00' !!
 				cc = i+1
 				while cc < len(arg):
@@ -1459,7 +1487,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(legend_only=l_o,legend_only_text=l_o_t,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
