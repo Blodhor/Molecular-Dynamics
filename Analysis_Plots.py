@@ -11,7 +11,7 @@ from matplotlib.transforms import IdentityTransform
 	
 class Analysis_plot:
 	max_num = sys.maxsize
-	_Types = ['one','two','2ph_2merge','1c3p','four','four_2merge','allin_one']
+	_Types = ['2ph_2merge','1cmp','four','four_2merge','allin_one']
 	def __init__(self, type = 'one', print_mean=False, names=[('file.dat','analysis_title')], analysisType = 'rmsd',mult_ana_plot=[],
 	frameToTime=False, frameStep = 5*10**4, timeStep = 0.004, nanosec = False, suptitle='Titulo geral', 
 	labelpx = 35.0, labelpy = 0.50, dpi = 100, label_color = 'darkblue', merge_legend = '', multi_merge_label_loc = (0.5,0.5),
@@ -24,7 +24,7 @@ class Analysis_plot:
 		
 		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
 
-		type: Plot 'one' dataset, 'two'/'2ph_2merge' datasets beside each other, 'four'/'four_2merge' datasets in a matrix fashion or multiple datasets in one XY frame ('allin_one').
+		type: Plot '2ph_2merge' datasets beside each other, 'four'/'four_2merge' datasets in a matrix fashion, multiple datasets in one XY frame ('allin_one') or multiple datasets in different plots but on the same colunm ('1cmp').
 
 		print_mean: (For type 'allin_one') prints the mean line of all data
 
@@ -109,10 +109,10 @@ class Analysis_plot:
 		self.plot_interface    = plot_interface
 		self.multi_ids = True
 
-		if type in ['one','two','1c3p','four']:
+		if type in ['1cmp','four']:
 			self.multi_ids = False
 
-		if type == 'allin_one' or type == 'allin_one_f3d' or type == '1c3p':
+		if type == 'allin_one' or type == 'allin_one_f3d' or type == '1cmp':
 			self.restriction_break = True
 
 		if 'radgyr' in analysisType:
@@ -175,18 +175,12 @@ class Analysis_plot:
 			#print(self.Y)
 			print("tamanho X e Y:",len(self.X[0]),len(self.Y[0]))
 		elif not legend_only:
-			if XTlabels != -1 and type == 'one':
-				self.plot_one(X=self.X[0], Y=self.Y[0], Xaxis=XTlabels[0][0], 
-				name= XTlabels[0][1])
-			elif XTlabels != -1 and type == 'two':
-				self.plot_two(X=self.X, Y=self.Y, Xaxis=[XTlabels[0][0],XTlabels[1][0]],
-				name= [XTlabels[0][1], XTlabels[1][1]])
-			elif XTlabels != -1 and type == '1c3p':
-				self.plot_1c3p(X=self.X, Y=self.Y, Xaxis=[XTlabels[0][0],XTlabels[1][0],XTlabels[2][0]],
-				name= [XTlabels[0][1], XTlabels[1][1], XTlabels[2][1]])
+			if XTlabels != -1 and type == '1cmp':
+				self.plot_1cmp(X=self.X, Y=self.Y, Xaxis=[XTlabels[i][0] for i in range(len(XTlabels))],
+				name= [XTlabels[i][1] for i in range(len(XTlabels))],plts=len(XTlabels))
 			elif XTlabels != -1 and type == 'four':
-				self.plot_four(X=self.X, Y=self.Y, Xaxis=[XTlabels[0][0],XTlabels[1][0],XTlabels[2][0],XTlabels[3][0]],
-				name= [XTlabels[i][1] for i in range(len(XTlabels))]) #[XTlabels[0][1], XTlabels[1][1], XTlabels[2][1], XTlabels[3][1]]
+				self.plot_four(X=self.X, Y=self.Y, Xaxis=[XTlabels[i][0] for i in range(4)],
+				name= [XTlabels[i][1] for i in range(len(XTlabels))])
 			elif XTlabels != -1 and type == '2ph_2merge': 
 				self.plot_two_2merge(X=self.X, Y=self.Y, Xaxis=XTlabels[0][0],
 				name= [XTlabels[i][1] for i in range(len(XTlabels))])
@@ -369,233 +363,20 @@ class Analysis_plot:
 			plt.savefig("Legend_box.jpeg",bbox_inches='tight',pad_inches=0.15)
 		else:
 			plt.show()
-
-	def plot_one(self, X = [], Y = [], Xaxis = "Frames", name = "Título"):
-		'''Plots one X-Y dataset.'''
-
-		mark_color="lightsteelblue"
-		plot_color="cornflowerblue"
-		inset_color = "darkslategray"
-		if self.mmpbsa or 'RMSF' in self.ana_type:
-			X_0 = []
-			for xx in X:
-				X_0.append(xx+self.ID_shift)
-		else:
-			X_0 = X
-
-		if not self.mmpbsa: 
-			fig = plt.figure(dpi=self.dpi)
-			#fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
-			if self.plotid != '':
-				self.plot_textid()
-			if ['Estado de Protonação','Protonation State'][self.lang_set] in self.ana_type:
-				plt.plot(X,Y,'o',ms=1)
-				plt.yticks(range(0,self.max_state+1))
-			else:
-				plt.plot(X_0,Y)
-			plt.title(name, fontsize=self.fontsize)
-			plt.ylabel(self.ana_type, fontsize=self.fontsize)
-			for xid in self.vlines:
-				plt.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
-			plt.xlabel(Xaxis, fontsize=self.fontsize)
-		else:
-			fig, ax1 = plt.subplots(nrows=1, ncols=1, dpi=self.dpi)
-			if self.plotid != '':
-				self.plot_textid()
-			ax1.plot(X_0,Y,color=plot_color)
-			ax1.set_ylabel(self.ana_type, fontsize=self.fontsize)
-			ax1.set_xlabel(Xaxis, fontsize=self.fontsize)
-			plt.title(name, fontsize=self.fontsize)
-			ax1.grid(self.grid)
-			for xid in self.vlines:
-				ax1.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
-			ax1.set_ylim(min(Y)-0.25,max(Y)+0.25)
-			# inset data res 170-210
-			if self.mmpbsa_inset:
-				inset1_x   = []
-				inset1_y   = []
-				for i in self.mmpbsa_inset_range:
-					inset1_x.append( X_0[i] )
-					inset1_y.append( Y[i] )
-				inset1 = plt.axes([0,0,1,1],label='upinset')
-				inset1.tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
-				inset1.set_xticks(np.arange(self.mmpbsa_inset_range[0], self.mmpbsa_inset_range[-1]+1, self.mmpbsa_inset_restick), minor=False)
-				ip1 = InsetPosition(ax1, [self.mmpbsa_inset_XY[0],self.mmpbsa_inset_XY[1],0.4,0.45])
-				inset1.set_axes_locator(ip1)
-				mark_inset(ax1, inset1, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=-1)
-				inset1.plot(inset1_x,inset1_y,color=plot_color)
-				inset1.axvline(x=178,color='green')
-				inset1.axvline(x=209,color='red')
-			
-			note = self.peaks(X=X_0,Y=Y)
-			for i in note:
-				text_color  ='black'
-				cor   = 0
-				if i[1] >0:
-					text_color = 'darkred'
-					cor   = [0,0.2,0.4][2]
-				if i[0] == 180:
-					cor = [0.2,0.4][1]
-				if self.mmpbsa_inset:
-					if i[0] in self.mmpbsa_inset_range:
-						inset1.text(i[0],i[1],self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0]), color=inset_color, fontsize=self.fontsize)
-					else:
-						ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize)
-				else:
-					ax1.text(i[0], i[1]-cor, self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize)
 	
-		if not self.plot_interface:
-			plt.savefig(self.file_name,bbox_inches='tight')
-		else:
-			plt.show()
-
-	def plot_two(self, X = [[], []], Y = [[], []], Xaxis = ["Frames"], name = ["Título"]):
+	def plot_1cmp(self, X = [[], []], Y = [[], []], Xaxis = ["Frames"], name = ["Título"], plts=3):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 		
 		mark_color  ="lightsteelblue"
 		plot_color  ="cornflowerblue"
 		inset_color = "darkslategray"
-		share=True
-
-		max_y = -self.max_num
-		min_y = self.max_num
-		for yy in Y:
-			max_y = max(max_y,max(yy))
-			min_y = min(min_y,min(yy))
-			#print(max_y,min_y)
-		y_tick=np.arange(round(min_y,1),round(max_y,1)+1,round((max_y-min_y)/4,1))
-
-		if self.mult_ana:
-			share = False
-
-		fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=share, dpi=self.dpi)
-		if self.plotid != '':
-			self.plot_textid()
-		anatest = ['Estado de Protonação','Protonation State'][self.lang_set]
-		if not self.mult_ana:
-			for ts in [ax1, ax2]:
-				plt.setp(ts, yticks=y_tick)
-				ts.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
+		axs= [0]*plts
+		if plts >1:
+			fig, axs[0:] = plt.subplots(nrows=plts, ncols=1, sharex=True, dpi=self.dpi)
 		else:
-			jj = -1
-			for ts in [ax1, ax2]:
-				jj+=1 
-				if self.ana_list[0]==anatest:
-					plt.setp(ts, yticks=range(0,self.max_state+1))
-				'''else:
-					plt.setp(ts, yticks=y_tick)'''
-		########
-		data_i = -1
-		inset  = []
-		for ts in [ax1, ax2]:
-			data_i +=1
-			bool_me  = self.mult_ana and self.ana_list[data_i]=='edcomp'
-			bool_mrf = self.mult_ana and 'rmsf' in self.ana_list[data_i]
-			bool_erf = self.mmpbsa or 'RMSF' in self.ana_type
-			if bool_me or bool_mrf or bool_erf:
-				X_0 = []
-				for xx in X[data_i]:
-					X_0.append(xx+self.ID_shift)
-			else:
-				X_0 = X[data_i]
+			fig, ax = plt.subplots(nrows=plts, ncols=1, sharex=True, dpi=self.dpi)
+			axs = [ax]
 
-			if self.mult_ana and self.ana_list[0]==anatest or anatest in self.ana_type:
-				ts.plot(X_0,Y[data_i],'o',ms=1)
-			else:
-				ts.plot(X_0,Y[data_i],color=plot_color)
-				if self.mult_ana:
-					ts.set_ylim(min(Y[data_i])-0.5,max(Y[data_i])+0.5)
-			
-			if self.mult_ana and self.ana_list[data_i]=='edcomp' or self.mmpbsa:
-				for xid in self.vlines:
-					ts.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
-			ts.set_title(name[data_i], color='skyblue',weight='bold', fontsize=self.fontsize)
-			ts.grid(self.grid)
-			if self.mult_ana:
-				ylb = self.ana_list[data_i]
-			else:
-				ylb = self.ana_type
-			
-			#esboco zuado
-			##ylb='Binding Energy' ##########
-			##plt.setp(ts, yticks=[0],xticks=[])#######
-			ts.set_xlabel(Xaxis[data_i], fontsize=self.fontsize)
-			##ts.text(160, -2, 'S', color='orange', fontsize=self.fontsize)
-			#ts.text(161, -2.5, 'M', color='blue', fontsize=self.fontsize)
-			ts.set_ylabel(ylb, fontsize=self.fontsize)
-			if ylb=='Binding Energy' and ts == ax2:
-				ts.text(237, -1, 'K', color='green', fontsize=self.fontsize)
-
-			if self.mult_ana and self.ana_list[data_i]=='edcomp' or self.mmpbsa:
-				# inset data res 170-210
-				if self.mmpbsa_inset:
-					inset_x   = []
-					inset_y   = []
-					for i in self.mmpbsa_inset_range:
-						inset_x.append( X_0[i] )
-						inset_y.append( Y[data_i][i] )
-					temp = plt.axes([0,0,1,1],label='upinset')
-					inset.append(temp)	
-					inset[data_i].tick_params(axis='both', which='major', labelsize=0.5*self.fontsize)
-					inset[data_i].set_xticks(np.arange(self.mmpbsa_inset_range[0], self.mmpbsa_inset_range[-1]+1, self.mmpbsa_inset_restick), minor=False)
-					ip = InsetPosition(ts, [self.mmpbsa_inset_XY[0],self.mmpbsa_inset_XY[1],0.4,0.45])
-					inset[data_i].set_axes_locator(ip)
-					mark_inset(ts, inset[data_i], loc1=2, loc2=4, fc="none", ec=mark_color,zorder=-1)
-					inset[data_i].plot(inset_x,inset_y,color=plot_color)
-					inset[data_i].axvline(x=178,color='green')
-					inset[data_i].axvline(x=209,color='red')
-			
-				note = self.peaks(X=X_0,Y=Y[data_i])
-				res_petase={87:('blue','Y'),160:('orange','S'),161:('blue','M'),185:('purple','W')}
-				for i in note:
-					text_color  ='black'
-					cor   = 0
-					if ylb!='Binding Energy':
-						nota = self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0])
-					elif i[0] in res_petase:
-						text_color = res_petase[i[0]][0]
-						nota = res_petase[i[0]][1]
-					elif i[0]==206:
-						if ts == ax1:
-							text_color = 'orange'
-							nota = 'D'
-						else:
-							text_color = 'green'
-							nota = 'E'
-					elif i[0]==237:
-						if ts == ax1:
-							text_color = 'red'
-							nota = 'H (Unfavorable)'
-					if self.mmpbsa_inset:
-						if i[0] in self.mmpbsa_inset_range:
-							inset[data_i].text(i[0],i[1],nota, color=inset_color, fontsize=self.fontsize)
-						else:
-							ts.text(i[0], i[1]-cor, nota, color=text_color, fontsize=self.fontsize)
-					else:		
-						ts.text(i[0], i[1]-cor, nota, color=text_color, fontsize=self.fontsize)
-					
-		
-		#pyplot.subplots can hide redundant axes
-		for ts in [ax1,ax2]:
-			ts.label_outer()
-		
-		if self.supertitle:
-			plt.suptitle(self.suptitle,fontsize=self.fontsize)
-		
-		if not self.plot_interface:
-			plt.savefig(self.file_name,bbox_inches='tight')
-		else:
-			plt.show()
-
-	def plot_1c3p(self, X = [[], []], Y = [[], []], Xaxis = ["Frames"], name = ["Título"]):
-		'''Plots two X-Y datasets sharing x,y - axis.'''
-		
-		#testar com multi ana!!!!!!!!!!!!!11
-
-		mark_color  ="lightsteelblue"
-		plot_color  ="cornflowerblue"
-		inset_color = "darkslategray"
-		fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, sharex=True, dpi=self.dpi)
 		if self.plotid != '':
 			self.plot_textid()
 		
@@ -608,10 +389,10 @@ class Analysis_plot:
 				max_y = max(max_y,max(yy))
 				min_y = min(min_y,min(yy))
 			y_tick=np.arange(round(min_y,1),round(max_y,1)+1,round((max_y-min_y)/4,1))
-			plt.setp((ax1, ax2, ax3), yticks=y_tick)
+			plt.setp(axs, yticks=y_tick)
 		else:
 			jj = -1
-			for ts in [ax1, ax2, ax3]:
+			for ts in axs:
 				jj+=1 
 				if self.ana_list[jj]==anatest:
 					plt.setp(ts, yticks=range(0,self.max_state+1))
@@ -622,10 +403,9 @@ class Analysis_plot:
 					plt.setp(ts, yticks=y_tick)
 		plt.subplots_adjust(hspace=0.3)
 
-		##### ver se tem redundancia com o plot_two
 		data_i = -1
 		inset  = []
-		for ts in [ax1, ax2, ax3]:
+		for ts in axs:
 			data_i +=1
 			bool_me  = self.mult_ana and self.ana_list[data_i]=='edcomp'
 			bool_mrf = self.mult_ana and 'rmsf' in self.ana_list[data_i]
@@ -647,13 +427,17 @@ class Analysis_plot:
 				ts.plot(X_0,Y[data_i],color=plot_color)
 			ts.set_title(name[data_i], fontsize=self.fontsize)
 			ts.grid(self.grid)
-			if self.mult_ana and self.ana_list[data_i]=='edcomp' or self.mmpbsa:
-				ts.set_xlabel(Xaxis[data_i],fontsize=self.fontsize)
-				if self.mult_ana:
-					ylb = self.ana_list[data_i]
-					ts.set_ylabel(ylb,fontsize=self.fontsize)
 			
-				# inset data res 170-210
+			#esboco zuado
+			##ylb='Binding Energy' ##########
+			##plt.setp(ts, yticks=[0],xticks=[])#######
+			##ts.text(160, -2, 'S', color='orange', fontsize=self.fontsize)
+			#ts.text(161, -2.5, 'M', color='blue', fontsize=self.fontsize)
+			#if ylb=='Binding Energy' and ts == axs[1]:
+			#	ts.text(237, -1, 'K', color='green', fontsize=self.fontsize)
+
+			if self.mult_ana and self.ana_list[data_i]=='edcomp' or self.mmpbsa:
+				# inset data res Eg:170-210
 				if self.mmpbsa_inset:
 					inset1_x   = []
 					inset1_y   = []
@@ -680,6 +464,23 @@ class Analysis_plot:
 						cor   = [0,0.2,0.4][2]
 					if i[0] == 180:
 						cor = [0.2,0.4][1]
+					'''# do esboço zuado!!
+					if ylb!='Binding Energy':
+						nota = self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0])
+					elif i[0] in res_petase:
+						text_color = res_petase[i[0]][0]
+						nota = res_petase[i[0]][1]
+					elif i[0]==206:
+						if ts == ax1:
+							text_color = 'orange'
+							nota = 'D'
+						else:
+							text_color = 'green'
+							nota = 'E'
+					elif i[0]==237:
+						if ts == ax1:
+							text_color = 'red'
+							nota = 'H (Unfavorable)' '''
 					if self.mmpbsa_inset:
 						if i[0] in self.mmpbsa_inset_range:
 							inset[data_i].text(i[0],i[1],self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0]), color=inset_color, fontsize=self.fontsize*0.5)
@@ -690,27 +491,29 @@ class Analysis_plot:
 
 		if self.mult_ana:
 			counter = -1
-			for ts in [ax1,ax2,ax3]:
+			for ts in axs:
 				counter += 1
 				ts.set_xlabel(Xaxis[counter],fontsize=self.fontsize)
 				ts.set_ylabel(self.ana_list[counter],fontsize=self.fontsize*0.8)	
 		elif self.mmpbsa:
 			counter=-1			
-			for ts in [ax1,ax2,ax3]:
+			for ts in axs:
 				counter+=1
 				ts.set_xlabel(Xaxis[counter],fontsize=self.fontsize)
 				for xid in self.vlines:
 					ts.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
-			#labelling ax2 only but with bigger font
-			ax2.set_ylabel(self.ana_type,fontsize=self.fontsize*1.25)
+				if plts != 3:
+					ts.set_ylabel(self.ana_type, fontsize=self.fontsize)
+			if plts==3:
+				axs[1].set_ylabel(self.ana_type,fontsize=self.fontsize*1.25)
 		else:
 			counter = -1
-			for ts in [ax1,ax2,ax3]:
+			for ts in axs:
 				counter += 1
 				ts.set_xlabel(Xaxis[counter], fontsize=self.fontsize)
 				ts.set_ylabel(self.ana_type, fontsize=self.fontsize)	
 		#pyplot.subplots can hide redundant axes
-		for ts in [ax1,ax2,ax3]:
+		for ts in axs:
 			ts.label_outer()
 		
 		if self.supertitle:
@@ -994,18 +797,6 @@ res=('LYS209','LYS 237')):
 		for value in ['7.00','9.00']:
 			File.append( ('%sph%s_%s.dat'%(path+s1,value,anatp),'pH='+value) )
 			File.append( ('%sph%s_%s.dat'%(path+[s2,smut][0],value,anatp),'pH='+value) )
-	elif tpe == 'two' and anatp !='prot_state':
-		if bckbne_comp:
-			path    = 'nativaHotfix1.1/'
-			ph_comp = '9.00'
-			File    = [('%sAll_backbone/ph%s_%s.dat'%(path,ph_comp,anatp),'Todo Backbone a pH=%s'%ph_comp),
-			('%sCA_C_N/ph%s_%s.dat'%(path,ph_comp,anatp),'CA,C,N do Backbone a pH=%s'%ph_comp)]
-		else:
-			path = 'PETase_Dynamics/gpu-ultra/' 
-			s1   = 'Jan_no_warp/'
-			s2   = 'Julho_no_warpReplicata/' #'HIS237_GLU/' #'ASP206_GLU-replicata/'
-			for value in ['7.00','9.00']:
-				File.append( ('%sph%s_%s.dat'%(path+s2,value,anatp),'pH='+value) )
 	elif tpe == 'allin_one' or tpe == 'allin_one_f3d' and anatp !='prot_state':
 		variant         = {'Nat':0,'D206E':1,'D206EH237K':2,'Nat_nored':4, 'H237K':3}
 		path0			= 'PETase_Dynamics/gpu-ultra/Dock_run/'
@@ -1088,7 +879,7 @@ res=('LYS209','LYS 237')):
 
 if __name__ == "__main__":
 	arg = sys.argv
-	version_n = 1.4
+	version_n = 1.5
 	version = ''' Analysis plot - Pyplot extension for RMSD, RMSF and Radgyr data analysis.
 
 Python3 modules needed: 
@@ -1129,8 +920,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 '''
-	dic_Type      = {1:'one', 13:'allin_one', 133:'allin_one_f3d', -13:'1c3p', 2:'two', 22: '2ph_2merge', 4:'four', 42: 'four_2merge'}
-
+	dic_Type = {13:'allin_one', 133:'allin_one_f3d', -13:'1cmp', 22: '2ph_2merge', 4:'four', 42: 'four_2merge'}
+	
 	#default keys
 	interface    = True
 	mmpbsa             = False
@@ -1249,7 +1040,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("Copyright (C) 2021  Braga, B. C.\nThis program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it under certain conditions; use option '-v' for details.\n")
 				print("\nUsage:\n\t-v or --version\t\tprints current version, the python libraries needed and the data format expected.\n")
 				print("\t-h or --help\t\tprints this message.\n")
-				print("\t-type\tQuantity of files used, for data comparison.\n\t\tone: Normal plot with one data file.\n\t\ttwo: Plots two data files with the same axis information.\n\t\tfour: Plots four data files with the same axis information.\n\t\tallin_one: Plots every dataset given in one XY frame.\n\t\t1c3p: 1 column with 3 plots.")
+				print("\t-type\tQuantity of files used, for data comparison.\n\t\t1cmp: 1 column and multiple plots (Eg.: '-type 1cmp -i 1.dat name1' for one and '-type 1cmp -i 1.dat name1 2.dat name2 3.dat name3' for three plots in one column).\n\t\tfour: Plots four data files with the same axis information.\n\t\tallin_one: Plots every dataset given in one XY frame.")
 				print("\t-eng\tSets default texts language to english. If this flag is not called the texts will be set on portuguese.\n")
 				print("\t-vlines\tPlot vertical lines. Eg.: -vlines 178,209\n")
 				print("\t-vcolor\tSets the color for the vertical lines (Default: purple).\n")
@@ -1259,7 +1050,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-jpeg\t\t(Recommended when dpi is too big) Saves picture directly to 'Figure.jpeg' instead of generating the interface.\n")
 				print("\t-nogrid\t\tTurn off 'grid' option.\n")
 				print("\t-mean\t\t(Valid only for type 'allin_one') Print a horizontal line with the mean value of all the data given.\n")
-				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist;\n\t\tedcomp (Valid only for types 'one', 'two', and '1c3p') Energy decomposition on the format of 'decode_mmpbsa.py'\n\t\tprot_state (Tested only with type one).\n")
+				print("\t-anatp\t\tAnalysis type:\n\t\trmsd;\n\t\trmsf;\n\t\tradgyr;\n\t\tdist;\n\t\tedcomp (Valid only for types 'one' and '1cmp') Energy decomposition on the format of 'decode_mmpbsa.py'\n\t\tprot_state (Tested only with type one).\n")
 				print("\t-multana\t\t(Has priority over 'anatp', and it's empty by default) Sets one analysis type for each file on the input flag '-i'. The first analysis will be set for the first input file, the second analysis for the second file and so on.\n")
 				print("\t-edcut\t\tSets the higher energy limit for highlighting residues on the energy decomposition plot. Default:%s\n"%str(mmpbsa_cut))
 				print("\t-edinsetXYpos\t\tSets the inset position relative to the original plot (values between 0 and 1). Eg. for 10%% Res axis and 5%% energy axis: -edinsetXYpos 0.1,0.05\n")
@@ -1273,8 +1064,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-fram2time\t(For anatp = rmsd or radgyr) Sets X-axis will change from frame to time (pico seconds). Must inform frame-step conversion.\n\t\t\tEg.: -fram2time 10000\n")
 				print("\t-nanosec\t\t(For anatp = rmsd or radgyr) Sets time intervals on X-axis to nanoseconds.\n")
 				print("\t-dpi\t\tSets the plot quality (recommended to use only with type=one). Default: 300\n")
-				print("\nExamples:\n\t$ python3 Analysis_Plots.py -type one -anatp rmsd -i ph7.00_rmsd.dat Production pH=7.00 -fram2time 10000 -dpi 120\n")
-				print("\n\t$ python3 Analysis_Plots.py -type two -anatp rmsf -i ph7.00_rmsf.dat Production pH=7.00 ph8.00_rmsf.dat Production pH=8.00\n")
+				print("\nExamples:\n\t$ python3 Analysis_Plots.py -type 1cmp -anatp rmsd -i ph7.00_rmsd.dat Production pH=7.00 -fram2time 10000 -dpi 120\n")
+				print("\n\t$ python3 Analysis_Plots.py -type 1cmp -anatp rmsf -i ph7.00_rmsf.dat Production pH=7.00 ph8.00_rmsf.dat Production pH=8.00\n")
 				print("\n\t$ python3 Analysis_Plots.py -type four -stitle Production -anatp radgyr -lblcrd (16.61,200) -i ph7.00_radgyr.dat pH=7.00 ph8.00_radgyr.dat pH=8.00 ph9.00_radgyr.dat pH=9.00 ph10.00_radgyr.dat pH=10.00 -fram2time 10000 -nanosec\n")
 				break
 
