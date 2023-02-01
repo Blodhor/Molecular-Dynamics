@@ -19,7 +19,7 @@ class Analysis_plot:
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
 	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True,
 	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A',
-	legend_only=False,legend_only_text=[]):
+	legend_only=False,legend_only_text=[],filter_factor=[6.0,5.0][1]):
 		'''Parameters:
 		
 		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
@@ -56,10 +56,11 @@ class Analysis_plot:
 		mmpbsa: Boolean argument. If True the data will be considered the 'decode_mmpbsa.py' format.
 		mmpbsa_cut: Energy limit for which residue is highlighted on the plot. 
 		'''
-		self.file_name = file_name
-		self.grid      = grid
-		self.max_state = 0
-		self.plotid    = plotid
+		self.file_name     = file_name
+		self.grid          = grid
+		self.max_state     = 0
+		self.plotid        = plotid
+		self.filter_factor = filter_factor
 		if bool_shift:
 			self.ID_shift = ID_shift
 		else:
@@ -322,7 +323,7 @@ class Analysis_plot:
 				false_peak.append( (X[i],Y[i]) )
 				if len(false_peak)==1:
 					notes.append( (X[i],Y[i]) )
-				elif abs(false_peak[-1][1]-false_peak[-2][1]) > abs(min(Y))/6.0:
+				elif abs(false_peak[-1][1]-false_peak[-2][1]) > abs(min(Y))/self.filter_factor:
 					#i don't want to see a bunch of neighbouring residues 
 					notes.append( (X[i],Y[i]) )
 		return notes	
@@ -502,10 +503,13 @@ class Analysis_plot:
 				ts.set_xlabel(Xaxis[counter],fontsize=self.fontsize)
 				for xid in self.vlines:
 					ts.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
-				if plts != 3:
+				if plts < 3:
 					ts.set_ylabel(self.ana_type, fontsize=self.fontsize)
 			if plts==3:
 				axs[1].set_ylabel(self.ana_type,fontsize=self.fontsize*1.25)
+			elif plts>3:
+				axs[2].set_ylabel(self.ana_type,fontsize=self.fontsize*1.5)
+				axs[2].yaxis.set_label_coords(-0.1, 1) #1 right above the third plot
 		else:
 			counter = -1
 			for ts in axs:
@@ -966,6 +970,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	vline_color     = 'purple'
 	vline_thickness = 0.25
 	vlines          = [] #[132,178,209]
+	filter_factor   = [6.0,5.0][1]
 	bool_shift      = False #ver flag -xshift
 	ID_shift        = 28
 	plotid          = ''
@@ -1004,7 +1009,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-id","-xshift","-vcolor","-vlines","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
+	flags = ["&","-v","--version","-id","-ffa","-xshift","-vcolor","-vlines","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
 
 	# Flag verification
 	for i in arg:
@@ -1044,6 +1049,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-eng\tSets default texts language to english. If this flag is not called the texts will be set on portuguese.\n")
 				print("\t-vlines\tPlot vertical lines. Eg.: -vlines 178,209\n")
 				print("\t-vcolor\tSets the color for the vertical lines (Default: purple).\n")
+				print("\t-ffa\t(Valid for 'edcomp' only) Filter factor for annotations (Default: 5). A small value means a bigger y-distance between annotations, so it will hide more annotations. Useful to change it when there are many enrgy wells close to one another.\n")
 				print("\t-xshift\t(Valid for 'edcomp' and 'rmsf' only) Adds to the X points, to shift the data in the x-axis (Default: 0).\n")
 				print("\t-fontsize\tInteger value for the fontsize of labels and inplot texts (Default=%d).\n"%fontsize)
 				print("\t-index3d\t(Valid only for type 'allin_one') Creates a 3D plot with a index axis separating your datasets.\n")
@@ -1077,6 +1083,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			elif arg[i] == "-type":
 				tpe = arg[i+1]
 				debug_dic['tpe'] = tpe 
+				continue
+			elif arg[i] == "-ffa":
+				filter_factor = float(arg[i+1])
+				debug_dic['ffa'] = filter_factor 
 				continue
 			elif arg[i] == "-id":
 				plotid = arg[i+1]
@@ -1278,7 +1288,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(legend_only=l_o,legend_only_text=l_o_t,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(legend_only=l_o,legend_only_text=l_o_t,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
