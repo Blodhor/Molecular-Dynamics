@@ -19,7 +19,7 @@ class Analysis_plot:
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
 	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True,
 	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A',
-	legend_only=False,legend_only_text=[],filter_factor=[6.0,5.0][1]):
+	legend_only=False,legend_only_text=[],filter_factor=[20,5.0]):
 		'''Parameters:
 		
 		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
@@ -56,11 +56,12 @@ class Analysis_plot:
 		mmpbsa: Boolean argument. If True the data will be considered the 'decode_mmpbsa.py' format.
 		mmpbsa_cut: Energy limit for which residue is highlighted on the plot. 
 		'''
-		self.file_name     = file_name
-		self.grid          = grid
-		self.max_state     = 0
-		self.plotid        = plotid
-		self.filter_factor = filter_factor
+		self.file_name      = file_name
+		self.grid           = grid
+		self.max_state      = 0
+		self.plotid         = plotid
+		self.filter_yfactor = filter_factor[1]
+		self.filter_xfactor = filter_factor[0]
 		if bool_shift:
 			self.ID_shift = ID_shift
 		else:
@@ -323,8 +324,10 @@ class Analysis_plot:
 				false_peak.append( (X[i],Y[i]) )
 				if len(false_peak)==1:
 					notes.append( (X[i],Y[i]) )
-				elif abs(false_peak[-1][1]-false_peak[-2][1]) > abs(min(Y))/self.filter_factor:
+				elif abs(false_peak[-1][1]-false_peak[-2][1]) > abs(min(Y))/self.filter_yfactor:
 					#i don't want to see a bunch of neighbouring residues 
+					notes.append( (X[i],Y[i]) )
+				elif abs(false_peak[-1][0]-false_peak[-2][0]) > self.filter_xfactor:
 					notes.append( (X[i],Y[i]) )
 		return notes	
 
@@ -406,11 +409,11 @@ class Analysis_plot:
 
 		data_i = -1
 		inset  = []
+		bool_erf = self.mmpbsa or 'RMSF' in self.ana_type
 		for ts in axs:
 			data_i +=1
 			bool_me  = self.mult_ana and self.ana_list[data_i]=='edcomp'
 			bool_mrf = self.mult_ana and 'rmsf' in self.ana_list[data_i]
-			bool_erf = self.mmpbsa or 'RMSF' in self.ana_type
 			if bool_me or bool_mrf or bool_erf:
 				X_0 = []
 				for xx in X[data_i]:
@@ -421,7 +424,7 @@ class Analysis_plot:
 			if self.mult_ana and self.ana_list[data_i]==anatest or anatest in self.ana_type:
 				ts.plot(X_0,Y[data_i],'o',ms=1)
 			elif anatest2 in self.ana_type:
-				print('residue correction', self.ID_shift)
+				print('Residue correction for plot %s:'%(data_i+1), self.ID_shift)
 				ts.plot(X_0,Y[data_i],color=plot_color)
 				ts.set_ylim(round(min_y,1)-0.5,round(max_y,1)+1)
 			else:
@@ -488,7 +491,7 @@ class Analysis_plot:
 						else:
 							ts.text(i[0], i[1]-cor, self.mmpbsa_res[0][i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize*0.5)
 					else:		
-						ts.text(i[0], i[1]-cor, self.mmpbsa_res[0][i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize*0.5)
+						ts.text(i[0], i[1]-cor, self.mmpbsa_res[data_i][i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize*0.5)
 
 		if self.mult_ana:
 			counter = -1
@@ -515,7 +518,14 @@ class Analysis_plot:
 			for ts in axs:
 				counter += 1
 				ts.set_xlabel(Xaxis[counter], fontsize=self.fontsize)
-				ts.set_ylabel(self.ana_type, fontsize=self.fontsize)	
+				if plts < 3:
+					ts.set_ylabel(self.ana_type, fontsize=self.fontsize)
+			if plts==3:
+				axs[1].set_ylabel(self.ana_type,fontsize=self.fontsize*1.25)
+			elif plts>3:
+				axs[2].set_ylabel(self.ana_type,fontsize=self.fontsize*1.5)
+				axs[2].yaxis.set_label_coords(-0.1, 1)
+	
 		#pyplot.subplots can hide redundant axes
 		for ts in axs:
 			ts.label_outer()
@@ -970,7 +980,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	vline_color     = 'purple'
 	vline_thickness = 0.25
 	vlines          = [] #[132,178,209]
-	filter_factor   = [6.0,5.0][1]
+	filter_factor   = [20,5.0]
 	bool_shift      = False #ver flag -xshift
 	ID_shift        = 28
 	plotid          = ''
@@ -1009,7 +1019,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-id","-ffa","-xshift","-vcolor","-vlines","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
+	flags = ["&","-v","--version","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
 
 	# Flag verification
 	for i in arg:
@@ -1049,7 +1059,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-eng\tSets default texts language to english. If this flag is not called the texts will be set on portuguese.\n")
 				print("\t-vlines\tPlot vertical lines. Eg.: -vlines 178,209\n")
 				print("\t-vcolor\tSets the color for the vertical lines (Default: purple).\n")
+				print("\t-vltcs\tSets the thickness of the vertical lines (Default: 0.25).\n")
 				print("\t-ffa\t(Valid for 'edcomp' only) Filter factor for annotations (Default: 5). A small value means a bigger y-distance between annotations, so it will hide more annotations. Useful to change it when there are many enrgy wells close to one another.\n")
+				if "-hidden" in arg:
+					print("\t-ffax\t(Valid for 'edcomp' only) X-axis filter factor for annotations (Default: 20). Differently from 'ffa' it means the exact number of residues it will skip if 'ffa' fails.\n")
 				print("\t-xshift\t(Valid for 'edcomp' and 'rmsf' only) Adds to the X points, to shift the data in the x-axis (Default: 0).\n")
 				print("\t-fontsize\tInteger value for the fontsize of labels and inplot texts (Default=%d).\n"%fontsize)
 				print("\t-index3d\t(Valid only for type 'allin_one') Creates a 3D plot with a index axis separating your datasets.\n")
@@ -1085,8 +1098,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				debug_dic['tpe'] = tpe 
 				continue
 			elif arg[i] == "-ffa":
-				filter_factor = float(arg[i+1])
-				debug_dic['ffa'] = filter_factor 
+				filter_factor[1] = float(arg[i+1])
+				debug_dic['ffa'] = filter_factor[1] 
+				continue
+			elif arg[i] == "-ffax":
+				filter_factor[0] = float(arg[i+1])
+				debug_dic['ffax'] = filter_factor[0] 
 				continue
 			elif arg[i] == "-id":
 				plotid = arg[i+1]
@@ -1124,6 +1141,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				for jj in temp:
 					vlines.append(int(jj))
 				debug_dic['vlines'] = vlines 
+				continue
+			elif arg[i] == "-vltcs":
+				vline_thickness  = float(arg[i+1])
+				debug_dic['vltcs'] = vline_thickness
 				continue
 			elif arg[i] == "-fontsize":
 				fontsize = int(arg[i+1])
