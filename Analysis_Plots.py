@@ -405,7 +405,7 @@ class Analysis_plot:
 					min_y = min(Y[jj])
 					y_tick=np.arange(round(min_y,1),round(max_y,1)+1,round((max_y-min_y)/3,1))
 					plt.setp(ts, yticks=y_tick)
-		plt.subplots_adjust(hspace=0.3)
+		plt.subplots_adjust(hspace=0.4)
 
 		data_i = -1
 		inset  = []
