@@ -143,7 +143,7 @@ class Analysis_plot:
 				for i in self.ana_list:
 					j +=1
 					if i =='edcomp':
-						new_list.append(['Decomposição de energia\n(kcal/mol)','Energy decomposition\n(kcal/mol)'][self.lang_set])
+						new_list.append(['Decomposição de Energia\n(kcal/mol)','Energy Decomposition\n(kcal/mol)'][self.lang_set])
 						XTlabels.extend( self.XY_decomp(files=names) )
 					else:
 						if i=='radgyr':
@@ -279,7 +279,7 @@ class Analysis_plot:
 		if len(files) in [1,2,4,8] or self.restriction_break:
 			xname = ['Número do Resíduo','Residue Number'][self.lang_set]
 			if not self.mult_ana:
-				self.ana_type = ['Decomposição de energia\n(kcal/mol)','Energy decomposition\n(kcal/mol)'][self.lang_set]
+				self.ana_type = ['Decomposição de Energia\n(kcal/mol)','Energy Decomposition\n(kcal/mol)'][self.lang_set]
 			XTlabel = []
 			for fs in files:
 				f = open(fs[0])
@@ -386,7 +386,7 @@ class Analysis_plot:
 			self.plot_textid()
 		
 		anatest = ['Estado de Protonação','Protonation State'][self.lang_set]
-		anatest2 = ['Decomposição de energia\n(kcal/mol)','Energy decomposition\n(kcal/mol)'][self.lang_set] 
+		anatest2 = ['Decomposição de Energia\n(kcal/mol)','Energy Decomposition\n(kcal/mol)'][self.lang_set] 
 		if not self.mult_ana:
 			if self.ytick_list == []:
 				max_y = -self.max_num
