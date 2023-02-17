@@ -19,7 +19,7 @@ class Analysis_plot:
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
 	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True,
 	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A',
-	legend_only=False,legend_only_text=[],filter_factor=[20,5.0]):
+	legend_only=False,legend_only_text=[],filter_factor=[20,5.0], ytick_list=[]):
 		'''Parameters:
 		
 		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
@@ -60,6 +60,7 @@ class Analysis_plot:
 		self.grid           = grid
 		self.max_state      = 0
 		self.plotid         = plotid
+		self.ytick_list     = ytick_list
 		self.filter_yfactor = filter_factor[1]
 		self.filter_xfactor = filter_factor[0]
 		if bool_shift:
@@ -229,7 +230,7 @@ class Analysis_plot:
 					data = i.split()
 					if i != '' and i[0] == '#':
 						if 'RMSF' in ana_type:
-							xname = ['Resíduo','Residue'][self.lang_set]
+							xname = ['Número do Resíduo','Residue Number'][self.lang_set]
 						elif not prot_state and not self.frameToTime:
 							xname = data[0][1:]
 							if 'frame' in xname.lower():
@@ -276,7 +277,7 @@ class Analysis_plot:
 		''' Specific for 'decode_mmpbsa.py' output format.'''
 
 		if len(files) in [1,2,4,8] or self.restriction_break:
-			xname = ['Resíduo','Residue'][self.lang_set]
+			xname = ['Número do Resíduo','Residue Number'][self.lang_set]
 			if not self.mult_ana:
 				self.ana_type = ['Decomposição de energia\n(kcal/mol)','Energy decomposition\n(kcal/mol)'][self.lang_set]
 			XTlabel = []
@@ -387,12 +388,17 @@ class Analysis_plot:
 		anatest = ['Estado de Protonação','Protonation State'][self.lang_set]
 		anatest2 = ['Decomposição de energia\n(kcal/mol)','Energy decomposition\n(kcal/mol)'][self.lang_set] 
 		if not self.mult_ana:
-			max_y = -self.max_num
-			min_y = self.max_num
-			for yy in Y:
-				max_y = max(max_y,max(yy))
-				min_y = min(min_y,min(yy))
-			y_tick=np.arange(round(min_y,1),round(max_y,1)+1,round((max_y-min_y)/4,1))
+			if self.ytick_list == []:
+				max_y = -self.max_num
+				min_y = self.max_num
+				for yy in Y:
+					max_y = max(max_y,max(yy))
+					min_y = min(min_y,min(yy))
+				y_tick=np.arange(round(min_y,1),round(max_y,1)+1,round((max_y-min_y)/4,1))
+			else:
+				y_tick=np.array(self.ytick_list)
+				min_y = min(y_tick)
+				max_y = max(y_tick)
 			plt.setp(axs, yticks=y_tick)
 		else:
 			jj = -1
@@ -401,16 +407,24 @@ class Analysis_plot:
 				if self.ana_list[jj]==anatest:
 					plt.setp(ts, yticks=range(0,self.max_state+1))
 				else:
-					max_y = max(Y[jj])
-					min_y = min(Y[jj])
-					y_tick=np.arange(round(min_y,1),round(max_y,1)+1,round((max_y-min_y)/3,1))
+					if self.ytick_list == []:
+						max_y = max(Y[jj])
+						min_y = min(Y[jj])
+						y_tick=np.arange(round(min_y,1),round(max_y,1)+1,round((max_y-min_y)/3,1))
+					else:
+						y_tick=np.array(self.ytick_list)
+						min_y = min(y_tick)
+						max_y = max(y_tick) 
 					plt.setp(ts, yticks=y_tick)
 		plt.subplots_adjust(hspace=0.4)
 
+		diff_y5t = len(y_tick) -5
 		data_i = -1
 		inset  = []
 		bool_erf = self.mmpbsa or 'RMSF' in self.ana_type
 		for ts in axs:
+			if diff_y5t>0:
+				ts.tick_params(axis='y', labelsize=(1.0-0.1*diff_y5t)*self.fontsize)
 			data_i +=1
 			bool_me  = self.mult_ana and self.ana_list[data_i]=='edcomp'
 			bool_mrf = self.mult_ana and 'rmsf' in self.ana_list[data_i]
@@ -972,6 +986,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	merge_legend = ['NativaS1',['NativaS2','D206E'][0]]
 	forced_mean  = False
 	fmv          = 4.75
+	ytick_list   = []
 	rareplot     = False
 	multi_label_loc=(.685,0.5)
 	#mmpbsa_cut must be negative!!
@@ -989,7 +1004,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	#  not matter even if it's True here
 	l_o   = True 
 	# text to be printed
-	l_o_t = ['(A) All','(B) Wildtype','(C) D206E','(D) D206E/H237K','(E) H237K'] 
+	l_o_t = ['(A) Wildtype','(B) H237K','(C) D206E/H237K']
+	#['(A) All','(B) Wildtype','(C) D206E','(D) D206E/H237K','(E) H237K'] 
 
 	default_mod     = True
 	inset_tick      = 10
@@ -1019,7 +1035,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
+	flags = ["&","-v","--version","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
 
 	# Flag verification
 	for i in arg:
@@ -1063,6 +1079,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-ffa\t(Valid for 'edcomp' only) Filter factor for annotations (Default: 5). A small value means a bigger y-distance between annotations, so it will hide more annotations. Useful to change it when there are many enrgy wells close to one another.\n")
 				if "-hidden" in arg:
 					print("\t-ffax\t(Valid for 'edcomp' only) X-axis filter factor for annotations (Default: 20). Differently from 'ffa' it means the exact number of residues it will skip if 'ffa' fails.\n")
+					print("\t-ytick\t(Valid for '1cmp' only) Y-axis tick list.\n")
 				print("\t-xshift\t(Valid for 'edcomp' and 'rmsf' only) Adds to the X points, to shift the data in the x-axis (Default: 0).\n")
 				print("\t-fontsize\tInteger value for the fontsize of labels and inplot texts (Default=%d).\n"%fontsize)
 				print("\t-index3d\t(Valid only for type 'allin_one') Creates a 3D plot with a index axis separating your datasets.\n")
@@ -1118,6 +1135,38 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				vline_color = arg[i+1]
 				debug_dic['vcolor'] = vline_color 
 				continue
+			elif arg[i] == "-ytick":
+				ntype =[int,float]
+				ytty  = 0 #Default is integer
+				#2,0,-2,-4,-6
+				cc = i+1
+				bool_check = "," in arg[cc]
+				if cc+1 < len(arg):
+					bool_check = "," in arg[cc] and arg[cc+1] in flags
+				
+				if bool_check:
+					if '.' in arg[cc]:
+						ytty = 1
+					temp = arg[cc].split(",")
+					i = cc
+				else:
+					# 2 0 -2 -4 -6
+					temp = []
+					while cc < len(arg):
+						if arg[cc] not in flags:
+							if '.' in arg[cc]:
+								ytty = 1
+							temp.append( arg[cc] )
+						else:
+							i = cc - 1
+							break
+						cc += 1
+				ytick_list = []
+				for jj in temp:
+					ytick_list.append(ntype[ytty](jj))
+				ytick_list.sort()
+				debug_dic['ytick'] = ytick_list 
+				continue
 			elif arg[i] == "-vlines":
 				#132,178,209
 				cc = i+1
@@ -1130,6 +1179,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 					i = cc
 				else:
 					# 132 178 209
+					temp = []
 					while cc < len(arg):
 						if arg[cc] not in flags:
 							temp.append( arg[cc] )
@@ -1309,7 +1359,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(legend_only=l_o,legend_only_text=l_o_t,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
