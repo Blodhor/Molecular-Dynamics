@@ -405,7 +405,7 @@ class Analysis_plot:
 			for ts in axs:
 				jj+=1 
 				if self.ana_list[jj]==anatest:
-					plt.setp(ts, yticks=range(0,self.max_state+1))
+					y_tick=range(0,self.max_state+1)
 				else:
 					if self.ytick_list == []:
 						max_y = max(Y[jj])
@@ -415,7 +415,7 @@ class Analysis_plot:
 						y_tick=np.array(self.ytick_list)
 						min_y = min(y_tick)
 						max_y = max(y_tick) 
-					plt.setp(ts, yticks=y_tick)
+				plt.setp(ts, yticks=y_tick)
 		plt.subplots_adjust(hspace=0.4)
 
 		diff_y5t = len(y_tick) -5
