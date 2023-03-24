@@ -381,7 +381,7 @@ class Analysis_plot:
 			for c_temp in range(len(freq)):
 				if freq[c_temp] == temp_max:
 					break
-			f.write("Curve %d; Curve integral: %.2f\nMax value: %.2f\nMean: %.2f\n"%(i+1,round(total_freq,2),new_X[c_temp],round(mean_value,2)))
+			f.write("Curve %d; Integral: %.2f Max value: %.2f Mean: %.2f\n"%(i+1,round(total_freq,2),new_X[c_temp],round(mean_value,2)))
 			X.append(new_X)
 			Y.append(freq)
 		f.close()
