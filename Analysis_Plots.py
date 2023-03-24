@@ -355,7 +355,7 @@ class Analysis_plot:
 			freq_count.append({})
 			for j in new_X:
 				freq_count[i][j]=0
-
+		f = open("%s_pars.txt"%self.file_name[:-5],'w')
 		for i in range(len(self.Y)):
 			# old self.X[i] ::= time (ns)
 			# old self.Y[i] ::= distance (Ang)
@@ -370,19 +370,21 @@ class Analysis_plot:
 						break
 			freq = [] # new Y[i]
 			total_freq = 0
+			mean_value = 0
 			for ii in range(len(new_X)):
 				temp = round(freq_count[i][new_X[ii]]/data_cnt,2)
 				total_freq += temp
 				freq.append( temp )
+				mean_value += new_X[ii]*temp
 			# finding max freq x-value
 			temp_max = max(freq)
 			for c_temp in range(len(freq)):
 				if freq[c_temp] == temp_max:
 					break
-			print("Curve %d; Curve integral: "%(i+1), total_freq, "Max value:", new_X[c_temp])
+			f.write("Curve %d; Curve integral: %f\nMax value: %f\nMean: %f"%(i+1,round(total_freq,2),new_X[c_temp],round(mean_value,2)))
 			X.append(new_X)
 			Y.append(freq)
-		
+		f.close()
 		self.X = X
 		self.Y = Y
 
