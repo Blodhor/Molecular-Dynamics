@@ -19,7 +19,7 @@ class Analysis_plot:
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
 	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True,
 	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A',
-	legend_only=False,legend_only_text=[],filter_factor=[20,5.0], ytick_list=[]):
+	legend_only=False,legend_only_text=[],filter_factor=[20,5.0], ytick_list=[],normal_freq = False,freq_grade=100):
 		'''Parameters:
 		
 		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
@@ -109,8 +109,9 @@ class Analysis_plot:
 		self.mmpbsa_inset_range   = range(mmpbsa_inset_range[0],mmpbsa_inset_range[1])
 		self.mmpbsa_cut           = mmpbsa_cut
 		self.mmpbsa_res           = []
-		self.plot_interface    = plot_interface
-		self.multi_ids = True
+		self.plot_interface       = plot_interface
+		self.multi_ids            = True
+		self.normal_freq          = normal_freq
 
 		if type in ['1cmp','four']:
 			self.multi_ids = False
@@ -172,11 +173,13 @@ class Analysis_plot:
 		else:
 			self.legend_frame(text=legend_only_text)
 
+		if self.normal_freq:
+			self.norm_freq_label = ['Frequência normalizada','Normalized Frequency'][self.lang_set]
+			self.norm_freq(grade=freq_grade)
+
 		if debug:
-			print(XTlabels, '\nnames:',names)
-			#print(self.X)
-			#print(self.Y)
-			print("tamanho X e Y:",len(self.X[0]),len(self.Y[0]))
+			print("X:", self.X)
+			print("Y:",self.Y)	
 		elif not legend_only:
 			if XTlabels != -1 and type == '1cmp':
 				self.plot_1cmp(X=self.X, Y=self.Y, Xaxis=[XTlabels[i][0] for i in range(len(XTlabels))],
@@ -331,6 +334,57 @@ class Analysis_plot:
 				elif abs(false_peak[-1][0]-false_peak[-2][0]) > self.filter_xfactor:
 					notes.append( (X[i],Y[i]) )
 		return notes	
+
+	def norm_freq(self,grade=100):
+		# Apply the normalized frequency for the current analysis (tested only on 'Distance'/Time)  
+		# Only applicable(now) if not mult_ana
+		X = []
+		Y = []
+		# self.Y := chosen dataset
+		may = max([max(i) for i in self.Y])
+		miy = min([min(i) for i in self.Y]) 	
+		delta = (may - miy)/grade
+		# shared x-axis subdivision
+		new_X = [] # new X[i]
+		for i in range(int(grade)+1):
+			temp = round(miy+i*delta,2)
+			new_X.append(temp)
+		# counter for each Y dataset on each x region
+		freq_count = []
+		for i in range(len(self.Y)):
+			freq_count.append({})
+			for j in new_X:
+				freq_count[i][j]=0
+
+		for i in range(len(self.Y)):
+			# old self.X[i] ::= time (ns)
+			# old self.Y[i] ::= distance (Ang)
+			data_cnt = 0.0				
+			for ii in self.Y[i]:
+				#ii: Y-point of the dataset
+				for j in freq_count[i]:
+					#j: x-region
+					if abs(ii-j) <= delta/2:
+						data_cnt += 1
+						freq_count[i][j]+=1
+						break
+			freq = [] # new Y[i]
+			total_freq = 0
+			for ii in range(len(new_X)):
+				temp = round(freq_count[i][new_X[ii]]/data_cnt,2)
+				total_freq += temp
+				freq.append( temp )
+			# finding max freq x-value
+			temp_max = max(freq)
+			for c_temp in range(len(freq)):
+				if freq[c_temp] == temp_max:
+					break
+			print("Curve %d; Curve integral: "%(i+1), total_freq, "Max value:", new_X[c_temp])
+			X.append(new_X)
+			Y.append(freq)
+		
+		self.X = X
+		self.Y = Y
 
 	def plot_textid(self):
 		#finding postion for id
@@ -681,7 +735,8 @@ class Analysis_plot:
 					X_0.append(xx+self.ID_shift)
 			else:
 				X_0 = self.X[i]
-			plt.plot(X_0, self.Y[i])
+			#plt.plot(X_0, self.Y[i],'o',ms=1) # ponto	
+			plt.plot(X_0, self.Y[i]) # linha
 
 		for xid in self.vlines:
 			plt.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
@@ -698,9 +753,14 @@ class Analysis_plot:
 		plt.legend(labels,loc=label_loc, fontsize=self.fontsize)
 		if self.supertitle:
 			plt.title(self.suptitle, fontsize=self.fontsize)
-		plt.ylabel(eixoy, fontsize=self.fontsize)
-		plt.xlabel(eixox, fontsize=self.fontsize)
 		
+		if not self.normal_freq:
+			plt.ylabel(eixoy, fontsize=self.fontsize)
+			plt.xlabel(eixox, fontsize=self.fontsize)
+		else:
+			plt.ylabel(self.norm_freq_label, fontsize=self.fontsize)
+			plt.xlabel(self.ana_type, fontsize=self.fontsize)
+			
 		if not self.plot_interface:
 			plt.savefig(self.file_name,bbox_inches='tight')
 		else:
@@ -975,9 +1035,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	dpi          = [100,200,300][2]
 	grid         = True
 	mean_flag    = False
-	
+	normal_freq  = False
+	freq_grade   = 20
+
 	debug        = False # for the arguments only
-	debug_inside = [True,False][1] # to help fix plot problems
 	debug_dic    = {}
 
 	# special cases #IGNORE THIS
@@ -988,10 +1049,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	fmv          = 4.75
 	ytick_list   = []
 	rareplot     = False
-	multi_label_loc=(.685,0.5)
+	multi_label_loc = (.685,0.5)
 	#mmpbsa_cut must be negative!!
 	mult_ana_plot   = [] # multiple analysis
-	file_name       = 'Figure.jpeg'
 	vline_color     = 'purple'
 	vline_thickness = 0.25
 	vlines          = [] #[132,178,209]
@@ -999,13 +1059,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	bool_shift      = False #ver flag -xshift
 	ID_shift        = 28
 	plotid          = ''
+	file_name       = 'Figure.jpeg'
 	# for legend box only and no plots
 	## on flag '-i' i've set this to False so it does
 	#  not matter even if it's True here
 	l_o   = True 
 	# text to be printed
-	l_o_t = ['(A) Wildtype','(B) H237K','(C) D206E/H237K']
-	#['(A) All','(B) Wildtype','(C) D206E','(D) D206E/H237K','(E) H237K'] 
+	l_o_t = ['(A) Todos','(B) Wildtype','(C) D206E','(D) D206E/H237K','(E) H237K']
+	#['(A) Wildtype','(B) H237K','(C) D206E/H237K']
+	#['(A) All','(B) Wildtype','(C) D206E','(D) D206E/H237K','(E) H237K']
 
 	default_mod     = True
 	inset_tick      = 10
@@ -1035,7 +1097,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
+	flags = ["&","-v","--version","-normfreq","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
 
 	# Flag verification
 	for i in arg:
@@ -1078,6 +1140,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-vltcs\tSets the thickness of the vertical lines (Default: 0.25).\n")
 				print("\t-ffa\t(Valid for 'edcomp' only) Filter factor for annotations (Default: 5). A small value means a bigger y-distance between annotations, so it will hide more annotations. Useful to change it when there are many enrgy wells close to one another.\n")
 				if "-hidden" in arg:
+					print("\t-normfreq\t(Valid only for the usual 2D style 'allin_one' with 'rmsd','radgyr' or 'dist') Sets analysis as a normalized frequency for the Y-axis. If a number of subdivions is not given then this program will set it to %d by default.\n"%freq_grade)
 					print("\t-ffax\t(Valid for 'edcomp' only) X-axis filter factor for annotations (Default: 20). Differently from 'ffa' it means the exact number of residues it will skip if 'ffa' fails.\n")
 					print("\t-ytick\t(Valid for '1cmp' only) Y-axis tick list.\n")
 				print("\t-xshift\t(Valid for 'edcomp' and 'rmsf' only) Adds to the X points, to shift the data in the x-axis (Default: 0).\n")
@@ -1107,13 +1170,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 			elif arg[i] == "-debug":
 				debug = True
-				inst_only = True
+				#inst_only = True
 				# A flag alone cannot set the loop to jump the next argument 
 				#continue
 			elif arg[i] == "-type":
 				tpe = arg[i+1]
 				debug_dic['tpe'] = tpe 
 				continue
+			elif arg[i] == "-normfreq":
+				normal_freq = True
+				if i+1< len(arg) and arg[i+1] not in flags:
+					freq_grade  = float(arg[i+1])
+					debug_dic['normfreq'] = (True,freq_grade)
+					continue
+				else:
+					debug_dic['normfreq'] = (True,freq_grade)
 			elif arg[i] == "-ffa":
 				filter_factor[1] = float(arg[i+1])
 				debug_dic['ffa'] = filter_factor[1] 
@@ -1359,7 +1430,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug_inside, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(normal_freq=normal_freq,freq_grade=freq_grade,legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
