@@ -8,6 +8,8 @@ import re
 import sys
 # For images but not plots
 from matplotlib.transforms import IdentityTransform
+# For interpolation
+from scipy.interpolate import make_interp_spline, BSpline
 	
 class Analysis_plot:
 	max_num = sys.maxsize
@@ -19,7 +21,7 @@ class Analysis_plot:
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
 	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True,
 	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A',
-	legend_only=False,legend_only_text=[],filter_factor=[20,5.0], ytick_list=[],normal_freq = False,freq_grade=100):
+	legend_only=False,legend_only_text=[],filter_factor=[20,5.0], ytick_list=[],normal_freq = False,freq_grade=100,interp_degree=3):
 		'''Parameters:
 		
 		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
@@ -112,6 +114,9 @@ class Analysis_plot:
 		self.plot_interface       = plot_interface
 		self.multi_ids            = True
 		self.normal_freq          = normal_freq
+		#interpolation attributes
+		self.interp_grade  = 200 # numb. of points generated for the plot
+		self.interp_degree = interp_degree # Degree 'k' of the BSpline 
 
 		if type in ['1cmp','four']:
 			self.multi_ids = False
@@ -382,8 +387,21 @@ class Analysis_plot:
 				if freq[c_temp] == temp_max:
 					break
 			f.write("Curve %d; Integral: %.2f Max value: %.2f Mean: %.2f\n"%(i+1,round(total_freq,2),new_X[c_temp],round(mean_value,2)))
-			X.append(new_X)
-			Y.append(freq)
+			# Doing interpolation to smooth out the lines
+			spl = make_interp_spline(new_X, freq, k=self.interp_degree) #k:= interpolation degree
+			X_interp = np.linspace(miy,may,self.interp_grade)
+			Y_interp = spl(X_interp)
+			i_list = []
+			for i in range(len(X_interp)):
+				if Y_interp[i]<0:
+					i_list.append(i)
+			if len(i_list)==0:
+				X.append(X_interp)#(new_X)
+				Y.append(Y_interp)#(freq)
+			else:
+				X.append(np.delete(X_interp,i_list))
+				Y.append(np.delete(Y_interp,i_list))
+			
 		f.close()
 		self.X = X
 		self.Y = Y
@@ -737,7 +755,7 @@ class Analysis_plot:
 					X_0.append(xx+self.ID_shift)
 			else:
 				X_0 = self.X[i]
-			#plt.plot(X_0, self.Y[i],'o',ms=1) # ponto	
+			#plt.plot(X_0, self.Y[i],'-o',ms=1) # ponto	
 			plt.plot(X_0, self.Y[i]) # linha
 
 		for xid in self.vlines:
@@ -1039,7 +1057,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	mean_flag    = False
 	normal_freq  = False
 	freq_grade   = 20
+	# for interpolation
+	interp_degree = 3
 
+	# debug
 	debug        = False # for the arguments only
 	debug_dic    = {}
 
@@ -1099,7 +1120,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-normfreq","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
+	flags = ["&","-v","--version","-normfreq","-splinedegree","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
 
 	# Flag verification
 	for i in arg:
@@ -1142,7 +1163,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-vltcs\tSets the thickness of the vertical lines (Default: 0.25).\n")
 				print("\t-ffa\t(Valid for 'edcomp' only) Filter factor for annotations (Default: 5). A small value means a bigger y-distance between annotations, so it will hide more annotations. Useful to change it when there are many enrgy wells close to one another.\n")
 				if "-hidden" in arg:
-					print("\t-normfreq\t(Valid only for the usual 2D style 'allin_one' with 'rmsd','radgyr' or 'dist') Sets analysis as a normalized frequency for the Y-axis. If a number of subdivions is not given then this program will set it to %d by default.\n"%freq_grade)
+					print("\t-normfreq\t(Valid only for the usual 2D style 'allin_one' with 'rmsd','radgyr' or 'dist') Sets analysis as a normalized frequency for the Y-axis. If a number of subdivions is not given then this program will set it to %d by default.\tPs: We will ignore the negative parts of our interpolation function.\n"%freq_grade)
+					print("\t-splinedegree\t(Valid only for 'normfreq') Sets the interporlation degree (Default: 3). Must be a natural number.\n")
 					print("\t-ffax\t(Valid for 'edcomp' only) X-axis filter factor for annotations (Default: 20). Differently from 'ffa' it means the exact number of residues it will skip if 'ffa' fails.\n")
 					print("\t-ytick\t(Valid for '1cmp' only) Y-axis tick list.\n")
 				print("\t-xshift\t(Valid for 'edcomp' and 'rmsf' only) Adds to the X points, to shift the data in the x-axis (Default: 0).\n")
@@ -1178,6 +1200,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			elif arg[i] == "-type":
 				tpe = arg[i+1]
 				debug_dic['tpe'] = tpe 
+				continue
+			elif arg[i] == "-splinedegree":
+				interp_degree = int(arg[i+1])
+				debug_dic['splinedegree'] = interp_degree 
 				continue
 			elif arg[i] == "-normfreq":
 				normal_freq = True
@@ -1432,7 +1458,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(normal_freq=normal_freq,freq_grade=freq_grade,legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(interp_degree=interp_degree,normal_freq=normal_freq,freq_grade=freq_grade,legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
