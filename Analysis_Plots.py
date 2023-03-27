@@ -987,12 +987,16 @@ res=('LYS209','LYS 237')):
 
 if __name__ == "__main__":
 	arg = sys.argv
-	version_n = 1.5
+	version_n = 1.6
 	version = ''' Analysis plot - Pyplot extension for RMSD, RMSF and Radgyr data analysis.
 
 Python3 modules needed: 
 	numpy; 
-	matplotlib.
+	matplotlib;
+	mpl_toolkits; # i believe this comes together with matplotlib
+	re;           # i believe this is a default python library but i could be wrong
+	scipy.
+
 
 Data file structure expected:
 
