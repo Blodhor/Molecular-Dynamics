@@ -413,7 +413,7 @@ class Analysis_plot:
 		else:
 			max_x, max_y = (-self.max_num, -self.max_num)
 			min_x = self.max_num
-			if 'list' in str(type(self.Y[0])):
+			if 'list' in str(type(self.Y[0])) or 'numpy' in str(type(self.Y[0])):
 				for yy in self.Y:
 					max_y = max(max_y,max(yy))
 				for xx in self.X:
@@ -423,7 +423,9 @@ class Analysis_plot:
 				max_y = max(max_y,max(self.Y))
 				max_x = max(max_x,max(self.X))
 				min_x = min(min_x,min(self.X))
-			id_x = min_x - (max_x - min_x)/5.0 
+			id_x = min_x - (max_x - min_x)/5.0
+			if 'numpy' in str(type(self.Y[0])):
+				id_x += -0.1
 			id_y = max_y
 			plt.text(x=id_x,y=id_y,s='(%s)'%self.plotid,color='steelblue', fontsize=1.5*self.fontsize)
 
