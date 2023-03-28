@@ -391,16 +391,11 @@ class Analysis_plot:
 			spl = make_interp_spline(new_X, freq, k=self.interp_degree) #k:= interpolation degree
 			X_interp = np.linspace(miy,may,self.interp_grade)
 			Y_interp = spl(X_interp)
-			i_list = []
-			for i in range(len(X_interp)):
-				if Y_interp[i]<0:
-					i_list.append(i)
-			if len(i_list)==0:
-				X.append(X_interp)#(new_X)
-				Y.append(Y_interp)#(freq)
-			else:
-				X.append(np.delete(X_interp,i_list))
-				Y.append(np.delete(Y_interp,i_list))
+			for ii in range(len(X_interp)):
+				if Y_interp[ii]<0:
+					Y_interp[ii] = 0
+			X.append(X_interp)#(new_X)
+			Y.append(Y_interp)#(freq)
 			
 		f.close()
 		self.X = X
