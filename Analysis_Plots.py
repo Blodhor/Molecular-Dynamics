@@ -20,7 +20,7 @@ class Analysis_plot:
 	forced_3Dzaxis=['ph','index'][1], forced_mean=False, fmv=4.75, eng=False, fontsize=10, mmpbsa=False,
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
 	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True,
-	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A',
+	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A', range_freq=(4,5),
 	legend_only=False,legend_only_text=[],filter_factor=[20,5.0], ytick_list=[],normal_freq = False,freq_grade=100,interp_degree=3):
 		'''Parameters:
 		
@@ -116,7 +116,9 @@ class Analysis_plot:
 		self.normal_freq          = normal_freq
 		#interpolation attributes
 		self.interp_grade  = 200 # numb. of points generated for the plot
-		self.interp_degree = interp_degree # Degree 'k' of the BSpline 
+		self.interp_degree = interp_degree # Degree 'k' of the BSpline
+		self.range_freq_i  = range_freq[0]
+		self.range_freq_f  = range_freq[1]
 
 		if type in ['1cmp','four']:
 			self.multi_ids = False
@@ -375,10 +377,14 @@ class Analysis_plot:
 						break
 			freq = [] # new Y[i]
 			total_freq = 0
+			#range 4-5 ang frequency
+			range_freq = 0
 			mean_value = 0
 			for ii in range(len(new_X)):
 				temp = round(freq_count[i][new_X[ii]]/data_cnt,2)
 				total_freq += temp
+				if new_X[ii] <= self.range_freq_f and new_X[ii] >= self.range_freq_i:
+					range_freq += temp
 				freq.append( temp )
 				mean_value += new_X[ii]*temp
 			# finding max freq x-value
@@ -386,7 +392,7 @@ class Analysis_plot:
 			for c_temp in range(len(freq)):
 				if freq[c_temp] == temp_max:
 					break
-			f.write("Curve %d; Integral: %.2f Max value: %.2f Mean: %.2f\n"%(i+1,round(total_freq,2),new_X[c_temp],round(mean_value,2)))
+			f.write("Curve %d; Integral: %.2f, freq_%.2f-%.2f: %.2f, Max value: %.2f, Mean: %.2f\n"%(i+1,round(total_freq,2),self.range_freq_i,self.range_freq_f,round(range_freq,2),new_X[c_temp],round(mean_value,2)))
 			# Doing interpolation to smooth out the lines
 			spl = make_interp_spline(new_X, freq, k=self.interp_degree) #k:= interpolation degree
 			X_interp = np.linspace(miy,may,self.interp_grade)
@@ -1060,6 +1066,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	freq_grade   = 20
 	# for interpolation
 	interp_degree = 3
+	range_freq    = (4,5)
 
 	# debug
 	debug        = False # for the arguments only
@@ -1121,7 +1128,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-normfreq","-splinedegree","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
+	flags = ["&","-v","--version","-normfreq","-rangfreq","-splinedegree","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
 
 	# Flag verification
 	for i in arg:
@@ -1165,6 +1172,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-ffa\t(Valid for 'edcomp' only) Filter factor for annotations (Default: 5). A small value means a bigger y-distance between annotations, so it will hide more annotations. Useful to change it when there are many enrgy wells close to one another.\n")
 				if "-hidden" in arg:
 					print("\t-normfreq\t(Valid only for the usual 2D style 'allin_one' with 'rmsd','radgyr' or 'dist') Sets analysis as a normalized frequency for the Y-axis. If a number of subdivions is not given then this program will set it to %d by default.\tPs: We will ignore the negative parts of our interpolation function.\n"%freq_grade)
+					print("\t-rangfreq\t(Valid only for the usual 2D style 'allin_one' with 'rmsd','radgyr' or 'dist') Sets a range to calculate the frequency. Eg: \"-rangfreq 4 5\" shows the frequency the data stays between 4 and 5 of the X-axis of the normalized frequency plot.\n")
 					print("\t-splinedegree\t(Valid only for 'normfreq') Sets the interporlation degree (Default: 3). Must be a natural number.\n")
 					print("\t-ffax\t(Valid for 'edcomp' only) X-axis filter factor for annotations (Default: 20). Differently from 'ffa' it means the exact number of residues it will skip if 'ffa' fails.\n")
 					print("\t-ytick\t(Valid for '1cmp' only) Y-axis tick list.\n")
@@ -1214,6 +1222,34 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 					continue
 				else:
 					debug_dic['normfreq'] = (True,freq_grade)
+			elif arg[i] == "-rangfreq":
+				#4.1,5
+				cc = i+1
+				bool_check = "," in arg[cc]
+				if cc+1 < len(arg):
+					bool_check = "," in arg[cc] and arg[cc+1] in flags
+				
+				if bool_check:
+					temp = arg[cc].split(",")
+					i = cc
+				else:
+					# 4.1 5
+					temp = []
+					while cc < len(arg):
+						if arg[cc] not in flags:
+							temp.append( arg[cc] )
+						else:
+							i = cc - 1
+							break
+						cc += 1
+				
+				if len(temp) !=2:
+					inst_only = True
+					print("Expected 2 values on this argument! Given:", temp)
+					break
+				range_freq = (float(temp[0]),float(temp[1]))
+				debug_dic['rangfreq'] = range_freq 
+				continue
 			elif arg[i] == "-ffa":
 				filter_factor[1] = float(arg[i+1])
 				debug_dic['ffa'] = filter_factor[1] 
@@ -1459,7 +1495,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(interp_degree=interp_degree,normal_freq=normal_freq,freq_grade=freq_grade,legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(range_freq=range_freq,interp_degree=interp_degree,normal_freq=normal_freq,freq_grade=freq_grade,legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
