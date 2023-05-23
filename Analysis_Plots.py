@@ -10,7 +10,53 @@ import sys
 from matplotlib.transforms import IdentityTransform
 # For interpolation
 from scipy.interpolate import make_interp_spline, BSpline
-	
+# Showing the colors
+import matplotlib.colors as mcolors
+import math
+from matplotlib.patches import Rectangle
+
+def plot_colortable(colors, *, ncols=4, sort_colors=True):
+
+	cell_width = 212
+	cell_height = 22
+	swatch_width = 48
+	margin = 12
+
+	# Sort colors by hue, saturation, value and name.
+	if sort_colors is True:
+		names = sorted( colors, key=lambda c: tuple(mcolors.rgb_to_hsv(mcolors.to_rgb(c))))
+	else:
+		names = list(colors)
+
+	n = len(names)
+	nrows = math.ceil(n / ncols)
+
+	width = cell_width * 4 + 2 * margin
+	height = cell_height * nrows + 2 * margin
+	dpi = 72
+
+	fig, ax = plt.subplots(figsize=(width / dpi, height / dpi), dpi=dpi)
+	fig.subplots_adjust(margin/width, margin/height, (width-margin)/width, (height-margin)/height)
+	ax.set_xlim(0, cell_width * 4)
+	ax.set_ylim(cell_height * (nrows-0.5), -cell_height/2.)
+	ax.yaxis.set_visible(False)
+	ax.xaxis.set_visible(False)
+	ax.set_axis_off()
+
+	for i, name in enumerate(names):
+		row = i % nrows
+		col = i // nrows
+		y = row * cell_height
+
+		swatch_start_x = cell_width * col
+		text_pos_x = cell_width * col + swatch_width + 7
+
+		ax.text(text_pos_x, y, name, fontsize=14,horizontalalignment='left', verticalalignment='center')
+
+		ax.add_patch(Rectangle(xy=(swatch_start_x, y-9), width=swatch_width, height=18, facecolor=colors[name], edgecolor='0.7') )
+	plt.savefig("ListOfColors.jpeg",bbox_inches='tight',pad_inches=0.15)
+	return "ListOfColors.jpeg"
+
 class Analysis_plot:
 	max_num = sys.maxsize
 	_Types = ['2ph_2merge','1cmp','four','four_2merge','allin_one']
@@ -21,7 +67,8 @@ class Analysis_plot:
 	mmpbsa_inset=[False,True][0], mmpbsa_inset_range=(169,210), mmpbsa_inset_tick=4, mmpbsa_inset_XY=(0.1,0.125),
 	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True,
 	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A', range_freq=(4,5),
-	legend_only=False,legend_only_text=[],filter_factor=[20,5.0], ytick_list=[],normal_freq = False,freq_grade=100,interp_degree=3):
+	legend_only=False,legend_only_text=[],filter_factor=[20,5.0], ytick_list=[],normal_freq = False,freq_grade=100,interp_degree=3,
+	focus_x=False,focus_xij=(30,265),background=False, background_color='black'):
 		'''Parameters:
 		
 		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
@@ -114,6 +161,10 @@ class Analysis_plot:
 		self.plot_interface       = plot_interface
 		self.multi_ids            = True
 		self.normal_freq          = normal_freq
+		self.background           = background
+		self.background_color     = background_color
+		self.focus_x              = focus_x
+		self.focus_xij            = focus_xij
 		#interpolation attributes
 		self.interp_grade  = 200 # numb. of points generated for the plot
 		self.interp_degree = interp_degree # Degree 'k' of the BSpline
@@ -289,7 +340,7 @@ class Analysis_plot:
 		if len(files) in [1,2,4,8] or self.restriction_break:
 			xname = ['Número do Resíduo','Residue Number'][self.lang_set]
 			if not self.mult_ana:
-				self.ana_type = ['Decomposição de Energia\n(kcal/mol)','Energy Decomposition\n(kcal/mol)'][self.lang_set]
+				self.ana_type = ['Decomposição de Energia (kcal/mol)','Energy Decomposition (kcal/mol)'][self.lang_set]
 			XTlabel = []
 			for fs in files:
 				f = open(fs[0])
@@ -462,8 +513,11 @@ class Analysis_plot:
 		if self.plotid != '':
 			self.plot_textid()
 		
+		if self.background:
+			fig.patch.set_facecolor('silver') #'lightsteelblue'
+
 		anatest = ['Estado de Protonação','Protonation State'][self.lang_set]
-		anatest2 = ['Decomposição de Energia\n(kcal/mol)','Energy Decomposition\n(kcal/mol)'][self.lang_set] 
+		anatest2 = ['Decomposição de Energia (kcal/mol)','Energy Decomposition (kcal/mol)'][self.lang_set] 
 		if not self.mult_ana:
 			if self.ytick_list == []:
 				max_y = -self.max_num
@@ -500,6 +554,11 @@ class Analysis_plot:
 		inset  = []
 		bool_erf = self.mmpbsa or 'RMSF' in self.ana_type
 		for ts in axs:
+			if self.background:
+				ts.set_facecolor(self.background_color)
+			if self.focus_x:
+				ts.set_xlim(self.focus_xij[0], self.focus_xij[1]) #(30,265)
+
 			if diff_y5t>0:
 				ts.tick_params(axis='y', labelsize=(1.0-0.1*diff_y5t)*self.fontsize)
 			data_i +=1
@@ -552,13 +611,22 @@ class Analysis_plot:
 			
 				note = self.peaks(X=X_0,Y=Y[data_i])
 				for i in note:
-					text_color  ='black'
+					if self.background and self.background_color=='black':
+						text_color  ='white'
+						self.vline_color = 'gold'
+					else:
+						text_color  ='black'
 					cor   = 0
 					if i[1] >0:
-						text_color = 'darkred'
+						if self.background and self.background_color=='black':
+							text_color = 'orange'#'yellow'
+						else:
+							text_color = 'darkred'
 						cor   = [0,0.2,0.4][2]
-					if i[0] == 180:
-						cor = [0.2,0.4][1]
+					if i[0] == 160:
+						cor = 0.5
+					elif i[0] == 206:
+						cor = -0.5
 					'''# do esboço zuado!!
 					if ylb!='Binding Energy':
 						nota = self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0])
@@ -582,7 +650,7 @@ class Analysis_plot:
 						else:
 							ts.text(i[0], i[1]-cor, self.mmpbsa_res[0][i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize*0.5)
 					else:		
-						ts.text(i[0], i[1]-cor, self.mmpbsa_res[data_i][i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize*0.5)
+						ts.text(i[0], i[1]-cor, self.mmpbsa_res[data_i][i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize*0.6)
 
 		if self.mult_ana:
 			counter = -1
@@ -603,7 +671,7 @@ class Analysis_plot:
 				axs[1].set_ylabel(self.ana_type,fontsize=self.fontsize*1.25)
 			elif plts>3:
 				axs[2].set_ylabel(self.ana_type,fontsize=self.fontsize*1.5)
-				axs[2].yaxis.set_label_coords(-0.1, 1) #1 right above the third plot
+				axs[2].yaxis.set_label_coords(-0.07, 1.25) #1 right above the third plot
 		else:
 			counter = -1
 			for ts in axs:
@@ -744,11 +812,19 @@ class Analysis_plot:
 			print('For some reason the number of Y datasets is different from de number of X datasets.')
 			return -1
 
-		plt.figure(dpi=self.dpi)
-		plt.grid(self.grid)
 		if self.plotid != '':
 			self.plot_textid()
 		
+		if not self.background:
+			plt.figure(dpi=self.dpi)
+		else:
+			fig = plt.figure(dpi=self.dpi)
+			fig.patch.set_facecolor('silver') #'lightsteelblue'
+			ts = fig.add_subplot(1, 1, 1)
+			ts.set_facecolor(self.background_color)
+
+		
+		plt.grid(self.grid)
 		mean_value = []
 		for i in range(len(self.X)):
 			mean_value.append( sum(self.Y[i])/len(self.Y[i]) )
@@ -1091,12 +1167,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	ID_shift        = 28
 	plotid          = ''
 	file_name       = 'Figure.jpeg'
+	focus_x          = False
+	focus_xij        = (30,265)
+	background       = False
+	background_color = 'black'
 	# for legend box only and no plots
 	## on flag '-i' i've set this to False so it does
 	#  not matter even if it's True here
 	l_o   = True 
 	# text to be printed
-	l_o_t = ['(A) Todos','(B) Wildtype','(C) D206E','(D) D206E/H237K','(E) H237K']
+	l_o_t = ['(A) Nativa','(B) H237K','(C) D206E/H237K']
 	#['(A) Wildtype','(B) H237K','(C) D206E/H237K']
 	#['(A) All','(B) Wildtype','(C) D206E','(D) D206E/H237K','(E) H237K']
 
@@ -1128,7 +1208,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-normfreq","-rangfreq","-splinedegree","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
+	flags = ["&","-v","--version","-backgrnd","-xlimited","-normfreq","-rangfreq","-splinedegree","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
 
 	# Flag verification
 	for i in arg:
@@ -1171,6 +1251,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-vltcs\tSets the thickness of the vertical lines (Default: 0.25).\n")
 				print("\t-ffa\t(Valid for 'edcomp' only) Filter factor for annotations (Default: 5). A small value means a bigger y-distance between annotations, so it will hide more annotations. Useful to change it when there are many enrgy wells close to one another.\n")
 				if "-hidden" in arg:
+					color_file = plot_colortable(mcolors.CSS4_COLORS)
+					print("\t-backgrnd\t(Valid only for the '1cmp'  and 2D 'allin_one' type) Changes the color for the background. Eg: \"-backgrnd black\". The list of colors are presented on file %s\n"%color_file)
+					print("\t-xlimited\t(Valid only for the '1cmp' type) Focus the X-axis on a specific range. Eg: \"-xlimited 30 265\" could be used for rmsf or edcomp to reduced the residues shown.\n")
 					print("\t-normfreq\t(Valid only for the usual 2D style 'allin_one' with 'rmsd','radgyr' or 'dist') Sets analysis as a normalized frequency for the Y-axis. If a number of subdivions is not given then this program will set it to %d by default.\tPs: We will ignore the negative parts of our interpolation function.\n"%freq_grade)
 					print("\t-rangfreq\t(Valid only for the usual 2D style 'allin_one' with 'rmsd','radgyr' or 'dist') Sets a range to calculate the frequency. Eg: \"-rangfreq 4 5\" shows the frequency the data stays between 4 and 5 of the X-axis of the normalized frequency plot.\n")
 					print("\t-splinedegree\t(Valid only for 'normfreq') Sets the interporlation degree (Default: 3). Must be a natural number.\n")
@@ -1200,7 +1283,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\n\t$ python3 Analysis_Plots.py -type 1cmp -anatp rmsf -i ph7.00_rmsf.dat Production pH=7.00 ph8.00_rmsf.dat Production pH=8.00\n")
 				print("\n\t$ python3 Analysis_Plots.py -type four -stitle Production -anatp radgyr -lblcrd (16.61,200) -i ph7.00_radgyr.dat pH=7.00 ph8.00_radgyr.dat pH=8.00 ph9.00_radgyr.dat pH=9.00 ph10.00_radgyr.dat pH=10.00 -fram2time 10000 -nanosec\n")
 				break
-
+			# THERE ARE MANY DUPLICATED FLAG-VERIFICATIONS BECAUSE
+			# I DIDN'T NEED THIS TO BE OPTMIZED, AND ONLY CARED IF IT WAS WORKING
+			# WE CAN MAKE A FEW METHODS TO SIMPLIFY THE IMPLEMENTATION BELOW!
 			elif arg[i] == "-debug":
 				debug = True
 				#inst_only = True
@@ -1209,6 +1294,40 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			elif arg[i] == "-type":
 				tpe = arg[i+1]
 				debug_dic['tpe'] = tpe 
+				continue
+			elif arg[i] == "-backgrnd":
+				background = True
+				background_color = arg[i+1]
+				debug_dic['backgrnd'] = (background,background_color) 
+				continue
+			elif arg[i] == "-xlimited":
+				focus_x = True
+				#4.1,5
+				cc = i+1
+				bool_check = "," in arg[cc]
+				if cc+1 < len(arg):
+					bool_check = "," in arg[cc] and arg[cc+1] in flags
+				
+				if bool_check:
+					temp = arg[cc].split(",")
+					i = cc
+				else:
+					# 4.1 5
+					temp = []
+					while cc < len(arg):
+						if arg[cc] not in flags:
+							temp.append( arg[cc] )
+						else:
+							i = cc - 1
+							break
+						cc += 1
+				
+				if len(temp) !=2:
+					inst_only = True
+					print("Expected 2 values on this argument! Given:", temp)
+					break
+				focus_xij = (float(temp[0]),float(temp[1]))
+				debug_dic['xlimited'] = (True, focus_xij)		
 				continue
 			elif arg[i] == "-splinedegree":
 				interp_degree = int(arg[i+1])
@@ -1495,7 +1614,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(range_freq=range_freq,interp_degree=interp_degree,normal_freq=normal_freq,freq_grade=freq_grade,legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(focus_x=focus_x,focus_xij=focus_xij,background=background,background_color=background_color,range_freq=range_freq,interp_degree=interp_degree,normal_freq=normal_freq,freq_grade=freq_grade,legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
