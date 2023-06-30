@@ -232,7 +232,7 @@ class Analysis_plot:
 			self.legend_frame(text=legend_only_text)
 
 		if self.normal_freq:
-			self.norm_freq_label = ['Frequência normalizada','Normalized Frequency'][self.lang_set]
+			self.norm_freq_label = ['Frequência normalizada (%)','Normalized Frequency'][self.lang_set]
 			self.norm_freq(grade=freq_grade)
 
 		if debug:
@@ -436,7 +436,11 @@ class Analysis_plot:
 				total_freq += temp
 				if new_X[ii] <= self.range_freq_f and new_X[ii] >= self.range_freq_i:
 					range_freq += temp
-				freq.append( temp )
+				# para plot em pt-br vou colocar em (%)
+				if self.lang_set == 0:
+					freq.append( int(temp*100) ) ##
+				else:
+					freq.append( temp ) ##
 				mean_value += new_X[ii]*temp
 			# finding max freq x-value
 			temp_max = max(freq)
@@ -451,6 +455,10 @@ class Analysis_plot:
 			for ii in range(len(X_interp)):
 				if Y_interp[ii]<0:
 					Y_interp[ii] = 0
+				'''else:
+					# para plot em pt-br vou colocar em (%)
+					if self.lang_set == 0:
+						Y_interp[ii] = int(Y_interp[ii]*100)'''
 			X.append(X_interp)#(new_X)
 			Y.append(Y_interp)#(freq)
 			
@@ -580,7 +588,7 @@ class Analysis_plot:
 			else:
 				ts.plot(X_0,Y[data_i],color=plot_color)
 			ts.set_title(name[data_i], fontsize=self.fontsize)
-			ts.grid(self.grid)
+			ts.grid(self.grid,color='gray',linewidth=0.5)
 			
 			#esboco zuado
 			##ylb='Binding Energy' ##########
@@ -611,6 +619,7 @@ class Analysis_plot:
 			
 				note = self.peaks(X=X_0,Y=Y[data_i])
 				for i in note:
+					def_weight='normal'
 					if self.background and self.background_color=='black':
 						text_color  ='white'
 						self.vline_color = 'gold'
@@ -620,6 +629,7 @@ class Analysis_plot:
 					if i[1] >0:
 						if self.background and self.background_color=='black':
 							text_color = 'orange'#'yellow'
+							def_weight = 'bold'
 						else:
 							text_color = 'darkred'
 						cor   = [0,0.2,0.4][2]
@@ -646,11 +656,11 @@ class Analysis_plot:
 							nota = 'H (Unfavorable)' '''
 					if self.mmpbsa_inset:
 						if i[0] in self.mmpbsa_inset_range:
-							inset[data_i].text(i[0],i[1],self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0]), color=inset_color, fontsize=self.fontsize*0.5)
+							inset[data_i].text(i[0],i[1],self.mmpbsa_res[i[0]-(1+self.ID_shift)]+str(i[0]), fontweight=def_weight, color=inset_color, fontsize=self.fontsize*0.5)
 						else:
-							ts.text(i[0], i[1]-cor, self.mmpbsa_res[0][i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize*0.5)
+							ts.text(i[0], i[1]-cor, self.mmpbsa_res[0][i[0]-(1+self.ID_shift)]+str(i[0]), fontweight=def_weight, color=text_color, fontsize=self.fontsize*0.75)
 					else:		
-						ts.text(i[0], i[1]-cor, self.mmpbsa_res[data_i][i[0]-(1+self.ID_shift)]+str(i[0]), color=text_color, fontsize=self.fontsize*0.6)
+						ts.text(i[0], i[1]-cor, self.mmpbsa_res[data_i][i[0]-(1+self.ID_shift)]+str(i[0]), fontweight=def_weight, color=text_color, fontsize=self.fontsize*0.75)
 
 		if self.mult_ana:
 			counter = -1
@@ -665,9 +675,12 @@ class Analysis_plot:
 				ts.set_xlabel(Xaxis[counter],fontsize=self.fontsize)
 				for xid in self.vlines:
 					ts.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
-				if plts < 3:
-					ts.set_ylabel(self.ana_type, fontsize=self.fontsize)
-			if plts==3:
+			if plts==1:
+				axs.set_ylabel(self.ana_type,fontsize=self.fontsize)
+			elif plts==2:
+				axs[1].set_ylabel(self.ana_type,fontsize=self.fontsize*1.25)
+				axs[1].yaxis.set_label_coords(-0.07, 1.25)
+			elif plts==3:
 				axs[1].set_ylabel(self.ana_type,fontsize=self.fontsize*1.25)
 			elif plts>3:
 				axs[2].set_ylabel(self.ana_type,fontsize=self.fontsize*1.5)
@@ -706,12 +719,16 @@ class Analysis_plot:
 		big_pp = 0
 		axs = [ax1, ax2]
 		for ap in axs:
+			##
+			ap.set_ylim(int(min(Y[big_pp]))-2,int(max(Y[big_pp])+2))
+			plt.setp(ap, yticks=range( int(min(Y[big_pp]))-1 , int(max(Y[big_pp]))+2))
+			##
 			ap.plot(X[big_pp],Y[big_pp], label= self.merge_legend[0])
 			ap.plot(X[big_pp+1],Y[big_pp+1], label= self.merge_legend[1])
 			ap.set_xlabel(Xaxis,fontsize=self.fontsize)
 			ap.set_ylabel(self.ana_type,fontsize=self.fontsize)
 			ap.legend(fontsize=self.fontsize)
-			ap.set_title(name[big_pp], fontsize=self.fontsize)
+			ap.set_title("pH %d"%(big_pp+7), fontsize=self.fontsize)
 			#ap.text(x=self.labelpx, y=self.labelpy, s=name[big_pp], color=self.label_color)
 			ap.grid(self.grid)
 			for xid in self.vlines:
@@ -1066,7 +1083,7 @@ res=('LYS209','LYS 237')):
 
 if __name__ == "__main__":
 	arg = sys.argv
-	version_n = 1.6
+	version_n = 1.7
 	version = ''' Analysis plot - Pyplot extension for RMSD, RMSF and Radgyr data analysis.
 
 Python3 modules needed: 
@@ -1151,7 +1168,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	# special cases #IGNORE THIS
 	File         = []
 	File2        = []
-	merge_legend = ['NativaS1',['NativaS2','D206E'][0]]
+	merge_legend = ['NativaS1',['NativaS2','D206E'][1]]
 	forced_mean  = False
 	fmv          = 4.75
 	ytick_list   = []
