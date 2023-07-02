@@ -3,6 +3,52 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1.inset_locator import (inset_axes, InsetPosition, mark_inset)
+# Showing the colors
+import matplotlib.colors as mcolors
+import math
+from matplotlib.patches import Rectangle
+
+def plot_colortable(colors, *, ncols=4, sort_colors=True):
+
+	cell_width = 212
+	cell_height = 22
+	swatch_width = 48
+	margin = 12
+
+	# Sort colors by hue, saturation, value and name.
+	if sort_colors is True:
+		names = sorted( colors, key=lambda c: tuple(mcolors.rgb_to_hsv(mcolors.to_rgb(c))))
+	else:
+		names = list(colors)
+
+	n = len(names)
+	nrows = math.ceil(n / ncols)
+
+	width = cell_width * 4 + 2 * margin
+	height = cell_height * nrows + 2 * margin
+	dpi = 72
+
+	fig, ax = plt.subplots(figsize=(width / dpi, height / dpi), dpi=dpi)
+	fig.subplots_adjust(margin/width, margin/height, (width-margin)/width, (height-margin)/height)
+	ax.set_xlim(0, cell_width * 4)
+	ax.set_ylim(cell_height * (nrows-0.5), -cell_height/2.)
+	ax.yaxis.set_visible(False)
+	ax.xaxis.set_visible(False)
+	ax.set_axis_off()
+
+	for i, name in enumerate(names):
+		row = i % nrows
+		col = i // nrows
+		y = row * cell_height
+
+		swatch_start_x = cell_width * col
+		text_pos_x = cell_width * col + swatch_width + 7
+
+		ax.text(text_pos_x, y, name, fontsize=14,horizontalalignment='left', verticalalignment='center')
+
+		ax.add_patch(Rectangle(xy=(swatch_start_x, y-9), width=swatch_width, height=18, facecolor=colors[name], edgecolor='0.7') )
+	plt.savefig("ListOfColors.jpeg",bbox_inches='tight',pad_inches=0.15)
+	return "ListOfColors.jpeg"
 
 # Quick sort for the first coodinate of my tupples
 def swap(t=[(0,'1'),(-6,'2')], ith = 0, jth = 1):
@@ -70,12 +116,12 @@ def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb
 					alt3_info = hetatm[alt3 - 1].split()
 					c_count = 0
 					o_count = 0
-					for t in [alt1_info[2],alt2_info[2],alt3_info[2]]:
-						if t == 'C':
+					for t in [alt1_info,alt2_info,alt3_info]:
+						if t[2] == 'C' or 'C' in t[2] and t[-1]=='C':
 							c_count += 1
-						elif t == 'O':
+						elif t[2] == 'O' or 'O' in t[2] and t[-1]=='O':
 							o_count += 1
-					if main_info[2] == 'C' and c_count == 1 and o_count == 2:
+					if (main_info[2] == 'C' or 'C' in main_info[2] and main_info[-1]=='C') and c_count == 1 and o_count == 2:
 						# main == C carbonyl
 						main_xyz = (float(main_info[5]),float(main_info[6]),float(main_info[7]))
 						rcarbs.append(dist(atm1=ser_hydroxyl,atm2=main_xyz))
@@ -121,6 +167,14 @@ def plot_AEvsR(dpi=300,file_name='Figure_3.jpeg',pointsize=4,Xg=[],Yg=[],g_color
 	mark_inset(ax1, ax2, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=5)
 
 	ax2.plot(Xg_ins,Yg_ins,'o',color=g_color,ms=pointsize)
+
+	'''
+	if self.background:
+			fig.patch.set_facecolor('silver') #'lightsteelblue'
+	for ts in [ax1,ax2]:
+			if self.background:
+				ts.set_facecolor(self.background_color)
+	'''
 	plt.savefig(file_name,bbox_inches='tight')
 	#plt.show()
 
@@ -202,7 +256,10 @@ def Main(ref = (-1.062,-12.604,-11.209), arg = ['AvR_DockingPlot.py', 'PDBFILE.p
 def Help(arg = ['AvR_DockingPlot.py', '-h']):
 	print("Please run this code as follows:\n(Option 1): $ pythonCompilerV3+ %s PDBFILE.pdb\n"%arg[0])
 	print("(Option 2): $ pythonCompilerV3+ %s PDBFILE.pdb ref Xcoord Ycoord Zcoord"%arg[0])
-
+	'''if "-hidden" in arg:
+		color_file = plot_colortable(mcolors.CSS4_COLORS)
+		print("\t-backgrnd\t(Valid only for the '1cmp'  and 2D 'allin_one' type) Changes the color for the background. Eg: \"-backgrnd black\". The list of colors are presented on file %s\n"%color_file)'''
+					
 if __name__ == "__main__":
 	from os import system as cmd
 	import sys
