@@ -144,8 +144,8 @@ def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb
 
 	return label_out
 
-def plot_AEvsR(dpi=300,file_name='Figure_3.jpeg',no_inset=False,pointsize=4,Xg=[],Yg=[],g_color='royalblue',Xw=[],Yw=[],w_color='deepskyblue',Xg_ins=[],Yg_ins=[],mark_color='black',titulo ="",eixoy="Vina score (kcal/mol)",eixox="$r_{hc}\,(\AA)$"):
-	#                                      'mediumseagreen'                'deepskyblue'
+def plot_AEvsR(dpi=300,file_name='Figure_3.jpeg',interface=False,no_inset=False,pointsize=4,Xg=[],Yg=[],g_color='royalblue',Xw=[],Yw=[],w_color='deepskyblue',Xg_ins=[],Yg_ins=[],mark_color='black',titulo ="",eixoy="Vina score (kcal/mol)",eixox="$r_{hc}\,(\AA)$"):
+	#       'mediumseagreen'                'deepskyblue'
 	fonte=[12,14,16][2]
 	fig, ax1 = plt.subplots(dpi=dpi)
 	ax1.plot(Xg,Yg,'o',color=g_color,ms=pointsize)
@@ -153,7 +153,10 @@ def plot_AEvsR(dpi=300,file_name='Figure_3.jpeg',no_inset=False,pointsize=4,Xg=[
 	ax1.set_xlabel(eixox,fontsize=fonte)
 	ax1.set_ylabel(eixoy,fontsize=fonte)
 	#ax1.set_xlim(2.5,17)
-	ax1.set_ylim(-6.0,-1.8)
+
+	ymin = min(Yg+Yw)-0.5
+	ymax = max(Yg+Yw)+0.5
+	ax1.set_ylim(ymin,ymax)
 
 	if not no_inset:
 		# Create a set of inset Axes: these should fill the bounding box allocated to
@@ -176,10 +179,12 @@ def plot_AEvsR(dpi=300,file_name='Figure_3.jpeg',no_inset=False,pointsize=4,Xg=[
 			if self.background:
 				ts.set_facecolor(self.background_color)
 	'''
-	plt.savefig(file_name,bbox_inches='tight')
-	#plt.show()
+	if not interface:
+		plt.savefig(file_name,bbox_inches='tight')
+	else:
+		plt.show()
 
-def Main(ref = (-1.062,-12.604,-11.209), arg = ['AvR_DockingPlot.py', 'PDBFILE.pdb'], inset_factor=10, no_inset=False):
+def Main(ref = (-1.062,-12.604,-11.209), arg = ['AvR_DockingPlot.py', 'PDBFILE.pdb'], dpi=300, inset_factor=10, no_inset=False, interface=False):
 
 	# ref := hydroxyl on serine 160 from 6eqe.pdb
 
@@ -252,12 +257,13 @@ def Main(ref = (-1.062,-12.604,-11.209), arg = ['AvR_DockingPlot.py', 'PDBFILE.p
 	f.write('\n')
 	f.close()
 
-	plot_AEvsR(Xg=r_g,Yg=ae_g,Xw=r_w,Yw=ae_w,Xg_ins=Xg_ins,Yg_ins=Yg_ins,no_inset=no_inset)
+	plot_AEvsR(dpi=dpi,Xg=r_g,Yg=ae_g,Xw=r_w,Yw=ae_w,Xg_ins=Xg_ins,Yg_ins=Yg_ins,no_inset=no_inset,interface=interface)
 	
 def Help(arg = ['AvR_DockingPlot.py', '-h']):
 	print("Please run this code as follows:\n(Option 1): $ pythonCompilerV3+ %s PDBFILE.pdb\n"%arg[0])
-	print("(Option 2): $ pythonCompilerV3+ %s PDBFILE.pdb ref Xcoord Ycoord Zcoord"%arg[0])
-	print("Ps: If needed use the key '-noinset' to remove the internal plot.")
+	print("(Option 2): $ pythonCompilerV3+ %s PDBFILE.pdb ref Xcoord Ycoord Zcoord\n"%arg[0])
+	print("Ps:\n\tIf needed, use the key '-noinset' to remove the internal plot.\n")
+	print("\tIf needed, use the key '-interface' to make your adjustments before saving the image.\n")
 	'''if "-hidden" in arg:
 		color_file = plot_colortable(mcolors.CSS4_COLORS)
 		print("\t-backgrnd\t(Valid only for the '1cmp'  and 2D 'allin_one' type) Changes the color for the background. Eg: \"-backgrnd black\". The list of colors are presented on file %s\n"%color_file)'''
@@ -267,15 +273,23 @@ if __name__ == "__main__":
 	import sys
 	arg = sys.argv
 	
-	no_inset=False
+	dpi = 300
+	no_inset  = False
+	interface = False
 	if '-noinset' in arg:
-		no_inset=True
+		no_inset = True
 		arg.remove('-noinset')
+	
+	if '-interface' in arg:
+		interface = True
+		dpi       = 140
+		arg.remove('-interface')
+	
 	try:
 		if len(arg) == 2:
-			Main(arg=arg,no_inset=no_inset)
+			Main(arg=arg,no_inset=no_inset,interface=interface,dpi=dpi)
 		elif arg[2].lower() == 'ref' and len(arg) == 6:
-			Main(ref=(float(arg[3]),float(arg[4]),float(arg[5])),arg=arg,no_inset=no_inset)
+			Main(ref=(float(arg[3]),float(arg[4]),float(arg[5])),dpi=dpi,arg=arg,no_inset=no_inset,interface=interface)
 		else:
 			Help()
 	except:
