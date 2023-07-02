@@ -55,7 +55,7 @@ def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb
 			f.write(temp[i])
 			if 'REMARK VINA RESULT:' in temp[i]:
 				affinities.append(float(temp[i][20:].split()[0]))
-			elif 'HETATM' in temp[i]:
+			elif 'HETATM' in temp[i] or 'ATOM' in temp[i]:
 				hetatm.append(temp[i])
 			elif 'CONECT' in temp[i]:
 				temp_c = temp[i].split()
