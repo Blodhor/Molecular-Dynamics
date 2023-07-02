@@ -144,7 +144,7 @@ def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb
 
 	return label_out
 
-def plot_AEvsR(dpi=300,file_name='Figure_3.jpeg',pointsize=4,Xg=[],Yg=[],g_color='royalblue',Xw=[],Yw=[],w_color='deepskyblue',Xg_ins=[],Yg_ins=[],mark_color='black',titulo ="",eixoy="Vina score (kcal/mol)",eixox="$r_{hc}\,(\AA)$"):
+def plot_AEvsR(dpi=300,file_name='Figure_3.jpeg',no_inset=False,pointsize=4,Xg=[],Yg=[],g_color='royalblue',Xw=[],Yw=[],w_color='deepskyblue',Xg_ins=[],Yg_ins=[],mark_color='black',titulo ="",eixoy="Vina score (kcal/mol)",eixox="$r_{hc}\,(\AA)$"):
 	#                                      'mediumseagreen'                'deepskyblue'
 	fonte=[12,14,16][2]
 	fig, ax1 = plt.subplots(dpi=dpi)
@@ -155,18 +155,19 @@ def plot_AEvsR(dpi=300,file_name='Figure_3.jpeg',pointsize=4,Xg=[],Yg=[],g_color
 	#ax1.set_xlim(2.5,17)
 	ax1.set_ylim(-6.0,-1.8)
 
-	# Create a set of inset Axes: these should fill the bounding box allocated to
-	# them.
-	ax2 = plt.axes([0,0,1,1])
-	# Manually set the position and relative size of the inset axes within ax1
-	ip = InsetPosition(ax1, [0.5,0.525,0.5,0.475]) # parant axes; inset X edgde, Y edge, width% to parent, height% to parent
-	ax2.set_axes_locator(ip)
-	# Mark the region corresponding to the inset axes on ax1 and draw lines
-	# linking the two axes.
-	# high zorder makes it being drawn above other objects, small zorder are drawn first
-	mark_inset(ax1, ax2, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=5)
+	if not no_inset:
+		# Create a set of inset Axes: these should fill the bounding box allocated to
+		# them.
+		ax2 = plt.axes([0,0,1,1])
+		# Manually set the position and relative size of the inset axes within ax1
+		ip = InsetPosition(ax1, [0.5,0.525,0.5,0.475]) # parant axes; inset X edgde, Y edge, width% to parent, height% to parent
+		ax2.set_axes_locator(ip)
+		# Mark the region corresponding to the inset axes on ax1 and draw lines
+		# linking the two axes.
+		# high zorder makes it being drawn above other objects, small zorder are drawn first
+		mark_inset(ax1, ax2, loc1=2, loc2=4, fc="none", ec=mark_color,zorder=5)
 
-	ax2.plot(Xg_ins,Yg_ins,'o',color=g_color,ms=pointsize)
+		ax2.plot(Xg_ins,Yg_ins,'o',color=g_color,ms=pointsize)
 
 	'''
 	if self.background:
@@ -178,7 +179,7 @@ def plot_AEvsR(dpi=300,file_name='Figure_3.jpeg',pointsize=4,Xg=[],Yg=[],g_color
 	plt.savefig(file_name,bbox_inches='tight')
 	#plt.show()
 
-def Main(ref = (-1.062,-12.604,-11.209), arg = ['AvR_DockingPlot.py', 'PDBFILE.pdb'], inset_factor=10):
+def Main(ref = (-1.062,-12.604,-11.209), arg = ['AvR_DockingPlot.py', 'PDBFILE.pdb'], inset_factor=10, no_inset=False):
 
 	# ref := hydroxyl on serine 160 from 6eqe.pdb
 
@@ -251,11 +252,12 @@ def Main(ref = (-1.062,-12.604,-11.209), arg = ['AvR_DockingPlot.py', 'PDBFILE.p
 	f.write('\n')
 	f.close()
 
-	plot_AEvsR(Xg=r_g,Yg=ae_g,Xw=r_w,Yw=ae_w,Xg_ins=Xg_ins,Yg_ins=Yg_ins)
+	plot_AEvsR(Xg=r_g,Yg=ae_g,Xw=r_w,Yw=ae_w,Xg_ins=Xg_ins,Yg_ins=Yg_ins,no_inset=no_inset)
 	
 def Help(arg = ['AvR_DockingPlot.py', '-h']):
 	print("Please run this code as follows:\n(Option 1): $ pythonCompilerV3+ %s PDBFILE.pdb\n"%arg[0])
 	print("(Option 2): $ pythonCompilerV3+ %s PDBFILE.pdb ref Xcoord Ycoord Zcoord"%arg[0])
+	print("Ps: If needed use the key '-noinset' to remove the internal plot.")
 	'''if "-hidden" in arg:
 		color_file = plot_colortable(mcolors.CSS4_COLORS)
 		print("\t-backgrnd\t(Valid only for the '1cmp'  and 2D 'allin_one' type) Changes the color for the background. Eg: \"-backgrnd black\". The list of colors are presented on file %s\n"%color_file)'''
@@ -265,11 +267,15 @@ if __name__ == "__main__":
 	import sys
 	arg = sys.argv
 	
+	no_inset=False
+	if '-noinset' in arg:
+		no_inset=True
+		arg.remove('-noinset')
 	try:
 		if len(arg) == 2:
-			Main(arg=arg)
+			Main(arg=arg,no_inset=no_inset)
 		elif arg[2].lower() == 'ref' and len(arg) == 6:
-			Main(ref=(float(arg[3]),float(arg[4]),float(arg[5])),arg=arg)
+			Main(ref=(float(arg[3]),float(arg[4]),float(arg[5])),arg=arg,no_inset=no_inset)
 		else:
 			Help()
 	except:
