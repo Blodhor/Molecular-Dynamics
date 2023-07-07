@@ -676,7 +676,7 @@ class Analysis_plot:
 				for xid in self.vlines:
 					ts.axvline(x=xid+self.ID_shift,color=self.vline_color,lw=self.vline_thickness,zorder=-1)
 			if plts==1:
-				axs.set_ylabel(self.ana_type,fontsize=self.fontsize)
+				axs[0].set_ylabel(self.ana_type,fontsize=self.fontsize)
 			elif plts==2:
 				axs[1].set_ylabel(self.ana_type,fontsize=self.fontsize*1.25)
 				axs[1].yaxis.set_label_coords(-0.07, 1.25)
