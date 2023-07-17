@@ -240,6 +240,12 @@ def Main(ref = (-1.062,-12.604,-11.209), arg = ['AvR_DockingPlot.py', 'PDBFILE.p
 	else:
 		top = rPaeVmodel[0:5]
 
+	f = open('OrderedList_R-A.txt','w')
+	f.write('S: Minimizing factor; Coords: (nucleophilic distance, affinity)\n')
+	for i in range(len(rPaeVmodel)):
+		f.write('%d: S=%.2f; %s; Coords=%s\n'%(i,rPaeVmodel[i][0],rPaeVmodel[i][1][:-1],rPaeVmodel[i][-1]))
+	f.close()
+
 	print('\nSmallest 5 "r_hc" found:\n')
 	for i in top_r:
 		print(i)
