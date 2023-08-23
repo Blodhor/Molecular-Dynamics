@@ -1149,7 +1149,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	bckbne_comp  = False 
 	merge_legend = ''
 	labx, laby   = (100.5, 0.51) #rmsd
-	fram2time    = True  # False
+	fram2time    = False
 	framstp      = 62500 # Ultra #gpu-high: 50 000
 	nano         = True  # False
 	dpi          = [100,200,300][2]
