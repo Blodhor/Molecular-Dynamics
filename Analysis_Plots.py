@@ -68,7 +68,7 @@ class Analysis_plot:
 	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True,
 	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A', range_freq=(4,5),
 	legend_only=False,legend_only_text=[],filter_factor=[20,5.0], ytick_list=[],normal_freq = False,freq_grade=100,interp_degree=3,
-	focus_x=False,focus_xij=(30,265),background=False, background_color='black'):
+	focus_x=False,focus_xij=(30,265),background=False, background_color='black',sharey=False):
 		'''Parameters:
 		
 		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
@@ -241,7 +241,7 @@ class Analysis_plot:
 		elif not legend_only:
 			if XTlabels != -1 and type == '1cmp':
 				self.plot_1cmp(X=self.X, Y=self.Y, Xaxis=[XTlabels[i][0] for i in range(len(XTlabels))],
-				name= [XTlabels[i][1] for i in range(len(XTlabels))],plts=len(XTlabels))
+				name= [XTlabels[i][1] for i in range(len(XTlabels))],plts=len(XTlabels),sharey=sharey)
 			elif XTlabels != -1 and type == 'four':
 				self.plot_four(X=self.X, Y=self.Y, Xaxis=[XTlabels[i][0] for i in range(4)],
 				name= [XTlabels[i][1] for i in range(len(XTlabels))])
@@ -505,7 +505,7 @@ class Analysis_plot:
 		else:
 			plt.show()
 	
-	def plot_1cmp(self, X = [[], []], Y = [[], []], Xaxis = ["Frames"], name = ["Título"], plts=3):
+	def plot_1cmp(self, X = [[], []], Y = [[], []], Xaxis = ["Frames"], name = ["Título"], plts=3, sharey= False):
 		'''Plots two X-Y datasets sharing x,y - axis.'''
 		
 		mark_color  ="lightsteelblue"
@@ -513,9 +513,9 @@ class Analysis_plot:
 		inset_color = "darkslategray"
 		axs= [0]*plts
 		if plts >1:
-			fig, axs[0:] = plt.subplots(nrows=plts, ncols=1, sharex=True, dpi=self.dpi)
+			fig, axs[0:] = plt.subplots(nrows=plts, ncols=1, sharex=True, sharey= sharey, dpi=self.dpi)
 		else:
-			fig, ax = plt.subplots(nrows=plts, ncols=1, sharex=True, dpi=self.dpi)
+			fig, ax = plt.subplots(nrows=plts, ncols=1, sharex=True, sharey= sharey, dpi=self.dpi)
 			axs = [ax]
 
 		if self.plotid != '':
@@ -723,8 +723,8 @@ class Analysis_plot:
 			ap.set_ylim(int(min(Y[big_pp]))-2,int(max(Y[big_pp])+2))
 			plt.setp(ap, yticks=range( int(min(Y[big_pp]))-1 , int(max(Y[big_pp]))+2))
 			##
-			ap.plot(X[big_pp],Y[big_pp], label= self.merge_legend[0])
-			ap.plot(X[big_pp+1],Y[big_pp+1], label= self.merge_legend[1])
+			ap.plot(X[big_pp],Y[big_pp], label= name[big_pp]) #self.merge_legend[0])
+			ap.plot(X[big_pp+1],Y[big_pp+1], label= name[big_pp+1])
 			ap.set_xlabel(Xaxis,fontsize=self.fontsize)
 			ap.set_ylabel(self.ana_type,fontsize=self.fontsize)
 			ap.legend(fontsize=self.fontsize)
@@ -1131,6 +1131,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	dic_Type = {13:'allin_one', 133:'allin_one_f3d', -13:'1cmp', 22: '2ph_2merge', 4:'four', 42: 'four_2merge'}
 	
 	#default keys
+	sharey       = False # for type '1cmp' only
 	interface    = True
 	mmpbsa             = False
 	mmpbsa_inset       = False
@@ -1197,7 +1198,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	#['(A) Wildtype','(B) H237K','(C) D206E/H237K']
 	#['(A) All','(B) Wildtype','(C) D206E','(D) D206E/H237K','(E) H237K']
 
-	default_mod     = True
+	default_mod     = False
 	inset_tick      = 10
 	mmpbsa_inset_XY = (0.10,0.10)
 	halving_ids = [[],[1,2,3]][0]
@@ -1225,7 +1226,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-backgrnd","-xlimited","-normfreq","-rangfreq","-splinedegree","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
+	flags = ["&","-v","--version","-backgrnd","-yshare","-xlimited","-normfreq","-rangfreq","-splinedegree","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
 
 	# Flag verification
 	for i in arg:
@@ -1267,6 +1268,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-vcolor\tSets the color for the vertical lines (Default: purple).\n")
 				print("\t-vltcs\tSets the thickness of the vertical lines (Default: 0.25).\n")
 				print("\t-ffa\t(Valid for 'edcomp' only) Filter factor for annotations (Default: 5). A small value means a bigger y-distance between annotations, so it will hide more annotations. Useful to change it when there are many enrgy wells close to one another.\n")
+				print("\t-yshare\t(Valid only for the '1cmp' type) Forces all the plots to share the zoom on the Y-axis.\n")
 				if "-hidden" in arg:
 					color_file = plot_colortable(mcolors.CSS4_COLORS)
 					print("\t-backgrnd\t(Valid only for the '1cmp'  and 2D 'allin_one' type) Changes the color for the background. Eg: \"-backgrnd black\". The list of colors are presented on file %s\n"%color_file)
@@ -1476,6 +1478,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				mean_flag = True
 				debug_dic['mean'] = True
 				#continue
+			elif arg[i] == "-yshare":
+				sharey = True
+				debug_dic['yshare'] = True
+				#continue
 			elif arg[i] == "-edcut":
 				mmpbsa_cut = float(arg[i+1])
 				debug_dic['edcomp cut'] = arg[i+1]
@@ -1631,7 +1637,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(focus_x=focus_x,focus_xij=focus_xij,background=background,background_color=background_color,range_freq=range_freq,interp_degree=interp_degree,normal_freq=normal_freq,freq_grade=freq_grade,legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(sharey=sharey,focus_x=focus_x,focus_xij=focus_xij,background=background,background_color=background_color,range_freq=range_freq,interp_degree=interp_degree,normal_freq=normal_freq,freq_grade=freq_grade,legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
