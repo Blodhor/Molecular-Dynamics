@@ -14,6 +14,8 @@ from scipy.interpolate import make_interp_spline, BSpline
 import matplotlib.colors as mcolors
 import math
 from matplotlib.patches import Rectangle
+# Drawing a box on top of the plot
+import matplotlib.patches as patches
 
 def plot_colortable(colors, *, ncols=4, sort_colors=True):
 
@@ -68,7 +70,8 @@ class Analysis_plot:
 	plot_interface=False, mmpbsa_cut=-0.5, halving_ids=[], debug=False, file_name='Figure.jpeg', grid=True,
 	vline_color='purple',vline_thickness=0.25,vlines=[132,178,209],bool_shift=True,ID_shift=28,plotid='A', range_freq=(4,5),
 	legend_only=False,legend_only_text=[],filter_factor=[20,5.0], ytick_list=[],normal_freq = False,freq_grade=100,interp_degree=3,
-	focus_x=False,focus_xij=(30,265),background=False, background_color='black',sharey=False):
+	focus_x=False,focus_xij=(30,265),background=False, background_color='black',sharey=False,
+	focus_box=True,box_x0=25,box_y0=4,box_xsize=25,box_ysize=2):
 		'''Parameters:
 		
 		mult_ana_plot: Default: Empty ([]). If not empty it will have the same size as 'names' and it will correspond to the analysis on each file in 'names'.
@@ -170,6 +173,12 @@ class Analysis_plot:
 		self.interp_degree = interp_degree # Degree 'k' of the BSpline
 		self.range_freq_i  = range_freq[0]
 		self.range_freq_f  = range_freq[1]
+		#box on the '1cmp' plot
+		self.focus_box = focus_box
+		self.box_x0    = box_x0
+		self.box_y0    = box_y0
+		self.box_xsize = box_xsize
+		self.box_ysize = box_ysize
 
 		if type in ['1cmp','four']:
 			self.multi_ids = False
@@ -562,6 +571,10 @@ class Analysis_plot:
 		inset  = []
 		bool_erf = self.mmpbsa or 'RMSF' in self.ana_type
 		for ts in axs:
+			# to draw something (a box in this case) on the plot
+			if self.focus_box:
+				box = patches.Rectangle((self.box_x0, self.box_y0), self.box_xsize, self.box_ysize, linewidth=1, edgecolor='r', facecolor='none',zorder=len(axs)+1)
+				ts.add_patch(box)
 			if self.background:
 				ts.set_facecolor(self.background_color)
 			if self.focus_x:
@@ -1158,6 +1171,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	mean_flag    = False
 	normal_freq  = False
 	freq_grade   = 20
+	# drawing box
+	focus_box = False
+	box_x0    = 25
+	box_y0    = 4
+	box_xsize = 25
+	box_ysize = 2
+
 	# for interpolation
 	interp_degree = 3
 	range_freq    = (4,5)
@@ -1226,7 +1246,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	elif anatp == 'radgyr':
 		labx, laby = (130, 16.8)
 
-	flags = ["&","-v","--version","-backgrnd","-yshare","-xlimited","-normfreq","-rangfreq","-splinedegree","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
+	flags = ["&","-v","--version","-redbox","-backgrnd","-yshare","-xlimited","-normfreq","-rangfreq","-splinedegree","-ytick","-id","-ffa","-ffax","-hidden","-xshift","-vcolor","-vlines","-vltcs","-fontsize","-jpeg","-nogrid","-edinsetXYpos","-edinsetX","-edXtick","-edcut","-eng","-h","--help","-type","-index3d","-mean", "-i", "-debug","-anatp","-multana","-stitle","-fram2time", "-framstp","-nanosec","-dpi","-lblcrd","-mlbpos"]
 
 	# Flag verification
 	for i in arg:
@@ -1268,6 +1288,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-vcolor\tSets the color for the vertical lines (Default: purple).\n")
 				print("\t-vltcs\tSets the thickness of the vertical lines (Default: 0.25).\n")
 				print("\t-ffa\t(Valid for 'edcomp' only) Filter factor for annotations (Default: 5). A small value means a bigger y-distance between annotations, so it will hide more annotations. Useful to change it when there are many enrgy wells close to one another.\n")
+				print("\t-redbox\t(Valid only for the '1cmp' type) Draw a red box on all plots sharing its parameters: initial x (x0), initial y (y0), length of x (xl) and length of y (yl) [MUST be given in this order]\n\t\t\tEg.: -redbox 25 4 23 6.\n")
 				print("\t-yshare\t(Valid only for the '1cmp' type) Forces all the plots to share the zoom on the Y-axis.\n")
 				if "-hidden" in arg:
 					color_file = plot_colortable(mcolors.CSS4_COLORS)
@@ -1547,6 +1568,35 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 						cc += 1
 				debug_dic['multana'] = mult_ana_plot	
 				continue
+			elif arg[i] == "-redbox":
+				focus_box = True
+				cc = i+1
+				bool_check = "," in arg[cc]
+				if cc+1 < len(arg):
+					bool_check = "," in arg[cc] and arg[cc+1] in flags
+				
+				if bool_check:
+					boxpar = arg[cc].split(",")
+					i = cc
+				else:
+					boxpar = []
+					while cc < len(arg):
+						if arg[cc] not in flags:
+							boxpar.append( arg[cc] )
+						else:
+							i = cc - 1
+							break
+						cc += 1
+				if len(boxpar) != 4:
+					inst_only = True
+					print("With flag '-redbox', you must give FOUR numbers representing: 'x0'; 'y0'; 'xsize' and 'ysize' in this order!")
+					break
+				box_x0    = float(boxpar[0])
+				box_y0    = float(boxpar[1])
+				box_xsize = float(boxpar[2])
+				box_ysize = float(boxpar[3])
+				debug_dic['redbox'] = boxpar	
+				continue
 			elif arg[i] == "-i":
 				default_mod = False
 				l_o         = False
@@ -1637,7 +1687,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 			print("No argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
-			ob4 = Analysis_plot(sharey=sharey,focus_x=focus_x,focus_xij=focus_xij,background=background,background_color=background_color,range_freq=range_freq,interp_degree=interp_degree,normal_freq=normal_freq,freq_grade=freq_grade,legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
+			ob4 = Analysis_plot(focus_box=focus_box,box_x0=box_x0,box_y0=box_y0,box_xsize=box_xsize,box_ysize=box_ysize,sharey=sharey,focus_x=focus_x,focus_xij=focus_xij,background=background,background_color=background_color,range_freq=range_freq,interp_degree=interp_degree,normal_freq=normal_freq,freq_grade=freq_grade,legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
 		else:
 			# creating an empty object
 			ob4   = Analysis_plot(type='tpe', fontsize=fontsize, eng=eng, names=File2, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_mean=forced_mean, fmv=fmv)
