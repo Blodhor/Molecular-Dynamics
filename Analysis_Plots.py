@@ -1604,12 +1604,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				#File.append( (arg[i+1], arg[i+2]) ) # arg[i+2] != 'Production pH=7.00' !!
 				cc = i+1
 				while cc < len(arg):
+					#a_t is the file name
 					if arg[cc] not in flags:
 						a_t = arg[cc]
 					else:
 						i = cc - 1
 						break
-
+					
+					#b_t is the label given to the file
 					b_t = ''
 					cc_t = cc +1
 					while cc_t < len(arg):
@@ -1618,11 +1620,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 								b_t += ' '
 							b_t += arg[cc_t]
 						else:
+							if cc_t == cc+1:
+								#1 file and no label
+								print("\tYou must give a label to your plot!")
+							elif '.dat' not in arg[cc_t] and '.dat' not in arg[cc_t-1]:
+								print("\tYou forgot to label your file!") 
 							break
 						cc_t += 1
 					cc = cc_t -1
 					if debug:
-						print((a_t,b_t))
+						print((a_t, b_t))
 					if len(b_t) > 0:
 						File.append( (a_t, b_t) )
 					else:
@@ -1684,7 +1691,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	
 	if not inst_only and not version_only:
 		if File == []:
-			print("No argument given on the flag '-i'\n")
+			print("No 'complete' argument given on the flag '-i'\n")
 		elif not rareplot:
 			#print('files:',File)
 			ob4 = Analysis_plot(focus_box=focus_box,box_x0=box_x0,box_y0=box_y0,box_xsize=box_xsize,box_ysize=box_ysize,sharey=sharey,focus_x=focus_x,focus_xij=focus_xij,background=background,background_color=background_color,range_freq=range_freq,interp_degree=interp_degree,normal_freq=normal_freq,freq_grade=freq_grade,legend_only=l_o,legend_only_text=l_o_t,ytick_list=ytick_list,filter_factor=filter_factor,type=tpe,plotid=plotid,vline_color=vline_color,vline_thickness=vline_thickness,vlines=vlines,bool_shift=bool_shift,ID_shift=ID_shift,plot_interface=interface, grid=grid, file_name=file_name, debug=debug, mmpbsa=mmpbsa, mmpbsa_inset=mmpbsa_inset, mmpbsa_inset_XY=mmpbsa_inset_XY, mmpbsa_inset_range=mmpbsa_inset_range, mmpbsa_inset_tick=inset_tick, mmpbsa_cut=mmpbsa_cut, halving_ids=halving_ids, fontsize=fontsize, eng=eng, print_mean=mean_flag, names=File, mult_ana_plot=mult_ana_plot, analysisType=anatp, suptitle=supertitle, frameToTime=fram2time, frameStep=framstp,  nanosec=nano, labelpx=labx, labelpy=laby, dpi=dpi, label_color=color, merge_legend=merge_legend, multi_merge_label_loc=multi_label_loc, forced_3Dzaxis=forced_3Dz, forced_mean=forced_mean, fmv=fmv)
