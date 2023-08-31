@@ -1615,16 +1615,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 					b_t = ''
 					cc_t = cc +1
 					while cc_t < len(arg):
-						if arg[cc_t] not in flags and '.dat' not in arg[cc_t]:
-							if len(b_t) > 0:
-								b_t += ' '
-							b_t += arg[cc_t]
+						if arg[cc_t] not in flags:
+							if '.dat' not in arg[cc_t]:
+								if len(b_t) > 0:
+									b_t += ' '
+								b_t += arg[cc_t]
+							else:
+								if cc_t == cc+1:
+									#2 files and no label
+									print("\tYou must give a label to your first plot!")
+								elif '.dat' in arg[cc_t] and '.dat' in arg[cc_t-1]:
+									print("\tYou forgot to label your file!") 
+								break
 						else:
-							if cc_t == cc+1:
-								#1 file and no label
-								print("\tYou must give a label to your plot!")
-							elif '.dat' not in arg[cc_t] and '.dat' not in arg[cc_t-1]:
-								print("\tYou forgot to label your file!") 
 							break
 						cc_t += 1
 					cc = cc_t -1
