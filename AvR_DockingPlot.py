@@ -50,7 +50,7 @@ def plot_colortable(colors, *, ncols=4, sort_colors=True):
 	plt.savefig("ListOfColors.jpeg",bbox_inches='tight',pad_inches=0.15)
 	return "ListOfColors.jpeg"
 
-# Quick sort for the first coodinate of my tupples
+# Quick sort for the first coordinate of my tuples
 def swap(t=[(0,'1'),(-6,'2')], ith = 0, jth = 1):
 	if ith != jth:
 		temp   = t[ith]
