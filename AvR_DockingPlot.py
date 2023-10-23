@@ -50,7 +50,7 @@ def plot_colortable(colors, *, ncols=4, sort_colors=True):
 	plt.savefig("ListOfColors.jpeg",bbox_inches='tight',pad_inches=0.15)
 	return "ListOfColors.jpeg"
 
-# Quick sort for the first coordinate of my tuples
+# Quick sort for the first coordinate of my tupples
 def swap(t=[(0,'1'),(-6,'2')], ith = 0, jth = 1):
 	if ith != jth:
 		temp   = t[ith]
@@ -75,7 +75,6 @@ def SortZerothTupple(t=[(0,'1'),(-6,'2')], begin= 0, end = 1):
 		b = SortZerothTupple(t=t,begin=pivot+1,end=end)
 
 # Distance betwwen two atoms
-
 def dist(atm1=(1,-2,3), atm2=(0,5,-6)):
 	x1, y1, z1 = atm1
 	x2, y2, z2 = atm2
@@ -84,7 +83,7 @@ def dist(atm1=(1,-2,3), atm2=(0,5,-6)):
 
 # List of tupples
 
-def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb'):
+def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb',debug=False,possible_rhc=2):
 	'''Creates a filtered pdb and returns a list of affinity vs distance between ser160 hydroxyl and a BHET carbonyl '''
 	f = open(file,'r')
 	temp = f.readlines()
@@ -94,6 +93,7 @@ def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb
 	affinities = []
 	rcarbs = [] # 2 per model
 	hetatm = []
+	rhc_count=0
 	f = open("Filtered_%s"%file,'w')
 
 	for i in range(len(temp)):
@@ -123,14 +123,22 @@ def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb
 							o_count += 1
 					if (main_info[2] == 'C' or 'C' in main_info[2] and main_info[-1]=='C') and c_count == 1 and o_count == 2:
 						# main == C carbonyl
+						rhc_count+=1
 						main_xyz = (float(main_info[5]),float(main_info[6]),float(main_info[7]))
 						rcarbs.append(dist(atm1=ser_hydroxyl,atm2=main_xyz))
 		elif 'model' in temp[i].lower() and 'model' in temp[i+1].lower():
 			hetatm = []
+			if rhc_count!=possible_rhc:
+				possible_rhc = rhc_count
+			rhc_count=0
 			models.append(temp[i]) 
 			f.write(temp[i])
 
 	f.close()
+	if debug:
+		print("rhc(%d elementos):"%len(rcarbs), rcarbs)
+		print("afinidade(%d elementos):"%len(affinities), affinities)
+		print("modelos(%d elementos):"%len(models), models)
 
 	label_out = []
 	exc = 0
@@ -138,7 +146,7 @@ def list_AEvsR(ser_hydroxyl = (-20.465,-10.036,7.369), file = 'all_Nice_dock.pdb
 	for i in range(len(rcarbs)):
 		exc +=1
 		label_out.append( (models[h],(affinities[h],rcarbs[i])) )
-		if exc == 2:
+		if exc == possible_rhc:
 			exc = 0
 			h += 1
 
