@@ -7,7 +7,8 @@ Automates the process of performing a molecular dynamics simulation using the Am
 Needs AMBER/AMBERtools installed and with its binaries on the computer's PATH. Works on Linux operating systems.
 
 Author: Braga, B. C.
-E-mail: bruno.braga@ufms.br
+E-mail: brunocamargobraga@gmail.com/bruno.braga@ufms.br
+If you need help, send an email about "ASM.py(Bug)" or else it might endup as spam.
 '''
 
 import re
@@ -63,7 +64,7 @@ class Amber_par:
 	custom_mode = False, custom_min = 10**4, custom_a = 10**6, custom_e = 10**7, custom_p = 10**8,
 	exp_solv= False, solvent_in='water', box_cuttoff= 12.0, information_cycles=200, gpu=0, prot_res='AS4 SER HIP',
 	mpi_use= False, mpicomp='mpiexec', mpicores=2, prep_stop= False, chosen_mut_flag = False, Reduce=True,
-	chosen_mut=['SER_160-MET'], active_site={'SER':[160],'HIS':[237],'ASP':[206]}):
+	chosen_mut=['SER_160-MET'], active_site={'SER':[160],'HIS':[237],'ASP':[206]},debug=False):
 		'''
 
 Parameters
@@ -171,6 +172,8 @@ chosen_mut: Specific mutation chosen.'''
 		#													Gl4 funciona!? e GL4?
 		self.default_counter = {'HIP': 'HIS', 'AS4': 'ASP', 'Gl4': 'GLU', 'HIS': 'HIP', 'ASP': 'AS4', 'GLU': 'GL4'}
 		self.ok = True
+		self.debug = debug
+		self.debug_file = []
 
 		# Docking-only options
 		self.docking    = docked_run
@@ -285,35 +288,66 @@ chosen_mut: Specific mutation chosen.'''
 			bool_pdb = self.pdb != 'WillThisWork.pdb'
 			if bool_pdb and self.goal.lower() == 'cphmd':
 				self.cph= True
-				cmd('pdb4amber -i %s -o system-amber.pdb --constantph --dry'%self.pdb)
+				logp='pdb4amber -i %s -o system-amber.pdb --constantph --dry'%self.pdb
+				cmd(logp)
+				self.debug_file.append(logp)
 				self.pdb ='system-amber.pdb'
 			elif bool_pdb:
-				cmd('pdb4amber -i %s -o system-amber.pdb --dry'%self.pdb)
+				logp='pdb4amber -i %s -o system-amber.pdb --dry'%self.pdb
+				cmd(logp)
+				self.debug_file.append(logp)
 				self.pdb ='system-amber.pdb'
 
 			if bool_class:
 				if chosen_mut_flag:
 					self.oldid_mut = cp(self.chosen_mutation)
-					print("Old residue id:\n", mutid)
+					logp="Old residue id (mutation):\n "+str(mutid)
+					self.debug_file.append(logp)
+					print(logp)
 					# self.chosen_mutation := {('SER', '160'): 'MET', ('SER', '125'): 'MET'}
 					self.chosen_residues = self.adjusting_finalstep(coords=resmut_newid)
 					# self.chosen_mutation := {('SER', 'newid'): 'MET', ('SER', 'O1newid'): 'MET'}
 					if self.chosen_residues != -1:
-						print("New residue id:\n", self.chosen_residues)
+						logp="New residue id (mutation):\n "+str(self.chosen_residues)
+						self.debug_file.append(logp)
+						print(logp)
 				else:
-					print("Old active site's id:\n",self.active_site)
+					logp="Old active site's id:\n "+str(self.active_site)
+					self.debug_file.append(logp)
+					print(logp)
 					self.active_site = self.adjusting_finalstep(coords=res_newid)
 					# self.active_site := {'SER':[newid, ...], ...}
-					print("New active site's id:\n",self.active_site)
+					logp="New active site's id:\n "+str(self.active_site)
+					self.debug_file.append(logp)
+					print(logp)
 
 			if information_cycles <50:
 				print('The number of information cycles is too short...ajusting to default value.') 
 				self.info_factor = int(100)
+				self.debug_file.append("New icyc: 100")
 			elif information_cycles > 1000:
 				print('The number of information cycles is too high...ajusting to the upper limit.')
 				self.info_factor = int(1000)
+				self.debug_file.append("New icyc: 1000")
 			else:
 				self.info_factor = int(information_cycles)
+			#registering any bs
+			self.debug_logfile(False)
+	
+	def debug_logfile(self, file_exist=False):
+		if self.debug_file == []:
+			return -1
+
+		mode= 'w'
+		if file_exist:
+			mode= 'r+'			 	
+		f = open("ASM_Debug_log.txt",mode)
+		for i in self.debug_file:
+			f.write(i)
+		self.debug_file = []
+		f.close()
+		return 0
+
 
 	def hmr_transform_file(self, input_name='hmr-prmtop.in', prmtop_new='systemHMR.prmtop'):
 		'''Creates the Parmed input file for a HMR transform in the topology file.
@@ -2558,14 +2592,14 @@ atm pos: Atoms' positions respectively to the sequence in atm_list.
 if __name__ == "__main__":
 	import sys
 	arg = sys.argv
-	version = '''Manager Alpha - Molecular Dynamics simulation manager (using Amber and Ambertools).
+	version = '''ASM Alpha - Molecular Dynamics simulation manager (using Amber and Ambertools).
 
-Manager Beta:
+ASM Beta:
 	*Information_cycle bug corrected.
 	*Tutorial guide made which show how the code works and asks for each variable specifying the formats.
 	*Simulation can now be made directly on Terminal console.
 
-Manager Version 1.0:
+ASM Version 1.0:
 	*Added option for explicit solvent.
 	*Method 'Amber_run.simulation' now verifies titratable residues and applies cpinutil correctly.
 	*'Amber_run' class rewritten for CpHMD.
@@ -2591,20 +2625,25 @@ Manager Version 1.0:
 		**'input_equil';
 		**'cpptraj_in' - RMSD, RMSF and RADGYR are correctly done now for CpHMD.
 
-Manager Version 1.1:
+ASM Version 1.1:
 	*Separation of the simulation.sh in stages to minimize errors from external sources. 
 	*Annealing duration shortened because it was unnecessarily long.
 	*Mutation method fixed.
 	*Error report file created.
 	*An easy restart .sh of current simulation stage created.
 
-Manager Version 1.2:
+ASM Version 1.2:
 	*Added a custom option for the duration of each stage of simulation.
 	*Added an option to run with a docked system. The docked ligand configuration must be given.
 	*Fixed the bug on the mutation method for multiple aminoacid alterations
-	
+
+ASM Version 1.3:
+	*Added some 'hidden' options
+
 Copyright (C) 2021-2022  Braga, B. C. 
-e-mail: bruno.braga@ufms.br 
+E-mail: brunocamargobraga@gmail.com/bruno.braga@ufms.br
+If you need help, send an email about "ASM.py(Bug)" or else it might endup as spam.
+ 
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -2621,7 +2660,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 	# Default keys
-	version_n     = '1.2'
+	version_n     = '1.3'
 	inst_only     = False
 	version_only  = False
 	arqui         = 'gpu'
@@ -2657,10 +2696,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 	ini_pH        = pH_ini
 	fin_pH        = ini_pH
 	pHInterval    = 1.0
+	# debug
+	debug        = False # for the arguments only
+	debug_dic    = {}
 
 	# If for some reason you don't want to use the HMR method, set the attribute "self.hmr" to False
 
-	flags = ["&","-v","--version","-h","--help",'-nored','-arq','gpu','-mode','-res','-mut','-rdmut','-atsite','-rdydone','-icyc','-solv','-g','-ph','-i','-dlig','-mpi','-explicit','-prepstp','-cut','-phdset','MIN','A','E','P']
+	flags = ["&","-v","--version","-h","--help","-debug","-hidden",'-nored','-arq','gpu','-mode','-res','-mut','-rdmut','-atsite','-rdydone','-icyc','-solv','-g','-ph','-i','-dlig','-mpi','-explicit','-prepstp','-cut','-phdset','MIN','A','E','P']
 	
 	# Flag verification
 	for i in arg:
@@ -2703,7 +2745,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				print("\t-arq\t\tChoice in architecture\n\t\t\tgpu (if chosen, the GPU id must be informed right after this flag)\n\t\t\tsander\n\t\t\tpmemd\n")
 				print("\t-mpi\t\tMulticore run (the number of cores must be informed right after this flag). Default compiler: mpiexec.\n\t\t\t\tObs: Not implemented for -arq gpu.\n")
 				print("\t-cut\t\tNonbonded cutoff in angstrom (Default: 12).\n")
-				#print("\t-prepstp\t(Option for Devs.) Stops the run after all preparations are complete (right before minimization).\n\t\t\t\tObs: The shell script, to run the simulation, will still be created for you.\n")
+				if "-hidden" in arg:
+					print("\t-prepstp\tStops the run after all preparations are complete (right before minimization).\n\t\t\t\tObs: The shell script, to run the simulation, will still be created for you.\n")
+					print("\t-debug\t")
 				print("\nExamples:\n\t$ python3 ASM.py -i 1UBQ.pdb -arq sander -mpi 4 -mode L -g CpHMD -phdset 6.0 7.0 0.5\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq pmemd -mpi 4 -mode L -g CpHMD -ph 6.5 -explicit water\n")
 				print("\n\t$ python3 ASM.py -i 6eqe.pdb -arq gpu 0 -mode GM -g MD -explicit water -res SER HIS ASP -rdmut 1\n")
@@ -2715,27 +2759,38 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				break
 
 			# Key verifications
+			elif arg[i] == "-debug":
+				debug = True
+				#inst_only = True
+				# A flag alone cannot set the loop to jump the next argument 
+				#continue
 			elif arg[i].lower() == '-arq':
 				arqui = arg[i+1]
 				if arqui.lower() == 'gpu':
 					gpu_unit = arg[i+2]
+				debug_dic['arq'] = (arqui,"if gpu:%d"%gpu_unit)
 				continue
 			elif arg[i].lower() == '-mode':
 				mode = arg[i+1]
 				if mode.upper() == 'CT':
 					custom_mode = True
+				debug_dic['mode'] = mode
 				continue
 			elif custom_mode and arg[i].upper() == 'MIN':
 				custom_min = IntTransNumb(arg[i+1])
+				debug_dic['ct_MIN'] = custom_min
 				continue
 			elif custom_mode and arg[i].upper() == 'A':
 				custom_a = IntTransNumb(arg[i+1])
+				debug_dic['ct_A'] = custom_a
 				continue
 			elif custom_mode and arg[i].upper() == 'E':
 				custom_e = IntTransNumb(arg[i+1])
+				debug_dic['ct_E'] = custom_e
 				continue
 			elif custom_mode and arg[i].upper() == 'P':
 				custom_p = IntTransNumb(arg[i+1])
+				debug_dic['ct_P'] = custom_p
 				continue
 			elif arg[i].lower() == '-res':
 				res_i = arg[i+1]
@@ -2750,6 +2805,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 					cc += 1
 				prt_res = res_i
 				print("\nResidues: ",prt_res)
+				debug_dic['res'] = prt_res
 				continue
 			elif arg[i].lower() == '-atsite':
 				site_i = [ arg[i+1] ]
@@ -2771,6 +2827,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 						atv_site[ ji[:pos_ji].upper() ] = [int(ji[pos_ji + 1:])]
 					else:
 						atv_site[ ji[:pos_ji].upper() ]. append( int(ji[pos_ji + 1:]) )	
+				debug_dic['atsite'] = atv_site
 				continue
 			elif arg[i].lower() == '-rdmut':
 				mut_rand = True
@@ -2779,6 +2836,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 					print("\nINVALID ARGUMENT FOR MUTATION TYPE!\n")
 					inst_only = True
 					break
+				debug_dic['rdmut'] = (mut_rand, mut_type)
 				continue
 			elif arg[i].lower() == '-mut':
 				mut_choice = True
@@ -2792,6 +2850,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 					else:
 						i = cc-1 
 						break
+				debug_dic['mut'] = mut
 				continue
 			elif arg[i].lower() == '-rdydone':
 				r_done = [ arg[i+1] ]
@@ -2812,35 +2871,44 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 						mut_done[ ji[:pos_ji] ] = [ji[pos_ji + 1:]]
 					elif ji[pos_ji + 1:] not in mut_done[ ji[:pos_ji] ]:
 						mut_done[ ji[:pos_ji] ].append( ji[pos_ji + 1:] )
+				debug_dic['rdydone'] = mut_done 
 				continue
 			elif arg[i].lower() == '-icyc':
 				icyc = int(arg[i+1])
+				debug_dic['icyc'] = icyc
 				continue
 			elif arg[i].lower() == '-solv':
 				solvent = arg[i+1]
+				debug_dic['solv'] = solvent
 				continue
 			elif arg[i].lower() == '-g':
 				sim_goal = arg[i+1]
+				debug_dic['g'] = sim_goal
 				continue
 			elif arg[i].lower() == '-ph':
 				initial_ph = float(arg[i+1])
+				debug_dic['ph'] = initial_ph
 				continue
 			elif arg[i].lower() == '-phdset':
 				multiple_pH = True
 				ini_pH = float(arg[i+1])
 				fin_pH = float(arg[i+2])
 				pHInterval = float(arg[i+3])
+				debug_dic['phdset'] = (ini_pH,fin_ph,pHInterval)
 				continue
 			elif arg[i].lower() == '-i':
 				sim_pdb = arg[i+1]
+				debug_dic['i'] = sim_pdb
 				continue
 			elif arg[i].lower() == '-dlig':
 				with_docking = True
 				dlig_pdb     = arg[i+1]
+				debug_dic['dlig'] = dlig_pdb
 				continue
 			elif arg[i].lower() == '-mpi':
 				mpi_flag = True
 				cores_ = arg[i+1]
+				debug_dic['mpi'] = cores
 				continue
 			elif arg[i].lower() == '-explicit':
 				explicit_flag = True
@@ -2851,28 +2919,35 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 						print(solv)
 					inst_only = True
 					break
+				debug_dic['explicit'] = solvent_
 				continue
 			elif arg[i].lower() == '-cut':
 				cuttoff_ = arg[i+1]
+				debug_dic['cut'] = cutoff_
 				continue
 			elif arg[i].lower() == '-nored':
 				Reduce = False
 				#We need to do increase 'cut', otherwise ASM will skip the next argument
 				# since the current flag doesn't use 2 arguments this would generate an error!
-				cut +=1 
-				continue
+				#cut +=1
+				debug_dic['nored'] = "Wont reduce" 
+				#continue
 			elif arg[i].lower() == '-prepstp':
 				prep_only = True
-				cut +=1
-				continue
+				#cut +=1
+				debug_dic['prepstp'] = prep_only
+				#continue
 			cut +=1
 		else:
 			# cut!= i means that the current arg[i] was used in the previous iteration
 			cut = i+1
 
+	if debug:
+		print("Arguments:",arg)
+		print("Input read:",debug_dic)
+
 	if mode == 'GU' and icyc < 800:
 		icyc = 800
-	# debug
 	#inst_only = True
 							
 	if not inst_only and not version_only:
@@ -2887,10 +2962,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 				pH_fin = fin_pH 
 
 			if not mut_rand and not mut_choice:
-				objeto = Amber_run(system=sim_pdb, docked_run=with_docking, docked_pdb=dlig_pdb, Reduce=Reduce, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, custom_mode = custom_mode, custom_min = custom_min, custom_a = custom_a, custom_e = custom_e, custom_p = custom_p, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
+				objeto = Amber_run(debug=debug,system=sim_pdb, docked_run=with_docking, docked_pdb=dlig_pdb, Reduce=Reduce, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, custom_mode = custom_mode, custom_min = custom_min, custom_a = custom_a, custom_e = custom_e, custom_p = custom_p, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
 				objeto.simulation(arq=arqui, ph_range=[pH_ini,pH_fin])
 			elif mut_rand and not mut_choice:
-				objeto = Amber_mutation(system=sim_pdb, docked_run=with_docking, docked_pdb=dlig_pdb, simulation=sim_goal, pHstep=pHInterval, Reduce=Reduce, simulation_length=mode, custom_mode = custom_mode, custom_min = custom_min, custom_a = custom_a, custom_e = custom_e, custom_p = custom_p, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only, active_site=atv_site)
+				objeto = Amber_mutation(debug=debug,system=sim_pdb, docked_run=with_docking, docked_pdb=dlig_pdb, simulation=sim_goal, pHstep=pHInterval, Reduce=Reduce, simulation_length=mode, custom_mode = custom_mode, custom_min = custom_min, custom_a = custom_a, custom_e = custom_e, custom_p = custom_p, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only, active_site=atv_site)
 				objeto.mutations_restricted = mut_done
 				if objeto.chosen_residues != -1:
 					# There wasn't a problem with the mutation residues
@@ -2904,7 +2979,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 						print("\nAll possible mutations were already made for the chosen mutation type.\n")
 			elif not mut_rand and mut_choice:
 				# mut := ['SER_160-MET']
-				objeto = Amber_mutation(chosen_mut_flag = True, chosen_mut=mut, docked_run=with_docking, docked_pdb=dlig_pdb, Reduce=Reduce, system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, custom_mode = custom_mode, custom_min = custom_min, custom_a = custom_a, custom_e = custom_e, custom_p = custom_p, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
+				objeto = Amber_mutation(debug=debug,chosen_mut_flag = True, chosen_mut=mut, docked_run=with_docking, docked_pdb=dlig_pdb, Reduce=Reduce, system=sim_pdb, simulation=sim_goal, pHstep=pHInterval, simulation_length=mode, custom_mode = custom_mode, custom_min = custom_min, custom_a = custom_a, custom_e = custom_e, custom_p = custom_p, pH=pH_ini, exp_solv= explicit_flag, solvent_in=solvent, prot_res=prt_res, box_cuttoff=cuttoff_, mpi_use= mpi_flag, mpicores=cores_, information_cycles=icyc, gpu=gpu_unit, prep_stop= prep_only)
 				objeto.mutations_restricted = {}
 				if objeto.chosen_mutation != {}:
 					# There wasn't a problem with the mutation residues
